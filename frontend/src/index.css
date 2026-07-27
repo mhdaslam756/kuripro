@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+/* ---------- Primitives (Phase 3 design system) ---------- */
+:root {
+  --n0: #ffffff;
+  --n50: #f6f7f1;
+  --n100: #edefe7;
+  --n200: #e0e3d8;
+  --n300: #c7cbbc;
+  --n400: #a5aa9b;
+  --n500: #82887e;
+  --n600: #656b67;
+  --n700: #4b5058;
+  --n800: #30343c;
+  --n900: #1e212a;
+  --n950: #14171d;
+
+  --b50: #faf3e7;
+  --b100: #f1e3c7;
+  --b200: #e3c998;
+  --b300: #d3ad6e;
+  --b400: #cba463;
+  --b500: #a9813f;
+  --b600: #8c6d34;
+  --b700: #6e5427;
+  --b800: #55401d;
+  --b900: #3d2e15;
+
+  --good-100: #e3efe7;
+  --good-300: #8fbba0;
+  --good-500: #3f6e52;
+  --good-700: #2c4e3a;
+  --warn-100: #f2e5d8;
+  --warn-300: #c99a6c;
+  --warn-500: #8c5a2b;
+  --warn-700: #5f3d1d;
+  --bad-100: #f1dfdd;
+  --bad-300: #c88e8b;
+  --bad-500: #8c3230;
+  --bad-700: #5f2321;
+  --info-100: #dee7ec;
+  --info-300: #7fa3b8;
+  --info-500: #3b5d7a;
+  --info-700: #28404f;
+
+  /* ---------- Semantic tokens: light (default) ---------- */
+  --bg-app: #f5f5f0;
+  --bg-surface: var(--n0);
+  --bg-raised: var(--n50);
+  --border-default: #dde0d6;
+  --border-strong: var(--n400);
+  --text-primary: var(--n900);
+  --text-secondary: var(--n600);
+  --text-disabled: var(--n400);
+  --text-on-brand: var(--n0);
+  --icon-default: var(--n600);
+  --accent-primary: #725320;
+  --accent-link: var(--b600);
+
+  --good-bg: var(--good-100);
+  --good-fg: var(--good-700);
+  --good-border: var(--good-300);
+  --warn-bg: var(--warn-100);
+  --warn-fg: var(--warn-700);
+  --warn-border: var(--warn-300);
+  --bad-bg: var(--bad-100);
+  --bad-fg: var(--bad-700);
+  --bad-border: var(--bad-300);
+  --info-bg: var(--info-100);
+  --info-fg: var(--info-700);
+  --info-border: var(--info-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-app: var(--n950);
+    --bg-surface: var(--n900);
+    --bg-raised: var(--n800);
+    --border-default: rgba(233, 231, 223, 0.16);
+    --border-strong: rgba(233, 231, 223, 0.28);
+    --text-primary: var(--n50);
+    --text-secondary: var(--n400);
+    --text-disabled: var(--n700);
+    --text-on-brand: var(--n950);
+    --icon-default: var(--n400);
+    --accent-primary: var(--b400);
+    --accent-link: var(--b400);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg-app: var(--n950);
+  --bg-surface: var(--n900);
+  --bg-raised: var(--n800);
+  --border-default: rgba(233, 231, 223, 0.16);
+  --border-strong: rgba(233, 231, 223, 0.28);
+  --text-primary: var(--n50);
+  --text-secondary: var(--n400);
+  --text-disabled: var(--n700);
+  --text-on-brand: var(--n950);
+  --icon-default: var(--n400);
+  --accent-primary: var(--b400);
+  --accent-link: var(--b400);
+}
+
+/* ---------- Tailwind theme mapping ---------- */
+@theme {
+  --font-display: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-bg-app: var(--bg-app);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-raised: var(--bg-raised);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-on-brand: var(--text-on-brand);
+  --color-icon-default: var(--icon-default);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-link: var(--accent-link);
+  --color-brand-solid: var(--accent-primary);
+  --color-brand-strong: var(--accent-primary);
+  --color-surface-muted: var(--bg-raised);
+
+  --color-brand-50: var(--b50);
+  --color-brand-100: var(--b100);
+  --color-brand-200: var(--b200);
+  --color-brand-300: var(--b300);
+  --color-brand-400: var(--b400);
+  --color-brand-500: var(--b500);
+  --color-brand-600: var(--b600);
+  --color-brand-700: var(--b700);
+  --color-brand-800: var(--b800);
+  --color-brand-900: var(--b900);
+
+  --color-good-bg: var(--good-bg);
+  --color-good-fg: var(--good-fg);
+  --color-good-border: var(--good-border);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-warn-border: var(--warn-border);
+  --color-bad-bg: var(--bad-bg);
+  --color-bad-fg: var(--bad-fg);
+  --color-bad-border: var(--bad-border);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-info-border: var(--info-border);
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-default);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    background: var(--bg-app);
+    overscroll-behavior-y: none;
+  }
+  body {
+    min-width: 320px;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    background-image: radial-gradient(circle at 8% 0%, rgb(227 201 152 / 0.22), transparent 28rem);
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background: var(--b200);
+    color: var(--n900);
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 16px controls prevent Safari from zooming the page when a field receives focus. */
+  @media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+/* Mobile-first utility helpers & scroll optimization */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .active-bounce {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .active-bounce:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+  .mobile-card {
+    @apply rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.99] active:bg-bg-raised;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
