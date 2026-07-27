@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { CollectDialog } from "./components/collect-dialog";
 import { DueStatusBadge } from "./components/collection-badges";
 import { ReceiptDialog } from "./components/receipt-dialog";
-import { clearSyncedFromQueue, getQueue } from "./offline-queue";
+import { clearSyncedFromQueue, countQueue, getQueue } from "./offline-queue";
 import type { Installment } from "./types";
 import {
   useBulkCollect,
@@ -67,8 +67,7 @@ export function CollectTab() {
   const [offlineCount, setOfflineCount] = useState(0);
 
   const refreshOfflineCount = useCallback(() => {
-    // Note: Assuming a hypothetical countQueue or similar implementation logic
-    void getQueue().then((q) => setOfflineCount(q.length));
+    void countQueue().then(setOfflineCount);
   }, []);
 
   const groupName = groups?.items.find((g) => g.id === groupId)?.name ?? "";
