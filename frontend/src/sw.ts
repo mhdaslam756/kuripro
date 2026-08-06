@@ -35,6 +35,19 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
+  const url = new URL(request.url);
+
+  // Skip Vite dev server internal routes, HMR updates, extension schemes, and API requests
+  if (
+    !url.protocol.startsWith("http") ||
+    url.pathname.startsWith("/@") ||
+    url.pathname.startsWith("/node_modules/") ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.includes("__vite")
+  ) {
+    return;
+  }
+
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => (await caches.match(APP_SHELL)) ?? Response.error()),
@@ -42,10 +55,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const url = new URL(request.url);
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(request).then((cached) => cached ?? fetch(request)),
+      caches
+        .match(request)
+        .then((cached) => cached ?? fetch(request))
+        .catch(() => Response.error()),
     );
   }
 });

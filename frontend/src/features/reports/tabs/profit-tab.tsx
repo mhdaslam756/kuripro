@@ -45,40 +45,77 @@ export function ProfitTab({ range, onRangeChange }: Props) {
               />
             </ChartCard>
             <ChartCard title="Profit & loss statement">
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableHeaderCell>Section</TableHeaderCell>
-                      <TableHeaderCell>Category</TableHeaderCell>
-                      <TableHeaderCell>Amount</TableHeaderCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {data.incomeByCategory.map((c) => (
-                      <TableRow key={`i-${c.category}`}>
-                        <TableCell className="text-good-fg">Income</TableCell>
-                        <TableCell className="font-medium">{c.category}</TableCell>
-                        <TableCell className="text-good-fg">{formatPaise(c.total)}</TableCell>
+              {/* Mobile View: Cards */}
+              <div className="grid gap-2.5 md:hidden p-1">
+                {data.incomeByCategory.map((c) => (
+                  <div
+                    key={`i-${c.category}`}
+                    className="active-bounce flex items-center justify-between rounded-xl border border-border-default bg-bg-surface p-3 shadow-xs"
+                  >
+                    <div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-good-fg">Income</span>
+                      <p className="font-semibold text-text-primary text-sm">{c.category}</p>
+                    </div>
+                    <p className="font-display text-base font-bold text-good-fg tabular-nums">+{formatPaise(c.total)}</p>
+                  </div>
+                ))}
+                {data.expenseByCategory.map((c) => (
+                  <div
+                    key={`e-${c.category}`}
+                    className="active-bounce flex items-center justify-between rounded-xl border border-border-default bg-bg-surface p-3 shadow-xs"
+                  >
+                    <div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-bad-fg">Expense</span>
+                      <p className="font-semibold text-text-primary text-sm">{c.category}</p>
+                    </div>
+                    <p className="font-display text-base font-bold text-bad-fg tabular-nums">-{formatPaise(c.total)}</p>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between rounded-xl border border-border-default bg-bg-raised p-3 shadow-xs mt-1">
+                  <p className="font-bold text-text-primary text-sm">Net Profit</p>
+                  <p className={`font-display text-lg font-bold tabular-nums ${data.netProfit >= 0 ? "text-good-fg" : "text-bad-fg"}`}>
+                    {formatPaise(data.netProfit)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden md:block">
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>Section</TableHeaderCell>
+                        <TableHeaderCell>Category</TableHeaderCell>
+                        <TableHeaderCell>Amount</TableHeaderCell>
                       </TableRow>
-                    ))}
-                    {data.expenseByCategory.map((c) => (
-                      <TableRow key={`e-${c.category}`}>
-                        <TableCell className="text-bad-fg">Expense</TableCell>
-                        <TableCell className="font-medium">{c.category}</TableCell>
-                        <TableCell className="text-bad-fg">({formatPaise(c.total)})</TableCell>
+                    </TableHead>
+                    <TableBody>
+                      {data.incomeByCategory.map((c) => (
+                        <TableRow key={`i-${c.category}`}>
+                          <TableCell className="text-good-fg">Income</TableCell>
+                          <TableCell className="font-medium">{c.category}</TableCell>
+                          <TableCell className="text-good-fg">{formatPaise(c.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                      {data.expenseByCategory.map((c) => (
+                        <TableRow key={`e-${c.category}`}>
+                          <TableCell className="text-bad-fg">Expense</TableCell>
+                          <TableCell className="font-medium">{c.category}</TableCell>
+                          <TableCell className="text-bad-fg">({formatPaise(c.total)})</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow>
+                        <TableCell className="font-semibold" />
+                        <TableCell className="font-semibold text-text-primary">Net profit</TableCell>
+                        <TableCell className={`font-semibold ${data.netProfit >= 0 ? "text-good-fg" : "text-bad-fg"}`}>
+                          {formatPaise(data.netProfit)}
+                        </TableCell>
                       </TableRow>
-                    ))}
-                    <TableRow>
-                      <TableCell className="font-semibold" />
-                      <TableCell className="font-semibold text-text-primary">Net profit</TableCell>
-                      <TableCell className={`font-semibold ${data.netProfit >= 0 ? "text-good-fg" : "text-bad-fg"}`}>
-                        {formatPaise(data.netProfit)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </div>
             </ChartCard>
           </div>
         </div>

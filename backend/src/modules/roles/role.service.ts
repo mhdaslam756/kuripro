@@ -52,6 +52,16 @@ export async function getOrganizationRoleBySlug(
   if (!role) {
     throw AppError.internal(`Organization is missing its system ${slug} role`);
   }
+
+  if (slug === "MEMBER") {
+    const defaults = DEFAULT_ROLE_PERMISSIONS.MEMBER;
+    const missing = defaults.filter((k) => !role.permissionKeys.includes(k));
+    if (missing.length > 0) {
+      role.permissionKeys = Array.from(new Set([...role.permissionKeys, ...missing]));
+      await saveRole(role);
+    }
+  }
+
   return role;
 }
 

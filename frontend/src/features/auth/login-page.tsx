@@ -27,6 +27,7 @@ export function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [lastEnteredPassword, setLastEnteredPassword] = useState("");
   const passkeySupported = isWebAuthnSupported();
 
   const {
@@ -41,6 +42,7 @@ export function LoginPage() {
 
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
+    setLastEnteredPassword(values.password);
     try {
       const loggedUser = await login(values.identifier, values.password, values.rememberDevice);
       if (loggedUser?.mustChangePassword) {
@@ -137,6 +139,7 @@ export function LoginPage() {
 
       <FirstLoginModal
         open={showFirstLoginModal}
+        initialPassword={lastEnteredPassword}
         onPasswordChanged={() => {
           setShowFirstLoginModal(false);
           navigate("/dashboard", { replace: true });

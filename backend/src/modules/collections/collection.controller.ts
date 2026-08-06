@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 
 import { requireTenantContext } from "../../middleware/rbac.js";
 import { AppError } from "../../utils/app-error.js";
-import type { MongoIdParam } from "../../utils/common-validators.js";
+import type { MongoIdParam, PaymentIdParam } from "../../utils/common-validators.js";
+import { listChitMembershipsByMemberId } from "../chit-groups/chit-membership.repository.js";
+import { resolveMemberForUser } from "../members/member.service.js";
 import * as collectionService from "./collection.service.js";
 import type {
   BulkCollectionInput,
@@ -31,7 +33,20 @@ export async function flagOverdue(req: Request, res: Response): Promise<void> {
 
 export async function listDues(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
-  const result = await collectionService.listDues(tenantId, req.query as unknown as ListDuesQuery);
+  let query = { ...(req.query as unknown as ListDuesQuery) };
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (member) {
+      const memberships = await listChitMembershipsByMemberId(tenantId, member._id.toString());
+      const chitMembershipIds = memberships.map((m) => m._id.toString());
+      query = { ...query, chitMembershipIds } as any;
+    } else {
+      query = { ...query, chitMembershipIds: [] } as any;
+    }
+  }
+
+  const result = await collectionService.listDues(tenantId, query);
   res.status(200).json(result);
 }
 
@@ -69,7 +84,16 @@ export async function sync(req: Request, res: Response): Promise<void> {
 
 export async function list(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
-  const result = await collectionService.listCollections(tenantId, req.query as unknown as ListCollectionsQuery);
+  let query = { ...(req.query as unknown as ListCollectionsQuery) };
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (member) {
+      query = { ...query, memberId: member._id.toString() };
+    }
+  }
+
+  const result = await collectionService.listCollections(tenantId, query);
   res.status(200).json(result);
 }
 
@@ -95,6 +119,13 @@ export async function receipt(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
   const dto = await collectionService.getReceipt(tenantId, id);
+  res.status(200).json({ receipt: dto });
+}
+
+export async function receiptByPaymentId(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { paymentId } = req.params as unknown as PaymentIdParam;
+  const dto = await collectionService.getReceiptByPaymentId(tenantId, paymentId);
   res.status(200).json({ receipt: dto });
 }
 

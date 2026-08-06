@@ -208,19 +208,36 @@
 
 /* Mobile-first utility helpers & scroll optimization */
 @layer utilities {
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .mb-safe {
+    margin-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
   .touch-target {
     min-height: 44px;
     min-width: 44px;
   }
   .active-bounce {
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
   }
   .active-bounce:active {
-    transform: scale(0.97);
-    opacity: 0.9;
+    transform: scale(0.96);
+    opacity: 0.92;
   }
   .mobile-card {
-    @apply rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.99] active:bg-bg-raised;
+    @apply rounded-2xl border border-border-default/80 bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.98] active:bg-bg-raised;
+  }
+  .mobile-hero-card {
+    background: linear-gradient(135deg, var(--n900) 0%, var(--n800) 50%, var(--n950) 100%);
+    color: var(--n50);
+  }
+  :root[data-theme="light"] .mobile-hero-card {
+    background: linear-gradient(135deg, #443216 0%, #725320 50%, #2b1f0c 100%);
+    color: #ffffff;
   }
   .hide-scrollbar {
     -ms-overflow-style: none;

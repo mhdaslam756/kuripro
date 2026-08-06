@@ -23,3 +23,10 @@ export function useDashboardActivity(limit = 12) {
     queryFn: () => api.get<{ items: ActivityItem[] }>(`/dashboard/activity?limit=${limit}`).then((r) => r.items),
   });
 }
+
+export function useMemberDashboard() {
+  return useQuery({
+    queryKey: ["member-dashboard"],
+    queryFn: () => api.get<import("./types").MemberDashboardData>("/dashboard/member"),
+  });
+}

@@ -43,6 +43,11 @@ interface RequestOptions {
 }
 
 let refreshInFlight: Promise<void> | null = null;
+let onUnauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorizedHandler = handler;
+}
 
 async function refreshAccessToken(): Promise<void> {
   refreshInFlight ??= (async () => {
@@ -80,12 +85,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     credentials: "include",
   });
 
-  if (res.status === 401 && !options.skipAuthRetry) {
+  const isAuthEndpoint = path.startsWith("/auth/");
+
+  if (res.status === 401 && !options.skipAuthRetry && !isAuthEndpoint) {
     try {
       await refreshAccessToken();
       return await request<T>(path, { ...options, skipAuthRetry: true });
-    } catch {
-      // Refresh failed — fall through and surface the original 401 to the caller.
+    } catch (err) {
+      setAccessToken(null);
+      onUnauthorizedHandler?.();
+      throw new ApiError(401, "UNAUTHORIZED", "Session expired");
     }
   }
 
@@ -121,12 +130,16 @@ async function downloadBlob(path: string, skipAuthRetry = false): Promise<Blob> 
 
   const res = await fetch(`${API_BASE_URL}${path}`, { headers, credentials: "include" });
 
-  if (res.status === 401 && !skipAuthRetry) {
+  const isAuthEndpoint = path.startsWith("/auth/");
+
+  if (res.status === 401 && !skipAuthRetry && !isAuthEndpoint) {
     try {
       await refreshAccessToken();
       return await downloadBlob(path, true);
     } catch {
-      // fall through to the error below
+      setAccessToken(null);
+      onUnauthorizedHandler?.();
+      throw new ApiError(401, "UNAUTHORIZED", "Session expired");
     }
   }
 

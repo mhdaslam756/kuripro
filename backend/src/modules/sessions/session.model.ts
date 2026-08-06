@@ -7,7 +7,7 @@ export interface SessionDoc extends Timestamps {
   tenantId: Types.ObjectId | null;
   userId: Types.ObjectId;
 
-  /** Matches the Redis refresh-token key's tokenId — this document is metadata only, never the secret. */
+  /** Matches the refresh-token key's tokenId — this document is metadata only, never the secret. */
   tokenId: string;
 
   /** Stable client-generated id for "this browser/app install" — lets a returning device reuse one session row. */

@@ -61,6 +61,9 @@ function extractDeviceContext(req: Request, body: Partial<DeviceContext> = {}): 
 export async function registerOrganizer(req: Request, res: Response): Promise<void> {
   const input = req.body as RegisterOrganizerInput;
   const result = await authService.registerOrganizer(input, extractDeviceContext(req, input));
+  if (result.refreshToken) {
+    setRefreshCookie(res, result.refreshToken);
+  }
   res.status(201).json(result);
 }
 

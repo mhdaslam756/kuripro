@@ -121,7 +121,7 @@ export async function recordBid(
 
   // Only members who have paid the current cycle's installment are eligible to bid in this cycle's auction
   const currentPayment = await findInstallmentByCycleAndMembership(tenantId, cycleId, input.chitMembershipId);
-  if (currentPayment && currentPayment.status !== "PAID") {
+  if (!currentPayment || currentPayment.status !== "PAID") {
     throw AppError.conflict(
       `Ticket #${membership.ticketNumber} must pay this cycle's installment before participating in the auction.`,
     );
@@ -224,6 +224,17 @@ async function resolveWinner(
     }
     if (membership.hasWon) throw AppError.conflict("That member has already won a cycle");
 
+    const currentPayment = await findInstallmentByCycleAndMembership(
+      tenantId,
+      cycle._id.toString(),
+      membership._id.toString(),
+    );
+    if (!currentPayment || currentPayment.status !== "PAID") {
+      throw AppError.conflict(
+        `Ticket #${membership.ticketNumber} must pay this cycle's installment before being declared a winner.`,
+      );
+    }
+
     let winningBid: BidDocument | undefined;
     let winningDiscount = fullCommission; // commission-only prize when no bid is honoured
     if (input.winningBidId) {
@@ -245,7 +256,7 @@ async function resolveWinner(
   );
 
   const eligible = (await listActiveMembershipsByGroup(tenantId, chitGroup._id.toString())).filter(
-    (m) => !m.hasWon && (currentPayments.length === 0 || paidMembershipIds.has(m._id.toString())),
+    (m) => !m.hasWon && paidMembershipIds.has(m._id.toString()),
   );
   if (eligible.length === 0) throw AppError.conflict("No eligible members (who have paid this cycle) remain for the lottery");
   const winner = eligible[randomInt(eligible.length)]!;
@@ -530,7 +541,7 @@ export async function getAuctionState(tenantId: string, cycleId: string): Promis
     .filter((m) => !m.hasWon)
     .map((m) => {
       const member = memberById.get(m.memberId.toString());
-      const hasPaidCurrentCycle = currentPayments.length === 0 || paidMembershipIds.has(m._id.toString());
+      const hasPaidCurrentCycle = paidMembershipIds.has(m._id.toString());
       return {
         membershipId: m._id.toString(),
         ticketNumber: m.ticketNumber,

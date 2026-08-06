@@ -20,6 +20,7 @@ import {
   countChitMemberships,
   createChitMembership,
   deleteChitMembership,
+  findChitMembershipByIdOrMemberId,
   listChitMemberships as repoListChitMemberships,
   listTicketNumbers,
   type PopulatedMemberRef,
@@ -154,9 +155,9 @@ export async function updateChitGroup(
 
 export async function listChitGroups(
   tenantId: string,
-  query: ListChitGroupsQuery,
+  query: ListChitGroupsQuery & { groupIds?: string[] },
 ): Promise<PaginatedResult<ChitGroupDocument>> {
-  return repoListChitGroups({ tenantId, status: query.status }, query);
+  return repoListChitGroups({ tenantId, status: query.status, groupIds: query.groupIds }, query);
 }
 
 // --- Member assignment ---
@@ -264,10 +265,20 @@ export async function assignMembers(
 
 export async function removeMember(tenantId: string, chitGroupId: string, membershipId: string): Promise<void> {
   const chitGroup = await getChitGroupById(tenantId, chitGroupId);
-  if (chitGroup.status !== "DRAFT") {
-    throw AppError.conflict("Members can only be removed while the chit group is in DRAFT status");
+  if (chitGroup.status !== "DRAFT" && chitGroup.status !== "ACTIVE") {
+    throw AppError.conflict("Members can only be removed while the chit group is in DRAFT or ACTIVE status");
   }
-  const removed = await deleteChitMembership(tenantId, chitGroupId, membershipId);
+
+  const membership = await findChitMembershipByIdOrMemberId(tenantId, chitGroupId, membershipId);
+  if (!membership) {
+    throw AppError.notFound("Membership not found");
+  }
+
+  if (membership.hasWon) {
+    throw AppError.conflict("Cannot remove a member who has already won an auction in this group");
+  }
+
+  const removed = await deleteChitMembership(tenantId, chitGroupId, membership._id.toString());
   if (!removed) {
     throw AppError.notFound("Membership not found");
   }
@@ -283,8 +294,8 @@ export async function activateChitGroup(tenantId: string, chitGroupId: string): 
 
   const scope = { tenantId, chitGroupId };
   const enrolledCount = await countChitMemberships(scope, { status: "ACTIVE" });
-  if (enrolledCount !== chitGroup.totalMembers) {
-    throw AppError.conflict(`Roster is incomplete: ${enrolledCount} of ${chitGroup.totalMembers} tickets filled`);
+  if (enrolledCount === 0) {
+    throw AppError.conflict("At least 1 member must be enrolled before activating the chit group");
   }
 
   const scheduleDates = computeScheduleDates({

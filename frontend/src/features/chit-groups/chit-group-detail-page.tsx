@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatPaise } from "@/lib/format";
 import { ChitStatusBadge } from "./components/chit-badges";
+import { CollectTab } from "@/features/collections/collect-tab";
 import { AuctionTab } from "./tabs/auction-tab";
 import { DocumentsTab } from "./tabs/documents-tab";
 import { MembersTab } from "./tabs/members-tab";
@@ -15,7 +16,7 @@ import { TermsTab } from "./tabs/terms-tab";
 import { FREQUENCY_LABELS } from "./types";
 import { useChitGroup } from "./use-chit-groups";
 
-const TABS = ["Overview", "Schedule", "Members", "Auction Rules", "Documents", "Terms", "Reports"] as const;
+const TABS = ["Overview", "Collections", "Schedule", "Members", "Auction Rules", "Documents", "Terms", "Reports"] as const;
 
 export function ChitGroupDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,16 +52,21 @@ export function ChitGroupDetailPage() {
           </header>
 
           <Tabs defaultValue="Overview">
-            <TabsList className="flex-wrap">
-              {TABS.map((tab) => (
-                <TabsTrigger key={tab} value={tab}>
-                  {tab}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="overflow-x-auto hide-scrollbar pb-1 mb-4">
+              <TabsList className="inline-flex min-w-full sm:min-w-0 sm:flex-wrap">
+                {TABS.map((tab) => (
+                  <TabsTrigger key={tab} value={tab} className="shrink-0 active-bounce">
+                    {tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             <TabsContent value="Overview">
               <OverviewTab chitGroup={chit} />
+            </TabsContent>
+            <TabsContent value="Collections">
+              <CollectTab initialGroupId={chit.id} />
             </TabsContent>
             <TabsContent value="Schedule">
               <ScheduleTab chitGroup={chit} />

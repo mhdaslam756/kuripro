@@ -1,22 +1,40 @@
-import { Queue, type Job } from "bullmq";
+type ProcessorFn<DataType, ResultType> = (job: { id: string; data: DataType }) => Promise<ResultType>;
 
-import { createBullConnection } from "../config/redis.js";
+const processors = new Map<string, ProcessorFn<any, any>>();
 
-const queueRegistry = new Map<string, Queue>();
-
-/**
- * Returns a lazily-created BullMQ Queue for `name`, cached for the process. Each queue owns a
- * dedicated Redis connection (see `createBullConnection`) rather than sharing the app connection.
- */
-export function getQueue<DataType = unknown, ResultType = unknown>(
+export function registerWorkerProcessor<DataType, ResultType>(
   name: string,
-): Queue<DataType, ResultType> {
-  const existing = queueRegistry.get(name);
-  if (existing) return existing as Queue<DataType, ResultType>;
-
-  const queue = new Queue<DataType, ResultType>(name, { connection: createBullConnection() });
-  queueRegistry.set(name, queue as Queue);
-  return queue;
+  processor: ProcessorFn<DataType, ResultType>,
+) {
+  processors.set(name, processor);
 }
 
-export type { Job };
+export function getQueue<DataType = unknown, ResultType = unknown>(name: string) {
+  return {
+    add: async (_jobName: string, data: DataType, _opts?: any) => {
+      const jobId = Math.random().toString(36).substring(2, 9);
+      const job = { id: jobId, data };
+      const processor = processors.get(name);
+
+      const promise = (async () => {
+        if (processor) {
+          return await processor(job);
+        }
+        return undefined as unknown as ResultType;
+      })();
+
+      return {
+        id: jobId,
+        waitUntilFinished: async (_events?: any, _timeoutMs?: number) => {
+          return await promise;
+        },
+      };
+    },
+  };
+}
+
+export type Job<DataType = unknown, ResultType = unknown> = {
+  id?: string;
+  data: DataType;
+  returnvalue?: ResultType;
+};

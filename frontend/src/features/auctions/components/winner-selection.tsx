@@ -118,8 +118,9 @@ export function WinnerSelection({ state, bids }: Props) {
 
         {method === "LOTTERY" ? (
           <p className="rounded-md border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-secondary">
-            A winner will be drawn at random from the {state.eligibleMembers.length} members who haven't won yet. Prize =
-            pot minus foreman commission.
+            A winner will be drawn at random from the{" "}
+            {state.eligibleMembers.filter((m) => m.hasPaidCurrentCycle).length} members who have completed payment for
+            this cycle. Prize = pot minus foreman commission.
           </p>
         ) : null}
 

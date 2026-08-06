@@ -14,7 +14,7 @@ import { listWonCyclesByMembershipIds } from "../chit-cycles/chit-cycle.reposito
 import { getPaymentPunctualityStats, listPaymentsByMembershipIds } from "../payments/payment.repository.js";
 import { listPayoutsByCycleIds } from "../payouts/payout.repository.js";
 import { getOrganizationRoleBySlug } from "../roles/role.service.js";
-import { createUser, findUserByEmail } from "../users/user.repository.js";
+import { createUser, findUserByEmail, findUserById } from "../users/user.repository.js";
 import type { UserDocument } from "../users/user.model.js";
 import { AppError } from "../../utils/app-error.js";
 import { generateTemporaryPassword, hashPassword } from "../../utils/password.js";
@@ -41,6 +41,7 @@ import {
   createMember,
   findMemberByAadhaarHash,
   findMemberById,
+  findMemberByPhone,
   findMemberByQrToken,
   findMemberByUserId,
   saveMember,
@@ -48,7 +49,7 @@ import {
   listMembersForExport,
   type SearchMembersFilter,
 } from "./member.repository.js";
-import type { MemberDocument } from "./member.model.js";
+import { Member, type MemberDocument } from "./member.model.js";
 import {
   createNominee,
   deleteNominee,
@@ -846,3 +847,31 @@ export async function commitBulkImport(
 
   return { created, skipped: reports.length - created, reports };
 }
+
+export async function resolveMemberForUser(userId: string, tenantId: string): Promise<MemberDocument | null> {
+  let member = await findMemberByUserId(userId, tenantId);
+  if (!member) {
+    const user = await findUserById(userId);
+    if (user) {
+      if (user.phone) {
+        member = await findMemberByPhone(tenantId, user.phone);
+        if (!member) {
+          const digits = user.phone.replace(/\D/g, "");
+          if (digits.length >= 10) {
+            const last10 = digits.slice(-10);
+            member = await Member.findOne({ tenantId, phone: { $regex: last10 + "$" } });
+          }
+        }
+      }
+      if (!member && user.email) {
+        member = await Member.findOne({ tenantId, email: user.email });
+      }
+      if (member && !member.userId) {
+        member.userId = new Types.ObjectId(userId) as any;
+        await member.save();
+      }
+    }
+  }
+  return member;
+}
+

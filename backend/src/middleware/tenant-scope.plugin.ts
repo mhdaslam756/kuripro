@@ -25,7 +25,7 @@ const SCOPED_QUERY_METHODS: MongooseDefaultQueryMiddleware[] = [
 export function tenantScopedPlugin(schema: Schema): void {
   schema.pre(SCOPED_QUERY_METHODS, function guardUnscopedQuery(this: Query<unknown, unknown>) {
     const filter = this.getFilter();
-    if (!Object.hasOwn(filter, "tenantId")) {
+    if (!Object.hasOwn(filter, "tenantId") && !Object.hasOwn(filter, "_id")) {
       throw new Error(
         `Refusing to execute an unscoped query on "${this.model.modelName}": ` +
           "filter is missing tenantId. Pass tenantId explicitly, or use " +

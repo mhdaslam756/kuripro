@@ -9,22 +9,32 @@ import { api } from "@/lib/api-client";
 
 interface Props {
   open: boolean;
+  initialPassword?: string;
   onPasswordChanged: () => void;
 }
 
-export function FirstLoginModal({ open, onPasswordChanged }: Props) {
-  const [currentPassword, setCurrentPassword] = useState("");
+export function FirstLoginModal({ open, initialPassword = "", onPasswordChanged }: Props) {
+  const [currentPassword, setCurrentPassword] = useState(initialPassword);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Sync currentPassword if initialPassword is provided
+  if (initialPassword && !currentPassword) {
+    setCurrentPassword(initialPassword);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
 
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters long");
+    const hasUpper = /[A-Z]/.test(newPassword);
+    const hasLower = /[a-z]/.test(newPassword);
+    const hasDigit = /\d/.test(newPassword);
+
+    if (newPassword.length < 10 || !hasUpper || !hasLower || !hasDigit) {
+      setError("Password must be at least 10 characters and include an uppercase letter, a lowercase letter, and a digit");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -34,7 +44,7 @@ export function FirstLoginModal({ open, onPasswordChanged }: Props) {
 
     setLoading(true);
     try {
-      await api.post("/auth/change-password", { currentPassword, newPassword });
+      await api.post("/auth/change-password", { currentPassword: currentPassword || initialPassword, newPassword });
       onPasswordChanged();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update password");

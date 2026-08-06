@@ -67,29 +67,50 @@ export function FinanceReportTab({ kind, range, onRangeChange }: Props) {
                 />
               </ChartCard>
               <ChartCard title="Breakdown">
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableHeaderCell>Category</TableHeaderCell>
-                        <TableHeaderCell>Entries</TableHeaderCell>
-                        <TableHeaderCell>Amount</TableHeaderCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {data.byCategory.map((c) => (
-                        <TableRow key={c.category}>
-                          <TableCell className="font-medium">
-                            {c.category}
-                            {c.system ? <span className="ml-2 text-xs text-text-secondary">(auto)</span> : null}
-                          </TableCell>
-                          <TableCell className="text-text-secondary">{c.system ? "—" : c.count}</TableCell>
-                          <TableCell>{formatPaise(c.total)}</TableCell>
+                {/* Mobile View: Cards */}
+                <div className="grid gap-2.5 md:hidden p-1">
+                  {data.byCategory.map((c) => (
+                    <div
+                      key={c.category}
+                      className="active-bounce flex items-center justify-between rounded-xl border border-border-default bg-bg-surface p-3 shadow-xs"
+                    >
+                      <div>
+                        <p className="font-semibold text-text-primary text-sm">
+                          {c.category} {c.system ? <span className="text-xs font-normal text-text-secondary">(auto)</span> : null}
+                        </p>
+                        <p className="text-[11px] text-text-secondary">{c.system ? "Auto generated" : `${c.count} entries`}</p>
+                      </div>
+                      <p className="font-display text-base font-bold text-text-primary tabular-nums">{formatPaise(c.total)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden md:block">
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableHeaderCell>Category</TableHeaderCell>
+                          <TableHeaderCell>Entries</TableHeaderCell>
+                          <TableHeaderCell>Amount</TableHeaderCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {data.byCategory.map((c) => (
+                          <TableRow key={c.category}>
+                            <TableCell className="font-medium">
+                              {c.category}
+                              {c.system ? <span className="ml-2 text-xs text-text-secondary">(auto)</span> : null}
+                            </TableCell>
+                            <TableCell className="text-text-secondary">{c.system ? "—" : c.count}</TableCell>
+                            <TableCell>{formatPaise(c.total)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </div>
               </ChartCard>
             </div>
           )}

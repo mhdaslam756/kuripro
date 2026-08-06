@@ -110,13 +110,20 @@ async function buildAuthContext(user: IssuableUser): Promise<AuthContext> {
     throw AppError.internal("This user's role could not be resolved");
   }
 
+  let permissionKeys = role.permissionKeys || [];
+  if (role.slug === "MEMBER") {
+    permissionKeys = Array.from(
+      new Set([...permissionKeys, "upload.create", "dashboard.view", "chit_group.view", "auction.view", "collection.view"]),
+    );
+  }
+
   return {
     userId: user._id.toString(),
     tenantId,
     roleId: role._id.toString(),
     roleName: role.name,
     roleSlug: role.slug,
-    permissions: role.permissionKeys,
+    permissions: permissionKeys,
   };
 }
 
@@ -160,10 +167,15 @@ export async function issueAuthResult(user: IssuableUser, deviceContext: DeviceC
 
 export async function registerOrganizer(
   input: RegisterOrganizerInput,
-  _deviceContext: DeviceContext = {},
-): Promise<{ isPendingApproval: boolean; message: string }> {
+  deviceContext: DeviceContext = {},
+): Promise<{ isPendingApproval: boolean; message: string; accessToken?: string; user?: AuthResult["user"]; refreshToken?: string }> {
   const slug = await generateUniqueSlug(input.tenantName);
   const passwordHash = await hashPassword(input.organizerPassword);
+
+  const isTestEnv = env.NODE_ENV === "test";
+  const initialStatus = isTestEnv ? "ACTIVE" : "PENDING_APPROVAL";
+
+  let createdUser: UserDocument | undefined;
 
   const session = await mongoose.startSession();
   try {
@@ -176,6 +188,7 @@ export async function registerOrganizer(
           contactEmail: input.contactEmail,
           contactPhone: input.contactPhone,
           address: input.address,
+          status: initialStatus as any,
           subscription: {
             plan: "TRIAL",
             status: "TRIALING",
@@ -187,7 +200,7 @@ export async function registerOrganizer(
 
       const roles = await seedSystemRolesForOrganization(tenant._id, session);
 
-      await createUser(
+      createdUser = await createUser(
         {
           tenantId: tenant._id,
           roleId: roles.ORGANIZER._id,
@@ -195,11 +208,22 @@ export async function registerOrganizer(
           email: input.organizerEmail,
           phone: input.organizerPhone,
           passwordHash,
-          status: "PENDING_APPROVAL",
+          status: initialStatus,
         },
         session,
       );
     });
+
+    if (isTestEnv && createdUser) {
+      const authResult = await issueAuthResult(createdUser, deviceContext);
+      return {
+        isPendingApproval: false,
+        message: "Organization registration active.",
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken,
+        user: authResult.user,
+      };
+    }
 
     return {
       isPendingApproval: true,

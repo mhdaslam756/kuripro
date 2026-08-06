@@ -107,74 +107,155 @@ export function HistoryTab() {
         </div>
       ) : (
         <>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Receipt</TableHeaderCell>
-                  <TableHeaderCell>Member</TableHeaderCell>
-                  <TableHeaderCell>Amount</TableHeaderCell>
-                  <TableHeaderCell>Method</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
-                  <TableHeaderCell>Collected</TableHeaderCell>
-                  <TableHeaderCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.items.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-mono text-xs">
-                      {c.receiptNumber}
-                      {c.isOffline ? <Badge variant="neutral" className="ml-2">Offline</Badge> : null}
-                      {c.isAdvance ? <Badge variant="info" className="ml-2">Advance</Badge> : null}
-                    </TableCell>
-                    <TableCell className="font-medium">
+          {/* Mobile View: Touch Cards */}
+          <div className="grid gap-3 md:hidden">
+            {data.items.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => openReceipt(c.id)}
+                className="active-bounce flex flex-col justify-between rounded-2xl border border-border-default bg-bg-surface p-4 shadow-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
+                        {c.receiptNumber}
+                      </span>
+                      {c.isOffline ? <Badge variant="neutral">Offline</Badge> : null}
+                      {c.isAdvance ? <Badge variant="info">Advance</Badge> : null}
+                    </div>
+                    <p className="mt-1.5 font-semibold text-text-primary text-base leading-tight">
                       {c.memberId.name}
-                      <span className="ml-2 font-mono text-xs text-text-secondary">{c.memberId.memberCode}</span>
-                    </TableCell>
-                    <TableCell>{formatPaise(c.amount)}</TableCell>
-                    <TableCell>
-                      <MethodBadge method={c.method} />
-                    </TableCell>
-                    <TableCell>
-                      <CollectionStatusBadge status={c.status} />
-                    </TableCell>
-                    <TableCell className="text-text-secondary">{formatDateTime(c.collectedAt)}</TableCell>
-                    <TableCell className="flex justify-end gap-2">
-                      {canReconcile && c.status === "PENDING_CLEARANCE" ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={clearCollection.isPending}
-                            onClick={() => void clearCollection.mutateAsync(c.id)}
-                          >
-                            Clear
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={bounceCollection.isPending}
-                            onClick={() => void bounceCollection.mutateAsync(c.id)}
-                          >
-                            Bounce
-                          </Button>
-                        </>
-                      ) : null}
-                      <button
-                        type="button"
-                        aria-label="View receipt"
-                        className="text-text-secondary hover:text-accent-primary"
-                        onClick={() => openReceipt(c.id)}
-                      >
-                        <ReceiptIcon size={16} />
-                      </button>
-                    </TableCell>
+                    </p>
+                    <p className="mt-0.5 font-mono text-xs text-text-secondary">{c.memberId.memberCode}</p>
+                  </div>
+                  <CollectionStatusBadge status={c.status} />
+                </div>
+
+                <div className="mt-3 flex items-end justify-between border-t border-border-default/60 pt-2.5">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Amount Collected</p>
+                    <p className="font-display text-lg font-bold tabular-nums text-text-primary">{formatPaise(c.amount)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MethodBadge method={c.method} />
+                    <button
+                      type="button"
+                      aria-label="View receipt"
+                      className="p-1.5 text-text-secondary hover:text-accent-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openReceipt(c.id);
+                      }}
+                    >
+                      <ReceiptIcon size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {canReconcile && c.status === "PENDING_CLEARANCE" ? (
+                  <div className="mt-3 flex items-center gap-2 border-t border-border-default/60 pt-2.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs font-semibold h-8"
+                      disabled={clearCollection.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void clearCollection.mutateAsync(c.id);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1 text-xs font-semibold h-8"
+                      disabled={bounceCollection.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void bounceCollection.mutateAsync(c.id);
+                      }}
+                    >
+                      Bounce
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden md:block">
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Receipt</TableHeaderCell>
+                    <TableHeaderCell>Member</TableHeaderCell>
+                    <TableHeaderCell>Amount</TableHeaderCell>
+                    <TableHeaderCell>Method</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell>Collected</TableHeaderCell>
+                    <TableHeaderCell />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-mono text-xs">
+                        {c.receiptNumber}
+                        {c.isOffline ? <Badge variant="neutral" className="ml-2">Offline</Badge> : null}
+                        {c.isAdvance ? <Badge variant="info" className="ml-2">Advance</Badge> : null}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {c.memberId.name}
+                        <span className="ml-2 font-mono text-xs text-text-secondary">{c.memberId.memberCode}</span>
+                      </TableCell>
+                      <TableCell>{formatPaise(c.amount)}</TableCell>
+                      <TableCell>
+                        <MethodBadge method={c.method} />
+                      </TableCell>
+                      <TableCell>
+                        <CollectionStatusBadge status={c.status} />
+                      </TableCell>
+                      <TableCell className="text-text-secondary">{formatDateTime(c.collectedAt)}</TableCell>
+                      <TableCell className="flex justify-end gap-2">
+                        {canReconcile && c.status === "PENDING_CLEARANCE" ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={clearCollection.isPending}
+                              onClick={() => void clearCollection.mutateAsync(c.id)}
+                            >
+                              Clear
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={bounceCollection.isPending}
+                              onClick={() => void bounceCollection.mutateAsync(c.id)}
+                            >
+                              Bounce
+                            </Button>
+                          </>
+                        ) : null}
+                        <button
+                          type="button"
+                          aria-label="View receipt"
+                          className="text-text-secondary hover:text-accent-primary"
+                          onClick={() => openReceipt(c.id)}
+                        >
+                          <ReceiptIcon size={16} />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </div>
 
           <div className="flex items-center justify-between text-sm text-text-secondary">
             <span>

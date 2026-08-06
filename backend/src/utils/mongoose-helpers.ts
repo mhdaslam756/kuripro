@@ -1,4 +1,4 @@
-import type { SchemaOptions, Types } from "mongoose";
+import { Types, type SchemaOptions } from "mongoose";
 
 /** Every model uses `baseSchemaOptions` (timestamps: true) — every Doc interface should extend this. */
 export interface Timestamps {
@@ -29,3 +29,13 @@ export const baseSchemaOptions: SchemaOptions = {
     },
   },
 };
+
+/** Converts a string to Types.ObjectId safely without throwing BSONError on invalid/ALL inputs. */
+export function safeObjectId(id: unknown): Types.ObjectId | null {
+  if (!id || id === "ALL") return null;
+  if (id instanceof Types.ObjectId) return id;
+  if (typeof id === "string" && Types.ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id.trim())) {
+    return new Types.ObjectId(id.trim());
+  }
+  return null;
+}

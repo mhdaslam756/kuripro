@@ -19,6 +19,12 @@ export const mongoIdParamSchema = z.object({
 
 export type MongoIdParam = z.infer<typeof mongoIdParamSchema>;
 
+export const paymentIdParamSchema = z.object({
+  paymentId: objectId,
+});
+
+export type PaymentIdParam = z.infer<typeof paymentIdParamSchema>;
+
 /** Validates a two-level nested resource route: `/:id/<child>/:childId`. */
 export const nestedMongoIdParamSchema = z.object({
   id: objectId,

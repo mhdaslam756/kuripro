@@ -19,6 +19,8 @@ dashboardRouter.get(
   dashboardController.trends,
 );
 
+dashboardRouter.get("/member", dashboardController.memberDashboard);
+
 dashboardRouter.get(
   "/activity",
   requirePermission("dashboard.view"),

@@ -111,13 +111,29 @@ export async function listChitMemberships(
   return buildPaginatedResult(paginatedItems as any, total, query);
 }
 
+export async function findChitMembershipByIdOrMemberId(
+  tenantId: string,
+  chitGroupId: string,
+  idOrMemberId: string,
+): Promise<ChitMembershipDocument | null> {
+  return ChitMembership.findOne({
+    tenantId,
+    chitGroupId,
+    $or: [{ _id: idOrMemberId }, { memberId: idOrMemberId }],
+  });
+}
+
 /** Model-level delete (keeps the tenant filter so the tenant-scope guard is satisfied). */
 export async function deleteChitMembership(
   tenantId: string,
   chitGroupId: string,
-  membershipId: string,
+  membershipIdOrMemberId: string,
 ): Promise<boolean> {
-  const result = await ChitMembership.deleteOne({ _id: membershipId, tenantId, chitGroupId });
+  const result = await ChitMembership.deleteOne({
+    tenantId,
+    chitGroupId,
+    $or: [{ _id: membershipIdOrMemberId }, { memberId: membershipIdOrMemberId }],
+  });
   return result.deletedCount > 0;
 }
 

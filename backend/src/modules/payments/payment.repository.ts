@@ -1,6 +1,6 @@
 import { Types, type ClientSession } from "mongoose";
 
-import type { ObjectIdLike } from "../../utils/mongoose-helpers.js";
+import { safeObjectId, type ObjectIdLike } from "../../utils/mongoose-helpers.js";
 import { buildPaginatedResult, toSkipLimit, type PaginatedResult, type PaginationQuery } from "../../utils/pagination.js";
 import { computeInstallmentStatus } from "./installment-status.js";
 import { Payment, type PaymentDoc, type PaymentDocument, type PaymentStatus } from "./payment.model.js";
@@ -41,6 +41,7 @@ export interface ListInstallmentsFilter {
   chitGroupId?: string;
   chitCycleId?: string;
   chitMembershipId?: string;
+  chitMembershipIds?: string[];
   status?: PaymentStatus;
 }
 
@@ -77,10 +78,26 @@ export async function listMembershipIdsWithInstallment(
 }
 
 function buildInstallmentFilter(filter: ListInstallmentsFilter): Record<string, unknown> {
-  const mongoFilter: Record<string, unknown> = { tenantId: filter.tenantId };
-  if (filter.chitGroupId) mongoFilter["chitGroupId"] = filter.chitGroupId;
-  if (filter.chitCycleId) mongoFilter["chitCycleId"] = filter.chitCycleId;
-  if (filter.chitMembershipId) mongoFilter["chitMembershipId"] = filter.chitMembershipId;
+  const mongoFilter: Record<string, unknown> = {};
+
+  const tenantObjId = safeObjectId(filter.tenantId);
+  if (tenantObjId) mongoFilter["tenantId"] = tenantObjId;
+  else if (filter.tenantId) mongoFilter["tenantId"] = filter.tenantId;
+
+  const groupObjId = safeObjectId(filter.chitGroupId);
+  if (groupObjId) mongoFilter["chitGroupId"] = groupObjId;
+
+  const cycleObjId = safeObjectId(filter.chitCycleId);
+  if (cycleObjId) mongoFilter["chitCycleId"] = cycleObjId;
+
+  const membershipObjId = safeObjectId(filter.chitMembershipId);
+  if (membershipObjId) mongoFilter["chitMembershipId"] = membershipObjId;
+
+  if (filter.chitMembershipIds !== undefined) {
+    const validIds = filter.chitMembershipIds.map(safeObjectId).filter((id): id is Types.ObjectId => id !== null);
+    mongoFilter["chitMembershipId"] = { $in: validIds };
+  }
+
   if (filter.status) mongoFilter["status"] = filter.status;
   return mongoFilter;
 }
@@ -99,8 +116,9 @@ export async function listInstallments(
       .limit(limit)
       .populate<{ chitMembershipId: PopulatedInstallmentMembership }>({
         path: "chitMembershipId",
+        match: { tenantId: { $exists: true } },
         select: "ticketNumber memberId",
-        populate: { path: "memberId", select: "name memberCode phone" },
+        populate: { path: "memberId", match: { tenantId: { $exists: true } }, select: "name memberCode phone" },
       }),
     Payment.countDocuments(mongoFilter),
   ]);

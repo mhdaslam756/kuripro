@@ -1,4 +1,9 @@
 import { listTenantActivity } from "../activity-logs/activity-log.service.js";
+import { countSettledCycles, findChitCycleByNumber } from "../chit-cycles/chit-cycle.repository.js";
+import { findChitGroupById } from "../chit-groups/chit-group.repository.js";
+import { listChitMembershipsByMemberId } from "../chit-groups/chit-membership.repository.js";
+import { resolveMemberForUser } from "../members/member.service.js";
+import { Payment } from "../payments/payment.model.js";
 import * as repo from "./dashboard.repository.js";
 
 // --- Date helpers ---
@@ -176,4 +181,187 @@ export async function getActivity(tenantId: string, limit: number): Promise<Acti
     message: log.message,
     createdAt: log.createdAt.toISOString(),
   }));
+}
+
+// --- Member Dashboard ---
+
+export interface MemberDashboardData {
+  isMember: boolean;
+  member: {
+    id: string;
+    memberCode: string;
+    name: string;
+    phone: string;
+    email?: string;
+    status: string;
+  } | null;
+  summary: {
+    totalGroups: number;
+    completedCycles: number;
+    totalPaid: number;
+    totalOutstanding: number;
+    prizesWon: number;
+  };
+  groups: {
+    id: string;
+    name: string;
+    registrationNumber: string;
+    chitValueRupees: number;
+    ticketNumber: number;
+    frequency: string;
+    totalMembers: number;
+    completedCyclesCount: number;
+    installmentAmount: number;
+    status: string;
+    hasWon: boolean;
+  }[];
+  recentPayments: {
+    id: string;
+    amountPaid: number;
+    amountDue: number;
+    dueDate: string;
+    paidAt?: string;
+    status: string;
+    method?: string;
+  }[];
+}
+
+export async function getMemberDashboard(tenantId: string, userId: string): Promise<MemberDashboardData> {
+  const member = await resolveMemberForUser(userId, tenantId);
+  if (!member) {
+    return {
+      isMember: false,
+      member: null,
+      summary: { totalGroups: 0, completedCycles: 0, totalPaid: 0, totalOutstanding: 0, prizesWon: 0 },
+      groups: [],
+      recentPayments: [],
+    };
+  }
+
+  const memberId = member._id.toString();
+  const memberships = await listChitMembershipsByMemberId(tenantId, memberId);
+  const membershipIds = memberships.map((m) => m._id);
+
+  if (memberships.length === 0) {
+    return {
+      isMember: true,
+      member: {
+        id: member._id.toString(),
+        memberCode: member.memberCode,
+        name: member.name,
+        phone: member.phone,
+        email: member.email,
+        status: member.status,
+      },
+      summary: { totalGroups: 0, completedCycles: 0, totalPaid: 0, totalOutstanding: 0, prizesWon: 0 },
+      groups: [],
+      recentPayments: [],
+    };
+  }
+
+  // Parallel Batch: Fetch all payments and group details concurrently
+  const [allPayments, groupDetails] = await Promise.all([
+    Payment.find({ tenantId, chitMembershipId: { $in: membershipIds } }).sort({ paidAt: -1, updatedAt: -1 }),
+    Promise.all(
+      memberships.map(async (m) => {
+        const groupRef = m.chitGroupId as any;
+        const chitGroupId = groupRef?._id ? groupRef._id.toString() : groupRef?.toString();
+        if (!chitGroupId) return null;
+
+        const chitGroup = await findChitGroupById(chitGroupId, tenantId);
+        if (!chitGroup) return null;
+
+        const cycleNumber = chitGroup.currentCycleNumber || 1;
+        const [settledCyclesCount, currentCycle] = await Promise.all([
+          countSettledCycles(tenantId, chitGroupId),
+          findChitCycleByNumber(tenantId, chitGroupId, cycleNumber),
+        ]);
+
+        const currentCyclePaidCount = currentCycle
+          ? await Payment.countDocuments({ tenantId, chitGroupId, chitCycleId: currentCycle._id, status: "PAID" })
+          : 0;
+
+        return { m, chitGroup, settledCyclesCount, cycleNumber, currentCyclePaidCount };
+      }),
+    ),
+  ]);
+
+  // Fast O(1) Map lookup for payments per membership
+  const paymentsByMembership = new Map<string, typeof allPayments>();
+  for (const p of allPayments) {
+    const key = p.chitMembershipId.toString();
+    const list = paymentsByMembership.get(key) || [];
+    list.push(p);
+    paymentsByMembership.set(key, list);
+  }
+
+  let completedCycles = 0;
+  let totalPaid = 0;
+  let totalOutstanding = 0;
+  let prizesWon = 0;
+
+  const groupsList = [];
+
+  for (const item of groupDetails) {
+    if (!item) continue;
+    const { m, chitGroup, settledCyclesCount, cycleNumber, currentCyclePaidCount } = item;
+
+    completedCycles += settledCyclesCount;
+    if (m.hasWon) prizesWon += 1;
+
+    const mPayments = paymentsByMembership.get(m._id.toString()) || [];
+    const paidForGroup = mPayments.reduce((s, p) => s + (p.amountPaid || 0), 0);
+    const dueForGroup = mPayments.reduce((s, p) => s + (p.amountDue || 0), 0);
+    const outstandingForGroup = Math.max(0, dueForGroup - paidForGroup);
+
+    totalPaid += paidForGroup;
+    totalOutstanding += outstandingForGroup;
+
+    groupsList.push({
+      id: chitGroup._id.toString(),
+      name: chitGroup.name,
+      registrationNumber: chitGroup.registrationNumber,
+      chitValueRupees: Math.round(chitGroup.chitValue / 100),
+      ticketNumber: m.ticketNumber,
+      frequency: chitGroup.frequency,
+      totalMembers: chitGroup.totalMembers,
+      completedCyclesCount: settledCyclesCount,
+      currentCycleNumber: cycleNumber,
+      currentCyclePaidCount,
+      installmentAmount: chitGroup.installmentAmount,
+      status: chitGroup.status,
+      hasWon: Boolean(m.hasWon),
+    });
+  }
+
+  const recentPayments = allPayments.slice(0, 10).map((p) => ({
+    id: p._id.toString(),
+    amountPaid: p.amountPaid,
+    amountDue: p.amountDue,
+    dueDate: p.dueDate.toISOString(),
+    paidAt: p.paidAt ? p.paidAt.toISOString() : undefined,
+    status: p.status,
+    method: p.method,
+  }));
+
+  return {
+    isMember: true,
+    member: {
+      id: member._id.toString(),
+      memberCode: member.memberCode,
+      name: member.name,
+      phone: member.phone,
+      email: member.email,
+      status: member.status,
+    },
+    summary: {
+      totalGroups: memberships.length,
+      completedCycles,
+      totalPaid,
+      totalOutstanding,
+      prizesWon,
+    },
+    groups: groupsList,
+    recentPayments,
+  };
 }

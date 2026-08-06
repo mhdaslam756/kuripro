@@ -31,32 +31,68 @@ export function BookTab({ kind, range, onRangeChange }: Props) {
           {data.rows.length === 0 ? (
             <EmptyReport label={`No ${kind === "cashbook" ? "cash" : "bank"} movements in this period.`} />
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Date</TableHeaderCell>
-                    <TableHeaderCell>Particulars</TableHeaderCell>
-                    <TableHeaderCell>Reference</TableHeaderCell>
-                    <TableHeaderCell>Inflow</TableHeaderCell>
-                    <TableHeaderCell>Outflow</TableHeaderCell>
-                    <TableHeaderCell>Balance</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.rows.slice(0, 300).map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-text-secondary">{formatDate(r.date)}</TableCell>
-                      <TableCell className="font-medium">{r.particulars}</TableCell>
-                      <TableCell className="font-mono text-xs text-text-secondary">{r.reference}</TableCell>
-                      <TableCell className="text-good-fg">{r.inflow ? formatPaise(r.inflow) : "—"}</TableCell>
-                      <TableCell className="text-bad-fg">{r.outflow ? formatPaise(r.outflow) : "—"}</TableCell>
-                      <TableCell className="font-medium tabular-nums">{formatPaise(r.balance)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              {/* Mobile View: Cards */}
+              <div className="grid gap-3 md:hidden">
+                {data.rows.slice(0, 300).map((r, i) => (
+                  <div
+                    key={i}
+                    className="active-bounce flex flex-col justify-between rounded-2xl border border-border-default bg-bg-surface p-4 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold text-text-primary text-base leading-tight">{r.particulars}</h4>
+                        <p className="mt-0.5 font-mono text-xs text-text-secondary">{r.reference} · {formatDate(r.date)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-end justify-between border-t border-border-default/60 pt-2.5">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Balance</p>
+                        <p className="font-display text-base font-bold tabular-nums text-text-primary">{formatPaise(r.balance)}</p>
+                      </div>
+                      <div className="text-right">
+                        {r.inflow ? (
+                          <span className="font-display text-base font-bold text-good-fg">+{formatPaise(r.inflow)}</span>
+                        ) : r.outflow ? (
+                          <span className="font-display text-base font-bold text-bad-fg">-{formatPaise(r.outflow)}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden md:block">
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>Date</TableHeaderCell>
+                        <TableHeaderCell>Particulars</TableHeaderCell>
+                        <TableHeaderCell>Reference</TableHeaderCell>
+                        <TableHeaderCell>Inflow</TableHeaderCell>
+                        <TableHeaderCell>Outflow</TableHeaderCell>
+                        <TableHeaderCell>Balance</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data.rows.slice(0, 300).map((r, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-text-secondary">{formatDate(r.date)}</TableCell>
+                          <TableCell className="font-medium">{r.particulars}</TableCell>
+                          <TableCell className="font-mono text-xs text-text-secondary">{r.reference}</TableCell>
+                          <TableCell className="text-good-fg">{r.inflow ? formatPaise(r.inflow) : "—"}</TableCell>
+                          <TableCell className="text-bad-fg">{r.outflow ? formatPaise(r.outflow) : "—"}</TableCell>
+                          <TableCell className="font-medium tabular-nums">{formatPaise(r.balance)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </div>
+            </>
           )}
         </div>
       )}

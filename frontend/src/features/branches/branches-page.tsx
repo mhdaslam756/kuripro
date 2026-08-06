@@ -55,41 +55,81 @@ export function BranchesPage() {
       ) : data.items.length === 0 ? (
         <p className="text-sm text-text-secondary">No branches yet — add your first one.</p>
       ) : (
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Code</TableHeaderCell>
-                <TableHeaderCell>City</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.items.map((branch) => (
-                <TableRow key={branch.id}>
-                  <TableCell className="font-medium">{branch.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{branch.code}</TableCell>
-                  <TableCell>{branch.address.city}</TableCell>
-                  <TableCell>
-                    <Badge variant={branch.status === "ACTIVE" ? "success" : "neutral"}>{branch.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => openEditDialog(branch)}
-                      className="text-text-secondary hover:text-accent-primary"
-                      aria-label={`Edit ${branch.name}`}
-                    >
-                      <Pencil size={15} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <>
+          {/* Mobile View: Cards */}
+          <div className="grid gap-3 md:hidden">
+            {data.items.map((branch) => (
+              <div
+                key={branch.id}
+                onClick={() => openEditDialog(branch)}
+                className="active-bounce flex items-center justify-between rounded-2xl border border-border-default bg-bg-surface p-4 shadow-xs"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-text-primary text-base">{branch.name}</span>
+                    <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
+                      {branch.code}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-text-secondary">City: {branch.address.city}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={branch.status === "ACTIVE" ? "success" : "neutral"}>{branch.status}</Badge>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditDialog(branch);
+                    }}
+                    className="p-1.5 text-text-secondary hover:text-accent-primary"
+                    aria-label={`Edit ${branch.name}`}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden md:block">
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Name</TableHeaderCell>
+                    <TableHeaderCell>Code</TableHeaderCell>
+                    <TableHeaderCell>City</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((branch) => (
+                    <TableRow key={branch.id}>
+                      <TableCell className="font-medium">{branch.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{branch.code}</TableCell>
+                      <TableCell>{branch.address.city}</TableCell>
+                      <TableCell>
+                        <Badge variant={branch.status === "ACTIVE" ? "success" : "neutral"}>{branch.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => openEditDialog(branch)}
+                          className="text-text-secondary hover:text-accent-primary"
+                          aria-label={`Edit ${branch.name}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </div>
+        </>
       )}
 
       <BranchFormDialog open={dialogOpen} onOpenChange={setDialogOpen} branch={editingBranch} />

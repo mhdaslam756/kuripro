@@ -23,3 +23,14 @@ export async function activity(req: Request, res: Response): Promise<void> {
   const items = await service.getActivity(tenantId, limit);
   res.status(200).json({ items });
 }
+
+export async function memberDashboard(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const userId = req.auth?.userId;
+  if (!userId) {
+    res.status(200).json({ isMember: false, summary: { totalGroups: 0, completedCycles: 0, totalPaid: 0, totalOutstanding: 0, prizesWon: 0 }, groups: [], recentPayments: [] });
+    return;
+  }
+  const data = await service.getMemberDashboard(tenantId, userId);
+  res.status(200).json(data);
+}

@@ -38,3 +38,50 @@ export interface ActivityItem {
   message: string;
   createdAt: string;
 }
+
+export interface MemberDashboardGroup {
+  id: string;
+  name: string;
+  registrationNumber: string;
+  chitValueRupees: number;
+  ticketNumber: number;
+  frequency: string;
+  totalMembers: number;
+  completedCyclesCount: number;
+  currentCycleNumber?: number;
+  currentCyclePaidCount?: number;
+  installmentAmount: number;
+  status: string;
+  hasWon: boolean;
+}
+
+export interface MemberDashboardPayment {
+  id: string;
+  amountPaid: number;
+  amountDue: number;
+  dueDate: string;
+  paidAt?: string;
+  status: string;
+  method?: string;
+}
+
+export interface MemberDashboardData {
+  isMember: boolean;
+  member: {
+    id: string;
+    memberCode: string;
+    name: string;
+    phone: string;
+    email?: string;
+    status: string;
+  } | null;
+  summary: {
+    totalGroups: number;
+    completedCycles: number;
+    totalPaid: number;
+    totalOutstanding: number;
+    prizesWon: number;
+  };
+  groups: MemberDashboardGroup[];
+  recentPayments: MemberDashboardPayment[];
+}

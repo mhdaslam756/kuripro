@@ -65,6 +65,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return;
   }
 
+  if (err && typeof err === "object" && "name" in err && (err.name === "BSONError" || err.name === "BSONTypeError")) {
+    res.status(400).json({ error: { code: "INVALID_ID", message: "Invalid ID format" } });
+    return;
+  }
+
   if (isMongoDuplicateKeyError(err)) {
     const field = Object.keys(err.keyPattern ?? {}).join(", ") || "field";
     res.status(409).json({ error: { code: "DUPLICATE", message: `${field} already exists` } });

@@ -12,17 +12,19 @@ export const DialogContent = forwardRef<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 max-h-[92dvh] w-full overflow-y-auto rounded-t-xl border border-border-default bg-bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl focus:outline-none sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-h-[90vh] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6",
+        "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full overflow-y-auto rounded-t-[32px] border-t border-border-default bg-bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl focus:outline-none animate-in slide-in-from-bottom duration-250 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-h-[88vh] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:p-6",
         className,
       )}
       {...props}
     >
+      {/* Mobile Bottom Sheet Handle */}
+      <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-border-strong/30 sm:hidden" />
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 text-text-secondary hover:text-text-primary">
+      <DialogPrimitive.Close className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-full bg-bg-raised text-text-secondary hover:bg-surface-muted hover:text-text-primary active-bounce">
         <X size={18} />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

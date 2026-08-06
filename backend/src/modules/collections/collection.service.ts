@@ -1,8 +1,9 @@
 import mongoose, { Types } from "mongoose";
 
 import { recordActivity } from "../activity-logs/activity-log.service.js";
-import { findChitGroupById } from "../chit-groups/chit-group.repository.js";
+import { findChitGroupById, saveChitGroup } from "../chit-groups/chit-group.repository.js";
 import {
+  countChitMemberships,
   findChitMembershipById,
   listActiveMembershipsByGroup,
 } from "../chit-groups/chit-membership.repository.js";
@@ -29,6 +30,7 @@ import {
   createCollection,
   findCollectionById,
   findCollectionByClientReceiptId,
+  findCollectionByPaymentId,
   findCollectionByReceiptToken,
   listCollections as repoListCollections,
   sumCollections,
@@ -62,8 +64,14 @@ export async function raiseCycleDues(
 ): Promise<RaiseDuesResult> {
   const chitGroup = await findChitGroupById(input.chitGroupId, tenantId);
   if (!chitGroup) throw AppError.notFound("Chit group not found");
-  if (chitGroup.status !== "ACTIVE") {
-    throw AppError.conflict("Dues can only be raised for an active chit group");
+  if (chitGroup.status === "DRAFT") {
+    const scope = { tenantId, chitGroupId: input.chitGroupId };
+    const enrolledCount = await countChitMemberships(scope, { status: "ACTIVE" });
+    if (enrolledCount === 0) {
+      throw AppError.conflict("At least 1 member must be enrolled before raising dues");
+    }
+    chitGroup.status = "ACTIVE";
+    await saveChitGroup(chitGroup);
   }
 
   const cycle = await findChitCycleById(input.chitCycleId, tenantId);
@@ -367,13 +375,14 @@ export async function bounceCollection(
 
 // --- Listing ---
 
-export async function listDues(tenantId: string, query: ListDuesQuery) {
+export async function listDues(tenantId: string, query: ListDuesQuery & { chitMembershipIds?: string[] }) {
   return listInstallments(
     {
       tenantId,
       chitGroupId: query.chitGroupId,
       chitCycleId: query.chitCycleId,
       chitMembershipId: query.chitMembershipId,
+      chitMembershipIds: query.chitMembershipIds,
       status: query.status,
     },
     query,
@@ -470,6 +479,12 @@ async function buildReceipt(tenantId: string, collection: CollectionDocument): P
 export async function getReceipt(tenantId: string, collectionId: string): Promise<ReceiptDto> {
   const collection = await findCollectionById(collectionId, tenantId);
   if (!collection) throw AppError.notFound("Receipt not found");
+  return buildReceipt(tenantId, collection);
+}
+
+export async function getReceiptByPaymentId(tenantId: string, paymentId: string): Promise<ReceiptDto> {
+  const collection = await findCollectionByPaymentId(paymentId, tenantId);
+  if (!collection) throw AppError.notFound("Receipt not found for this payment");
   return buildReceipt(tenantId, collection);
 }
 

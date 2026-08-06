@@ -8,7 +8,7 @@ import { z } from "zod";
 const ceremonyResponse = z.object({}).passthrough();
 
 export const webauthnLoginOptionsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1, "Email or phone number is required").trim(),
 });
 
 export type WebauthnLoginOptionsInput = z.infer<typeof webauthnLoginOptionsSchema>;
@@ -21,7 +21,7 @@ export const webauthnRegisterVerifySchema = z.object({
 export type WebauthnRegisterVerifyInput = z.infer<typeof webauthnRegisterVerifySchema>;
 
 export const webauthnLoginVerifySchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1, "Email or phone number is required").trim(),
   response: ceremonyResponse,
   deviceId: z.string().optional(),
   deviceLabel: z.string().max(120).optional(),

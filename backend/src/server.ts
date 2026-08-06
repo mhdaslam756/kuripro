@@ -6,7 +6,6 @@ import { createApp } from "./app.js";
 import { connectDatabase, disconnectDatabase } from "./config/db.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
-import { disconnectRedis, redis } from "./config/redis.js";
 import { startHealthCheckWorker } from "./jobs/health-check.job.js";
 import { startNotificationWorker } from "./modules/notifications/notification.queue.js";
 import { seedPermissionCatalog } from "./modules/permissions/permission.repository.js";
@@ -15,8 +14,6 @@ import { initSocketServer } from "./sockets/index.js";
 
 async function main(): Promise<void> {
   await connectDatabase();
-  // Fail fast if Redis (refresh tokens, job queues) is unreachable at boot.
-  await redis.ping();
   // Idempotent — safe on every boot, keeps the Permission catalog in sync with the code.
   await seedPermissionCatalog();
   await seedSuperAdmin();
@@ -34,9 +31,8 @@ async function main(): Promise<void> {
   async function shutdown(signal: string): Promise<void> {
     logger.info(`Received ${signal}, shutting down gracefully`);
     httpServer.close();
-    // Close the BullMQ workers before tearing down Redis — they need a live connection to deregister cleanly.
     await Promise.all([healthCheckWorker.close(), notificationWorker.close()]);
-    await Promise.all([disconnectDatabase(), disconnectRedis()]);
+    await disconnectDatabase();
     process.exit(0);
   }
 

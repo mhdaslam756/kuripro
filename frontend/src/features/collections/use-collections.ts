@@ -20,11 +20,13 @@ export function useDues(chitGroupId: string | undefined, chitCycleId: string | u
   return useQuery({
     queryKey: ["dues", chitGroupId, chitCycleId, status],
     queryFn: () => {
-      const params = new URLSearchParams({ chitGroupId: chitGroupId!, chitCycleId: chitCycleId!, limit: "100" });
+      const params = new URLSearchParams({ limit: "100" });
+      if (chitGroupId) params.set("chitGroupId", chitGroupId);
+      if (chitCycleId && chitCycleId !== "ALL") params.set("chitCycleId", chitCycleId);
       if (status) params.set("status", status);
       return api.get<PaginatedDues>(`/collections/dues?${params.toString()}`);
     },
-    enabled: Boolean(chitGroupId && chitCycleId),
+    enabled: Boolean(chitGroupId || (chitCycleId && chitCycleId !== "ALL")),
   });
 }
 
@@ -35,7 +37,7 @@ export function useCycleSummary(chitGroupId: string | undefined, chitCycleId: st
       api
         .get<{ summary: CycleSummary }>(`/collections/dues/summary?chitGroupId=${chitGroupId}&chitCycleId=${chitCycleId}`)
         .then((r) => r.summary),
-    enabled: Boolean(chitGroupId && chitCycleId),
+    enabled: Boolean(chitGroupId && chitCycleId && chitCycleId !== "ALL"),
   });
 }
 
@@ -133,7 +135,13 @@ export function useCollectionHistory(filters: CollectionFilters) {
 export function useReceipt(collectionId: string | undefined) {
   return useQuery({
     queryKey: ["receipt", collectionId],
-    queryFn: () => api.get<{ receipt: Receipt }>(`/collections/${collectionId}/receipt`).then((r) => r.receipt),
+    queryFn: () => {
+      if (collectionId?.startsWith("payment-")) {
+        const paymentId = collectionId.replace("payment-", "");
+        return api.get<{ receipt: Receipt }>(`/collections/payment/${paymentId}/receipt`).then((r) => r.receipt);
+      }
+      return api.get<{ receipt: Receipt }>(`/collections/${collectionId}/receipt`).then((r) => r.receipt);
+    },
     enabled: Boolean(collectionId),
     staleTime: Infinity,
   });

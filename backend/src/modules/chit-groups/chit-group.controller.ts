@@ -3,7 +3,9 @@ import type { Request, Response } from "express";
 import { requireTenantContext } from "../../middleware/rbac.js";
 import type { MongoIdParam, NestedMongoIdParam } from "../../utils/common-validators.js";
 import type { PaginationQuery } from "../../utils/pagination.js";
+import { resolveMemberForUser } from "../members/member.service.js";
 import * as chitGroupService from "./chit-group.service.js";
+import { listChitMembershipsByMemberId } from "./chit-membership.repository.js";
 import type {
   AddChitDocumentInput,
   AssignMembersInput,
@@ -21,7 +23,23 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function list(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
-  const result = await chitGroupService.listChitGroups(tenantId, req.query as unknown as ListChitGroupsQuery);
+  let query = { ...(req.query as unknown as ListChitGroupsQuery) };
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (member) {
+      const memberships = await listChitMembershipsByMemberId(tenantId, member._id.toString());
+      const groupIds = memberships.map((m) => {
+        const ref = m.chitGroupId as any;
+        return ref?._id ? ref._id.toString() : ref.toString();
+      });
+      query = { ...query, groupIds } as any;
+    } else {
+      query = { ...query, groupIds: [] } as any;
+    }
+  }
+
+  const result = await chitGroupService.listChitGroups(tenantId, query);
   res.status(200).json(result);
 }
 

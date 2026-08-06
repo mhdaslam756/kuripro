@@ -101,37 +101,67 @@ export function HistoryTab() {
         </div>
       ) : (
         <>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Recipient</TableHeaderCell>
-                  <TableHeaderCell>Channel</TableHeaderCell>
-                  <TableHeaderCell>Type</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
-                  <TableHeaderCell>When</TableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.items.map((n) => (
-                  <TableRow key={n.id} className="cursor-pointer" onClick={() => setDetail(n)}>
-                    <TableCell className="font-medium">
-                      {n.recipientName}
-                      <span className="ml-2 text-xs text-text-secondary">{n.recipientContact}</span>
-                    </TableCell>
-                    <TableCell>
-                      <ChannelBadge channel={n.channel} />
-                    </TableCell>
-                    <TableCell className="text-text-secondary">{humanize(n.type)}</TableCell>
-                    <TableCell>
-                      <NotificationStatusBadge status={n.status} />
-                    </TableCell>
-                    <TableCell className="text-text-secondary">{formatDateTime(n.sentAt ?? n.createdAt)}</TableCell>
+          {/* Mobile View: Cards */}
+          <div className="grid gap-3 md:hidden">
+            {data.items.map((n) => (
+              <div
+                key={n.id}
+                onClick={() => setDetail(n)}
+                className="active-bounce flex flex-col justify-between rounded-2xl border border-border-default bg-bg-surface p-4 shadow-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-semibold text-text-primary text-base leading-tight">{n.recipientName}</h4>
+                    <p className="mt-0.5 font-mono text-xs text-text-secondary">{n.recipientContact}</p>
+                  </div>
+                  <NotificationStatusBadge status={n.status} />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between border-t border-border-default/60 pt-2.5">
+                  <div className="flex items-center gap-2">
+                    <ChannelBadge channel={n.channel} />
+                    <span className="text-xs text-text-secondary">{humanize(n.type)}</span>
+                  </div>
+                  <span className="text-[11px] text-text-secondary">{formatDateTime(n.sentAt ?? n.createdAt)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden md:block">
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Recipient</TableHeaderCell>
+                    <TableHeaderCell>Channel</TableHeaderCell>
+                    <TableHeaderCell>Type</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell>When</TableHeaderCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((n) => (
+                    <TableRow key={n.id} className="cursor-pointer" onClick={() => setDetail(n)}>
+                      <TableCell className="font-medium">
+                        {n.recipientName}
+                        <span className="ml-2 text-xs text-text-secondary">{n.recipientContact}</span>
+                      </TableCell>
+                      <TableCell>
+                        <ChannelBadge channel={n.channel} />
+                      </TableCell>
+                      <TableCell className="text-text-secondary">{humanize(n.type)}</TableCell>
+                      <TableCell>
+                        <NotificationStatusBadge status={n.status} />
+                      </TableCell>
+                      <TableCell className="text-text-secondary">{formatDateTime(n.sentAt ?? n.createdAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </div>
 
           <div className="mt-4 flex items-center justify-between text-sm text-text-secondary">
             <span>

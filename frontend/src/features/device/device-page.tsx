@@ -1,11 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Bell,
-  Camera as CameraIcon,
   CloudUpload,
   Fingerprint,
-  MapPin,
-  QrCode,
   Smartphone,
   Trash2,
   Wifi,
@@ -15,11 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CameraCapture } from "@/components/device/camera-capture";
-import { QrScanner } from "@/components/device/qr-scanner";
 import { formatDateTime } from "@/lib/format";
 import { promptInstall } from "@/lib/pwa-runtime";
 import {
@@ -30,7 +24,6 @@ import {
   isPushSupported,
   notificationPermission,
 } from "@/lib/push";
-import { useGeolocation } from "@/lib/use-geolocation";
 import { useIsStandalone, useOnlineStatus, usePwa } from "@/lib/use-pwa";
 import { isWebAuthnSupported, platformAuthenticatorAvailable } from "@/lib/webauthn";
 import { countQueue } from "@/features/collections/offline-queue";
@@ -275,114 +268,13 @@ function OfflineCard() {
   );
 }
 
-// --- Location ---
-function LocationCard() {
-  const { supported, state, request } = useGeolocation();
-  const status =
-    state.status === "granted" ? "Located" : state.status === "denied" ? "Blocked" : supported ? "Ready" : "Not supported";
-  const tone: Tone = state.status === "granted" ? "success" : state.status === "denied" ? "danger" : "neutral";
-
-  return (
-    <Capability
-      icon={<MapPin className="size-5" />}
-      title="Location (GPS)"
-      description="Capture the device's GPS coordinates — used to geotag a member's address or where a collection was taken."
-      status={status}
-      tone={tone}
-    >
-      <div className="flex flex-col gap-2">
-        <Button variant="outline" disabled={!supported || state.status === "prompting"} onClick={request}>
-          <MapPin className="size-4" /> {state.status === "prompting" ? "Locating…" : "Share my location"}
-        </Button>
-        {state.coords ? (
-          <p className="text-sm text-text-primary">
-            {state.coords.lat}, {state.coords.lng}{" "}
-            <span className="text-text-secondary">(±{state.coords.accuracy}m)</span>
-          </p>
-        ) : null}
-        {state.error ? <p className="text-sm text-bad-fg">{state.error}</p> : null}
-      </div>
-    </Capability>
-  );
-}
-
-// --- Camera + QR (modal-based) ---
-function CameraCard() {
-  const [open, setOpen] = useState(false);
-  const [captured, setCaptured] = useState<string | null>(null);
-  return (
-    <Capability
-      icon={<CameraIcon className="size-5" />}
-      title="Camera"
-      description="Capture a member photo or document straight from the device camera."
-      status="Available"
-      tone="info"
-    >
-      <div className="flex items-center gap-3">
-        <Button variant="outline" onClick={() => setOpen(true)}>
-          <CameraIcon className="size-4" /> Test camera
-        </Button>
-        {captured ? <img src={captured} alt="Captured" className="h-10 rounded border border-border-default" /> : null}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Camera</DialogTitle>
-            <DialogDescription>Capture a photo — it stays on this device.</DialogDescription>
-          </DialogHeader>
-          <CameraCapture onCapture={(url) => setCaptured(url)} />
-        </DialogContent>
-      </Dialog>
-    </Capability>
-  );
-}
-
-function QrCard() {
-  const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  return (
-    <Capability
-      icon={<QrCode className="size-5" />}
-      title="QR scanner"
-      description="Scan a member's QR code to pull them up quickly at the counter."
-      status={result ? "Scanned" : "Available"}
-      tone={result ? "success" : "info"}
-    >
-      <div className="flex flex-col gap-2">
-        <Button variant="outline" onClick={() => { setResult(null); setOpen(true); }}>
-          <QrCode className="size-4" /> Scan a QR code
-        </Button>
-        {result ? (
-          <p className="break-all text-sm text-text-primary">
-            Decoded: <span className="font-mono text-xs">{result}</span>
-          </p>
-        ) : null}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scan QR code</DialogTitle>
-            <DialogDescription>Point your camera at a KuriPro member QR code.</DialogDescription>
-          </DialogHeader>
-          <QrScanner
-            onResult={(text) => {
-              setResult(text);
-              setOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </Capability>
-  );
-}
-
 export function DevicePage() {
   return (
     <div>
       <div className="mb-6">
         <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Device &amp; Security</h1>
         <p className="text-sm text-text-secondary">
-          Install the app, sign in with biometrics, and manage this device's camera, location, notifications and offline data.
+          Install the app, sign in with biometrics, and manage notifications and offline data.
         </p>
       </div>
 
@@ -391,9 +283,6 @@ export function DevicePage() {
         <PushCard />
         <PasskeyCard />
         <OfflineCard />
-        <LocationCard />
-        <CameraCard />
-        <QrCard />
       </div>
     </div>
   );

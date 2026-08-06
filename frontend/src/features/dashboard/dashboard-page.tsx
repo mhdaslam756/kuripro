@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Banknote, CalendarClock, Gavel, TrendingUp, Users, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart } from "@/features/reports/charts/area-chart";
@@ -9,6 +10,8 @@ import { BarChart } from "@/features/reports/charts/bar-chart";
 import { DonutChart } from "@/features/reports/charts/donut-chart";
 import { cn } from "@/lib/utils";
 import { formatDateTime, formatPaise, humanize } from "@/lib/format";
+import { useAuth } from "@/lib/auth-context";
+import { MemberDashboardView } from "./components/member-dashboard-view";
 import { useDashboardActivity, useDashboardSummary, useDashboardTrends } from "./use-dashboard";
 import type { DashboardTrends } from "./types";
 
@@ -61,47 +64,94 @@ function HighlightCards() {
 
   const next = data.upcomingAuctions[0];
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="rounded-lg border border-brand-300 bg-brand-50 p-4 shadow-[0_4px_16px_rgb(114_83_32/0.08)] sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-brand-strong">
-          <Banknote className="size-4" />
-          <span className="text-sm font-medium">Today's collection</span>
+    <>
+      {/* Mobile Native Hero Card */}
+      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-brand-500/30">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-brand-200/80">
+          <span>Today's Live Collection</span>
+          <span className="rounded-full bg-brand-500/20 px-2.5 py-0.5 text-[10px] text-brand-200">Real-time</span>
         </div>
-        <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.today.total)}</p>
-        <p className="mt-1 text-sm text-text-secondary">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
+        <p className="mt-2 font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.today.total)}</p>
+        <p className="mt-1 text-xs text-brand-100/90">{data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today</p>
+        
+        <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-brand-200/70 font-semibold">Pending Dues</p>
+            <p className="font-display text-sm font-bold text-white">{formatPaise(data.pending.pendingAmount)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-red-200/90 font-semibold">Overdue</p>
+            <p className="font-display text-sm font-bold text-red-300">{formatPaise(data.pending.overdueAmount)}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2 pt-1">
+          <Link
+            to="/collections"
+            className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white text-n900 py-2.5 text-xs font-bold shadow-md"
+          >
+            <Banknote size={15} /> Collect Dues
+          </Link>
+          <Link
+            to="/members"
+            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20"
+            aria-label="Add Member"
+          >
+            <Users size={16} />
+          </Link>
+          <Link
+            to="/auctions"
+            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20"
+            aria-label="Live Auction"
+          >
+            <Gavel size={16} />
+          </Link>
+        </div>
       </div>
 
-      <div className="rounded-lg border border-warn-border bg-warn-bg p-4 shadow-[0_4px_16px_rgb(140_90_43/0.07)] sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-warn-fg">
-          <Wallet className="size-4" />
-          <span className="text-sm font-medium">Pending collection</span>
+      {/* Desktop / Tablet Highlight Cards */}
+      <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-brand-300 bg-brand-50 p-4 shadow-[0_4px_16px_rgb(114_83_32/0.08)] sm:p-5">
+          <div className="mb-1 flex items-center gap-2 text-brand-strong">
+            <Banknote className="size-4" />
+            <span className="text-sm font-medium">Today's collection</span>
+          </div>
+          <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.today.total)}</p>
+          <p className="mt-1 text-sm text-text-secondary">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
         </div>
-        <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.pending.pendingAmount)}</p>
-        <p className="mt-1 text-sm text-text-secondary">
-          {data.pending.pendingCount} due · <span className="text-bad-fg">{data.pending.overdueCount} overdue</span> ({formatPaise(data.pending.overdueAmount)})
-        </p>
-      </div>
 
-      <div className="rounded-lg border border-border-default bg-bg-surface p-4 shadow-[0_4px_16px_rgb(30_33_42/0.04)] sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-text-secondary">
-          <CalendarClock className="size-4" />
-          <span className="text-sm font-medium">Upcoming auction</span>
+        <div className="rounded-xl border border-warn-border bg-warn-bg p-4 shadow-[0_4px_16px_rgb(140_90_43/0.07)] sm:p-5">
+          <div className="mb-1 flex items-center gap-2 text-warn-fg">
+            <Wallet className="size-4" />
+            <span className="text-sm font-medium">Pending collection</span>
+          </div>
+          <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.pending.pendingAmount)}</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            {data.pending.pendingCount} due · <span className="text-bad-fg">{data.pending.overdueCount} overdue</span> ({formatPaise(data.pending.overdueAmount)})
+          </p>
         </div>
-        {next ? (
-          <>
-            <p className="font-display text-lg font-semibold text-text-primary">{next.chitGroupName}</p>
-            <p className="mt-0.5 text-sm text-text-secondary">
-              Cycle #{next.cycleNumber} · {new Date(next.scheduledDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · pot {formatPaise(next.potAmount)}
-            </p>
-            <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-accent-link hover:underline">
-              Go to auctions →
-            </Link>
-          </>
-        ) : (
-          <p className="mt-2 text-sm text-text-secondary">No auctions scheduled right now.</p>
-        )}
+
+        <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-[0_4px_16px_rgb(30_33_42/0.04)] sm:p-5">
+          <div className="mb-1 flex items-center gap-2 text-text-secondary">
+            <CalendarClock className="size-4" />
+            <span className="text-sm font-medium">Upcoming auction</span>
+          </div>
+          {next ? (
+            <>
+              <p className="font-display text-lg font-semibold text-text-primary">{next.chitGroupName}</p>
+              <p className="mt-0.5 text-sm text-text-secondary">
+                Cycle #{next.cycleNumber} · {new Date(next.scheduledDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · pot {formatPaise(next.potAmount)}
+              </p>
+              <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-accent-link hover:underline">
+                Go to auctions →
+              </Link>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-text-secondary">No auctions scheduled right now.</p>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -229,8 +279,29 @@ function RecentActivity() {
 const RANGES = [6, 12] as const;
 
 export function DashboardPage() {
+  const { user } = useAuth();
   const [months, setMonths] = useState<number>(6);
+  const [viewMode, setViewMode] = useState<"ORGANIZER" | "MEMBER">("ORGANIZER");
   const { data: trends, isLoading: trendsLoading } = useDashboardTrends(months);
+
+  if (user?.role?.slug === "MEMBER" || viewMode === "MEMBER") {
+    return (
+      <div className="flex flex-col gap-4">
+        {user?.role?.slug !== "MEMBER" ? (
+          <div className="flex items-center justify-between rounded-xl border border-brand-300 bg-brand-50 px-4 py-3 shadow-xs">
+            <div className="flex items-center gap-2 text-accent-primary">
+              <span className="font-semibold text-sm">👀 Member Portal Preview Mode</span>
+              <span className="text-xs text-text-secondary">Viewing how member users experience their dashboard</span>
+            </div>
+            <Button size="sm" variant="outline" className="text-xs font-semibold bg-bg-surface" onClick={() => setViewMode("ORGANIZER")}>
+              Switch Back to Organizer View
+            </Button>
+          </div>
+        ) : null}
+        <MemberDashboardView />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
@@ -261,20 +332,30 @@ export function DashboardPage() {
           <h1 className="font-display text-2xl font-bold leading-tight text-text-primary sm:text-3xl">Dashboard</h1>
           <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">Your chit business at a glance — today's money, what's due, and where trends are heading.</p>
         </div>
-        <div className="inline-flex self-start rounded-lg border border-border-default bg-bg-surface p-1 shadow-xs">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setMonths(r)}
-              className={cn(
-                "rounded-md px-3 py-1 text-xs sm:text-sm font-semibold transition-colors active-bounce",
-                months === r ? "bg-brand-solid text-text-on-brand shadow-xs" : "text-text-secondary hover:bg-brand-50 hover:text-text-primary",
-              )}
-            >
-              {r} months
-            </button>
-          ))}
+        <div className="flex items-center gap-3 self-start">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs font-semibold border-brand-300 bg-brand-50 text-accent-primary hover:bg-brand-100"
+            onClick={() => setViewMode("MEMBER")}
+          >
+            👀 Preview Member View
+          </Button>
+          <div className="inline-flex rounded-lg border border-border-default bg-bg-surface p-1 shadow-xs">
+            {RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setMonths(r)}
+                className={cn(
+                  "rounded-md px-3 py-1 text-xs sm:text-sm font-semibold transition-colors active-bounce",
+                  months === r ? "bg-brand-solid text-text-on-brand shadow-xs" : "text-text-secondary hover:bg-brand-50 hover:text-text-primary",
+                )}
+              >
+                {r} months
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

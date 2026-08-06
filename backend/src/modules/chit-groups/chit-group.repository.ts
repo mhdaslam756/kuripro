@@ -17,6 +17,7 @@ export type CreateChitGroupData = Omit<
 export interface ListChitGroupsFilter {
   tenantId: string;
   status?: ChitGroupStatus;
+  groupIds?: string[];
 }
 
 export async function createChitGroup(data: CreateChitGroupData): Promise<ChitGroupDocument> {
@@ -35,7 +36,10 @@ export async function listChitGroups(
   filter: ListChitGroupsFilter,
   query: PaginationQuery,
 ): Promise<PaginatedResult<ChitGroupDocument>> {
-  const mongoFilter = { tenantId: filter.tenantId, ...(filter.status ? { status: filter.status } : {}) };
+  const mongoFilter: Record<string, unknown> = { tenantId: filter.tenantId };
+  if (filter.status) mongoFilter["status"] = filter.status;
+  if (filter.groupIds) mongoFilter["_id"] = { $in: filter.groupIds };
+
   const { skip, limit } = toSkipLimit(query);
 
   const [items, total] = await Promise.all([

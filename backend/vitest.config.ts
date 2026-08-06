@@ -12,7 +12,6 @@ export default defineConfig({
       NODE_ENV: "test",
       LOG_LEVEL: "silent",
       MONGODB_URI: "mongodb://127.0.0.1:27017/kuripro-test",
-      REDIS_URL: "redis://localhost:6379",
       JWT_ACCESS_SECRET: "test-only-secret-that-is-at-least-32-characters-long",
       JWT_ACCESS_TTL_SECONDS: "900",
       CORS_ORIGIN: "http://localhost:5173",

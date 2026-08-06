@@ -3,7 +3,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/jwt-auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import { validate } from "../../middleware/validate.js";
-import { mongoIdParamSchema } from "../../utils/common-validators.js";
+import { mongoIdParamSchema, paymentIdParamSchema } from "../../utils/common-validators.js";
 import * as collectionController from "./collection.controller.js";
 import {
   bulkCollectionSchema,
@@ -90,6 +90,13 @@ collectionRouter.post(
   requirePermission("collection.manage_dues"),
   validate({ params: mongoIdParamSchema }),
   collectionController.bounce,
+);
+
+collectionRouter.get(
+  "/payment/:paymentId/receipt",
+  requirePermission("collection.view"),
+  validate({ params: paymentIdParamSchema }),
+  collectionController.receiptByPaymentId,
 );
 
 collectionRouter.get(

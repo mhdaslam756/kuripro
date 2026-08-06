@@ -10,7 +10,6 @@ import {
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
 
 import { env } from "../../config/env.js";
-import { redis } from "../../config/redis.js";
 import { AppError } from "../../utils/app-error.js";
 import { findUserByEmail, findUserById } from "../users/user.repository.js";
 import { recordActivity } from "../activity-logs/activity-log.service.js";
@@ -30,6 +29,8 @@ const CHALLENGE_TTL_SECONDS = 300;
 
 const regChallengeKey = (userId: string): string => `webauthn:reg:${userId}`;
 const authChallengeKey = (email: string): string => `webauthn:auth:${email.toLowerCase()}`;
+
+const challengeStore = new Map<string, { challenge: string; expiresAt: number }>();
 
 function assertCanLogin(status: string): void {
   if (status === "SUSPENDED") throw AppError.forbidden("Your account has been suspended");
@@ -57,7 +58,10 @@ export async function getRegistrationOptions(userId: string): Promise<PublicKeyC
     authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
   });
 
-  await redis.set(regChallengeKey(userId), options.challenge, "EX", CHALLENGE_TTL_SECONDS);
+  challengeStore.set(regChallengeKey(userId), {
+    challenge: options.challenge,
+    expiresAt: Date.now() + CHALLENGE_TTL_SECONDS * 1000,
+  });
   return options;
 }
 
@@ -67,8 +71,13 @@ export async function verifyRegistration(
   response: RegistrationResponseJSON,
   deviceLabel?: string,
 ): Promise<{ verified: boolean }> {
-  const expectedChallenge = await redis.get(regChallengeKey(userId));
-  if (!expectedChallenge) throw AppError.badRequest("Registration challenge expired — please try again");
+  const record = challengeStore.get(regChallengeKey(userId));
+  challengeStore.delete(regChallengeKey(userId));
+
+  if (!record || record.expiresAt < Date.now()) {
+    throw AppError.badRequest("Registration challenge expired — please try again");
+  }
+  const expectedChallenge = record.challenge;
 
   const verification = await verifyRegistrationResponse({
     response,
@@ -91,7 +100,6 @@ export async function verifyRegistration(
     transports: credential.transports ?? [],
     deviceLabel: deviceLabel?.trim() || "Passkey",
   });
-  await redis.del(regChallengeKey(userId));
 
   await recordActivity({
     tenantId,
@@ -120,7 +128,10 @@ export async function getAuthenticationOptions(email: string): Promise<PublicKey
     userVerification: "preferred",
   });
 
-  await redis.set(authChallengeKey(email), options.challenge, "EX", CHALLENGE_TTL_SECONDS);
+  challengeStore.set(authChallengeKey(email), {
+    challenge: options.challenge,
+    expiresAt: Date.now() + CHALLENGE_TTL_SECONDS * 1000,
+  });
   return options;
 }
 
@@ -129,8 +140,13 @@ export async function verifyAuthentication(
   response: AuthenticationResponseJSON,
   deviceContext: DeviceContext = {},
 ): Promise<AuthResult> {
-  const expectedChallenge = await redis.get(authChallengeKey(email));
-  if (!expectedChallenge) throw AppError.badRequest("Sign-in challenge expired — please try again");
+  const record = challengeStore.get(authChallengeKey(email));
+  challengeStore.delete(authChallengeKey(email));
+
+  if (!record || record.expiresAt < Date.now()) {
+    throw AppError.badRequest("Sign-in challenge expired — please try again");
+  }
+  const expectedChallenge = record.challenge;
 
   const credential = await findCredentialByCredentialId(response.id);
   if (!credential) throw AppError.unauthorized("This passkey isn't registered", "INVALID_CREDENTIALS");
@@ -159,7 +175,6 @@ export async function verifyAuthentication(
   if (!verification.verified) throw AppError.unauthorized("Passkey verification failed", "INVALID_CREDENTIALS");
 
   await updateCredentialCounter(credential.credentialId, verification.authenticationInfo.newCounter);
-  await redis.del(authChallengeKey(email));
 
   if (user.status === "INVITED") {
     user.status = "ACTIVE";

@@ -129,7 +129,9 @@ export function useRemoveMember(id: string) {
 
 function invalidateRoster(queryClient: ReturnType<typeof useQueryClient>, id: string) {
   void queryClient.invalidateQueries({ queryKey: ["chit-group-members", id] });
+  void queryClient.invalidateQueries({ queryKey: ["chit-group-detail", id] });
   void queryClient.invalidateQueries({ queryKey: ["chit-group-report", id] });
+  void queryClient.invalidateQueries({ queryKey: ["chit-groups"] });
 }
 
 // --- Schedule / cycles ---

@@ -36,32 +36,71 @@ export function PayoutTab({ range, onRangeChange }: Props) {
           {data.rows.length === 0 ? (
             <EmptyReport />
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Voucher</TableHeaderCell>
-                    <TableHeaderCell>Member</TableHeaderCell>
-                    <TableHeaderCell>Chit group</TableHeaderCell>
-                    <TableHeaderCell>Method</TableHeaderCell>
-                    <TableHeaderCell>Date</TableHeaderCell>
-                    <TableHeaderCell>Amount</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.rows.slice(0, 200).map((r, i) => (
-                    <TableRow key={`${r.receiptNumber}-${i}`}>
-                      <TableCell className="font-mono text-xs">{r.receiptNumber}</TableCell>
-                      <TableCell className="font-medium">{r.memberName}</TableCell>
-                      <TableCell className="text-text-secondary">{r.chitGroupName}</TableCell>
-                      <TableCell>{METHOD_LABEL[r.method] ?? r.method}</TableCell>
-                      <TableCell className="text-text-secondary">{formatDate(r.disbursedAt)}</TableCell>
-                      <TableCell>{formatPaise(r.amount)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              {/* Mobile View: Cards */}
+              <div className="grid gap-3 md:hidden">
+                {data.rows.slice(0, 200).map((r, i) => (
+                  <div
+                    key={`${r.receiptNumber}-${i}`}
+                    className="active-bounce flex flex-col justify-between rounded-2xl border border-border-default bg-bg-surface p-4 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
+                            {r.receiptNumber}
+                          </span>
+                          <span className="text-xs text-text-secondary">{METHOD_LABEL[r.method] ?? r.method}</span>
+                        </div>
+                        <h4 className="mt-1.5 font-semibold text-text-primary text-base leading-tight">{r.memberName}</h4>
+                        <p className="mt-0.5 text-xs text-text-secondary">{r.chitGroupName}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-end justify-between border-t border-border-default/60 pt-2.5">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Disbursed On</p>
+                        <p className="text-xs font-semibold text-text-primary">{formatDate(r.disbursedAt)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Disbursed Amount</p>
+                        <p className="font-display text-base font-bold tabular-nums text-text-primary">{formatPaise(r.amount)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden md:block">
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>Voucher</TableHeaderCell>
+                        <TableHeaderCell>Member</TableHeaderCell>
+                        <TableHeaderCell>Chit group</TableHeaderCell>
+                        <TableHeaderCell>Method</TableHeaderCell>
+                        <TableHeaderCell>Date</TableHeaderCell>
+                        <TableHeaderCell>Amount</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data.rows.slice(0, 200).map((r, i) => (
+                        <TableRow key={`${r.receiptNumber}-${i}`}>
+                          <TableCell className="font-mono text-xs">{r.receiptNumber}</TableCell>
+                          <TableCell className="font-medium">{r.memberName}</TableCell>
+                          <TableCell className="text-text-secondary">{r.chitGroupName}</TableCell>
+                          <TableCell>{METHOD_LABEL[r.method] ?? r.method}</TableCell>
+                          <TableCell className="text-text-secondary">{formatDate(r.disbursedAt)}</TableCell>
+                          <TableCell>{formatPaise(r.amount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </div>
+            </>
           )}
         </div>
       )}

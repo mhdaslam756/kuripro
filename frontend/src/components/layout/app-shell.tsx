@@ -1,4 +1,4 @@
-import { Banknote, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X } from "lucide-react";
+import { Banknote, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -10,7 +10,6 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof Building2;
-  /** When omitted, the item is shown to every authenticated user (e.g. personal device settings). */
   permission?: string;
 }
 
@@ -38,7 +37,7 @@ function ThemeToggle() {
   ];
 
   return (
-    <div className="flex items-center rounded-full border border-border-default p-0.5">
+    <div className="flex items-center rounded-full border border-border-default bg-bg-raised p-0.5 shadow-xs">
       {options.map(({ value, icon: Icon, label }) => (
         <button
           key={value}
@@ -47,8 +46,8 @@ function ThemeToggle() {
           aria-label={`${label} theme`}
           aria-pressed={mode === value}
           className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-full text-text-secondary transition-colors",
-            mode === value && "bg-accent-primary text-text-on-brand",
+            "flex h-7 w-7 items-center justify-center rounded-full text-text-secondary transition-all active-bounce",
+            mode === value && "bg-accent-primary text-text-on-brand shadow-xs font-bold",
           )}
         >
           <Icon size={14} />
@@ -62,9 +61,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
-  const visibleItems = NAV_ITEMS.filter((item) => !item.permission || hasPermission(item.permission));
-  const primaryItems = visibleItems.slice(0, 4);
-  const moreItems = visibleItems.slice(4);
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (user?.role?.slug === "MEMBER") {
+      return ["/dashboard", "/chit-groups", "/collections", "/auctions", "/device"].includes(item.to);
+    }
+    return !item.permission || hasPermission(item.permission);
+  });
+
+  const moreItems = visibleItems.filter((i) => !["/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to));
 
   async function handleLogout() {
     await logout();
@@ -73,12 +78,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-bg-app lg:flex">
+      {/* Desktop Sidebar */}
       <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex">
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex size-10 items-center justify-center rounded-md bg-accent-primary font-display text-lg font-bold text-text-on-brand shadow-[0_5px_14px_rgb(114_83_32/0.22)]">K</div>
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 font-display text-lg font-bold text-text-on-brand shadow-md">K</div>
           <div>
-            <p className="font-display text-xl font-semibold leading-none text-accent-primary">KuriPro</p>
-            <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-text-secondary">Chit management</p>
+            <p className="font-display text-xl font-bold leading-none text-accent-primary">KuriPro</p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">Chit Management</p>
           </div>
         </div>
         <nav className="flex flex-col gap-1.5">
@@ -88,9 +94,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               to={to}
               className={({ isActive }: { isActive: boolean }) =>
                 cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium text-text-secondary transition-all",
+                  "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-secondary transition-all",
                   "hover:bg-brand-50/70 hover:text-text-primary",
-                  isActive && "bg-brand-100/70 text-accent-primary shadow-sm",
+                  isActive && "bg-brand-100/80 text-accent-primary font-semibold shadow-xs border border-brand-200/50",
                 )
               }
             >
@@ -102,29 +108,44 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border-default bg-bg-surface/85 px-4 py-2 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex items-center gap-2 lg:hidden">
-              <div className="flex size-9 items-center justify-center rounded-md bg-accent-primary font-display text-lg font-bold text-text-on-brand shadow-sm">K</div>
-              <div>
-                <div className="font-display text-lg font-semibold leading-none text-accent-primary">KuriPro</div>
-                <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.13em] text-text-secondary">Chit management</div>
-              </div>
+        {/* Native Mobile App Bar */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-default/80 bg-bg-surface/90 px-4 pt-[max(0.6rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 font-display text-base font-bold text-text-on-brand shadow-sm">
+              K
+            </div>
+            <div>
+              <p className="font-display text-base font-bold leading-none text-accent-primary">KuriPro</p>
+              <p className="text-[10px] font-medium text-text-secondary">Fintech Platform</p>
             </div>
           </div>
+
+          <div className="hidden lg:flex lg:items-center lg:gap-2">
+            <span className="text-sm font-semibold text-text-primary">KuriPro Management Platform</span>
+          </div>
+
           <div className="flex items-center gap-2 lg:gap-4">
-            <div className="flex items-center gap-2 lg:hidden">
-              <ThemeToggle />
-            </div>
+            <NavLink
+              to="/notifications"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-colors hover:text-text-primary lg:hidden active-bounce"
+              aria-label="Notifications"
+            >
+              <Bell size={18} />
+            </NavLink>
             <div className="hidden lg:block"><ThemeToggle /></div>
             <div className="flex items-center gap-2 lg:gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-text-primary">{user?.name}</p>
                 <p className="text-xs text-text-secondary">{user?.role.name}</p>
               </div>
-              <div className="flex size-9 items-center justify-center rounded-full bg-brand-100 font-semibold text-accent-primary ring-2 ring-brand-50 lg:hidden" aria-hidden="true">
+              <button
+                type="button"
+                onClick={() => setMoreOpen(true)}
+                className="flex size-9 items-center justify-center rounded-full bg-brand-100 font-bold text-accent-primary ring-2 ring-brand-200/60 lg:hidden active-bounce"
+                aria-label="Open User Menu"
+              >
                 {user?.name?.trim().charAt(0).toUpperCase() || "U"}
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={() => void handleLogout()}
@@ -137,61 +158,183 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-5 pb-28 sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8">
+        {/* Main Body */}
+        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8">
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border-default bg-bg-surface/95 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-4px_24px_rgb(0_0_0/0.08)] backdrop-blur-xl lg:hidden" aria-label="Primary navigation">
-        {primaryItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }: { isActive: boolean }) => cn(
-              "active-bounce flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] font-medium text-text-secondary transition-all",
-              isActive && "bg-brand-100/80 font-semibold text-accent-primary shadow-xs"
-            )}
-          >
-            <Icon size={20} strokeWidth={2.2} />
-            <span className="max-w-full truncate">{label}</span>
-          </NavLink>
-        ))}
+      {/* Native Bottom Navigation Bar */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
+        aria-label="App Navigation"
+      >
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }: { isActive: boolean }) =>
+            cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )
+          }
+        >
+          {({ isActive }: { isActive: boolean }) => (
+            <>
+              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span>Home</span>
+            </>
+          )}
+        </NavLink>
+
+        <NavLink
+          to="/chit-groups"
+          className={({ isActive }: { isActive: boolean }) =>
+            cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )
+          }
+        >
+          {({ isActive }: { isActive: boolean }) => (
+            <>
+              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                <Landmark size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span>Chits</span>
+            </>
+          )}
+        </NavLink>
+
+        {/* Prominent Floating Action Collect Button */}
+        <NavLink
+          to="/collections"
+          className={({ isActive }: { isActive: boolean }) =>
+            cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              isActive ? "text-accent-primary" : "text-text-secondary",
+            )
+          }
+        >
+          {({ isActive }: { isActive: boolean }) => (
+            <>
+              <div className={cn(
+                "flex h-9 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-md transition-transform active:scale-95",
+                isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface"
+              )}>
+                <HandCoins size={20} strokeWidth={2.5} />
+              </div>
+              <span className="font-bold text-accent-primary">Collect</span>
+            </>
+          )}
+        </NavLink>
+
+        <NavLink
+          to="/auctions"
+          className={({ isActive }: { isActive: boolean }) =>
+            cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )
+          }
+        >
+          {({ isActive }: { isActive: boolean }) => (
+            <>
+              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                <Gavel size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span>Auctions</span>
+            </>
+          )}
+        </NavLink>
+
         <button
           type="button"
           onClick={() => setMoreOpen(true)}
-          className="active-bounce flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] font-medium text-text-secondary transition-all"
-          aria-label="Open more navigation options"
-          aria-expanded={moreOpen}
+          className={cn(
+            "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+            moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+          )}
+          aria-label="Open More Menu"
         >
-          <Menu size={20} strokeWidth={2.2} />
+          <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
+            <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
+          </div>
           <span>More</span>
         </button>
       </nav>
 
+      {/* Native Bottom Sheet Drawer for "More" Menu */}
       {moreOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
-          <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity" aria-label="Close navigation" onClick={() => setMoreOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-3xl border-t border-border-default bg-bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-border-strong/40" />
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <p className="font-display text-xl font-bold text-text-primary">{user?.name || "User"}</p>
-                <p className="text-xs font-medium text-text-secondary">{user?.role.name || "Member"}</p>
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More Options Menu">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            aria-label="Close Sheet"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[32px] border-t border-border-default bg-bg-surface px-5 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-250">
+            {/* Grab handle */}
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border-strong/30" />
+
+            {/* Profile Overview Banner */}
+            <div className="mb-5 flex items-center justify-between rounded-2xl border border-border-default bg-bg-raised p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-sm">
+                  {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+                </div>
+                <div>
+                  <p className="font-display text-base font-bold text-text-primary">{user?.name || "User"}</p>
+                  <p className="text-xs font-semibold text-text-secondary">{user?.role?.name || "Organizer"}</p>
+                  {user?.email ? <p className="text-[11px] text-text-secondary">{user.email}</p> : null}
+                </div>
               </div>
-              <button type="button" onClick={() => setMoreOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-raised text-text-secondary hover:text-text-primary" aria-label="Close navigation"><X size={20} /></button>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
             </div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">All Modules</p>
-            <div className="grid grid-cols-2 gap-2.5">
+
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary">App Features &amp; Settings</p>
+
+            <div className="grid grid-cols-2 gap-3">
               {moreItems.map(({ to, label, icon: Icon }) => (
-                <NavLink key={to} to={to} onClick={() => setMoreOpen(false)} className={({ isActive }: { isActive: boolean }) => cn("active-bounce flex min-h-[4.5rem] flex-col items-start justify-center gap-1.5 rounded-xl border border-border-default bg-bg-raised p-3.5 text-sm font-medium text-text-primary transition-all", isActive && "border-brand-400 bg-brand-50/80 text-accent-primary font-semibold shadow-xs")}>
-                  <Icon size={20} className="text-accent-primary" />
-                  <span>{label}</span>
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMoreOpen(false)}
+                  className={({ isActive }: { isActive: boolean }) =>
+                    cn(
+                      "active-bounce flex min-h-[4.25rem] items-center justify-between rounded-2xl border border-border-default bg-bg-surface p-3.5 shadow-xs transition-all",
+                      isActive && "border-brand-400 bg-brand-50/90 text-accent-primary font-bold shadow-sm"
+                    )
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-accent-primary">
+                      <Icon size={18} />
+                    </span>
+                    <span className="text-xs font-semibold text-text-primary">{label}</span>
+                  </div>
+                  <ChevronRight size={14} className="text-text-secondary" />
                 </NavLink>
               ))}
             </div>
-            <div className="mt-5 flex items-center justify-between border-t border-border-default pt-4">
+
+            <div className="mt-6 flex items-center justify-between border-t border-border-default/80 pt-4">
               <ThemeToggle />
-              <button type="button" onClick={() => void handleLogout()} className="active-bounce flex min-h-11 items-center gap-2 rounded-xl bg-bad-bg px-4 py-2.5 text-sm font-semibold text-bad-fg"><LogOut size={17} /> Log out</button>
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className="active-bounce flex min-h-11 items-center gap-2 rounded-2xl bg-bad-bg px-4 py-2.5 text-xs font-bold text-bad-fg shadow-xs"
+              >
+                <LogOut size={16} /> Sign Out
+              </button>
             </div>
           </div>
         </div>

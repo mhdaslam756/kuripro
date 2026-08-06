@@ -64,7 +64,9 @@ export interface PaginatedChitGroups {
 }
 
 export interface ChitMembershipMember {
-  _id: string;
+  /** Backend toJSON transforms _id → id; accept both for safety. */
+  id?: string;
+  _id?: string;
   name: string;
   memberCode: string;
   phone: string;
@@ -72,8 +74,9 @@ export interface ChitMembershipMember {
 
 export interface ChitMembership {
   id: string;
+  _id?: string;
   chitGroupId: string;
-  memberId: ChitMembershipMember;
+  memberId: ChitMembershipMember | string;
   ticketNumber: number;
   status: "ACTIVE" | "DEFAULTED" | "EXITED";
   hasWon: boolean;

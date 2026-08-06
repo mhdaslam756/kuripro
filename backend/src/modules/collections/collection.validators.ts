@@ -66,12 +66,16 @@ export const syncOfflineSchema = z.object({
 
 export type SyncOfflineInput = z.infer<typeof syncOfflineSchema>;
 
-// --- Listing ---
+const flexibleObjectId = z
+  .string()
+  .optional()
+  .transform((val) => (!val || val === "ALL" || val.trim() === "" ? undefined : val))
+  .refine((val) => !val || /^[0-9a-fA-F]{24}$/.test(val), "Invalid id");
 
 export const listDuesQuerySchema = paginationQuerySchema.extend({
-  chitGroupId: objectId.optional(),
-  chitCycleId: objectId.optional(),
-  chitMembershipId: objectId.optional(),
+  chitGroupId: flexibleObjectId,
+  chitCycleId: flexibleObjectId,
+  chitMembershipId: flexibleObjectId,
   status: z.enum(["PENDING", "PARTIAL", "PAID", "OVERDUE", "WAIVED"]).optional(),
 });
 

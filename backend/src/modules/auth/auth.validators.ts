@@ -46,8 +46,8 @@ export type RegisterOrganizerInput = z.infer<typeof registerOrganizerSchema>;
 
 export const loginSchema = z
   .object({
-    email: z.string().email(),
-    password: z.string().min(1),
+    email: z.string().min(1, "Email or phone number is required").trim(),
+    password: z.string().min(1, "Password is required"),
   })
   .merge(deviceContextSchema);
 
@@ -65,12 +65,14 @@ const otpCodeSchema = z
   .length(6, "Code must be 6 digits")
   .regex(/^\d{6}$/, "Code must be 6 digits");
 
-export const requestOtpSchema = z.object({ email: z.string().email() });
+export const requestOtpSchema = z.object({
+  email: z.string().min(1, "Email or phone number is required").trim(),
+});
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
 
 export const verifyOtpSchema = z
   .object({
-    email: z.string().email(),
+    email: z.string().min(1, "Email or phone number is required").trim(),
     code: otpCodeSchema,
   })
   .merge(deviceContextSchema);

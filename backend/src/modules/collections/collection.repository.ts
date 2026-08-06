@@ -1,6 +1,6 @@
 import { Types, type ClientSession } from "mongoose";
 
-import type { ObjectIdLike } from "../../utils/mongoose-helpers.js";
+import { safeObjectId, type ObjectIdLike } from "../../utils/mongoose-helpers.js";
 import { buildPaginatedResult, toSkipLimit, type PaginatedResult, type PaginationQuery } from "../../utils/pagination.js";
 import {
   Collection,
@@ -72,6 +72,10 @@ export async function findCollectionByReceiptToken(token: string, tenantId: stri
   return Collection.findOne({ receiptToken: token, tenantId });
 }
 
+export async function findCollectionByPaymentId(paymentId: string, tenantId: string): Promise<CollectionDocument | null> {
+  return Collection.findOne({ paymentId, tenantId }).sort({ createdAt: -1 });
+}
+
 export async function findCollectionByClientReceiptId(
   clientReceiptId: string,
   tenantId: string,
@@ -138,10 +142,15 @@ export async function sumCollections(filter: ListCollectionsFilter): Promise<Col
 
 /** Aggregation needs real ObjectIds for id fields, not strings. */
 function normalizeForAggregate(filter: Record<string, unknown>): Record<string, unknown> {
-  const idKeys = ["tenantId", "chitGroupId", "memberId"];
-  const out: Record<string, unknown> = { ...filter };
-  for (const key of idKeys) {
-    if (typeof out[key] === "string") out[key] = new Types.ObjectId(out[key] as string);
+  const idKeys = ["tenantId", "chitGroupId", "memberId", "chitCycleId", "paymentId"];
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(filter)) {
+    if (idKeys.includes(key)) {
+      const objId = safeObjectId(val);
+      if (objId) out[key] = objId;
+    } else {
+      out[key] = val;
+    }
   }
   return out;
 }
