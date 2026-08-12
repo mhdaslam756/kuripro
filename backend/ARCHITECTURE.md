@@ -10,7 +10,7 @@ backend/src/
 ├── cache/           generic Redis cache-aside helper
 ├── jobs/            BullMQ queue/worker factories + job definitions
 ├── uploads/         generic file-upload middleware/service (Cloudinary)
-├── routes/          versioned route aggregators (v1.ts, future v2.ts)
+├── routes/          route aggregator (index.ts)
 ├── middleware/       cross-cutting Express middleware
 ├── modules/
 │   └── <name>/
@@ -43,7 +43,7 @@ This is why `chit-group.service.ts` has zero `import { ChitGroup }` — it only 
 - **Files**: `kebab-case.role.ts` — `chit-group.controller.ts`, not `ChitGroupController.ts` or `controllers/chitGroup.ts`.
 - **Functions**: verbs that say what happens — `createChitGroup`, `findUserByEmail`, `listChitGroups`. Repository functions are named after the query, not CRUD-generic (`findUserByEmail`, not `find`).
 - **Types**: `PascalCase`. A model's document type is always `<Name>Document` (the hydrated Mongoose doc), its plain-field interface is `<Name>Doc`. A repository's create-input type is `Create<Name>Input`/`Create<Name>Data`.
-- **Routers**: exported as `<name>Router` (`chitGroupRouter`), one per module, mounted once in `routes/v1.ts`.
+- **Routers**: exported as `<name>Router` (`chitGroupRouter`), one per module, mounted once in `routes/index.ts`.
 - **Booleans**: `is`/`has`/`must` prefix (`isDeleted`, `hasWon`, `mustChangePassword`) — never a bare adjective.
 
 ## REST standards
@@ -56,9 +56,9 @@ This is why `chit-group.service.ts` has zero `import { ChitGroup }` — it only 
 - List endpoints always return `{ items, page, limit, total, totalPages }` (see `utils/pagination.ts`) — never a bare array, so adding pagination later is never a breaking change.
 - Query filters are always optional and additive — a filterable list endpoint must still return sensible results with zero query params.
 
-## API versioning
+## API routing
 
-Every module's router is mounted once, in `routes/v1.ts`, under `/api/v1`. A breaking change to an existing endpoint gets a new `routes/v2.ts` aggregator and a parallel `/api/v2` mount in `app.ts` — v1's files are never touched to make room for v2. Non-breaking additions (a new field, a new endpoint) go straight into v1.
+Every module's router is mounted once in `routes/index.ts` under `/api`.
 
 ## Authentication
 

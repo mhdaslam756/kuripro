@@ -10,7 +10,7 @@ import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { pingQueue } from "./jobs/health-check.job.js";
-import { v1Router } from "./routes/v1.js";
+import { apiRouter } from "./routes/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -43,7 +43,7 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok", pongedAt: result.pongedAt });
   });
 
-  app.use("/api", v1Router);
+  app.use("/api", apiRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

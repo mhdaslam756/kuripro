@@ -22,28 +22,27 @@ import { usersRouter } from "../modules/users/users.routes.js";
 import { uploadsRouter } from "../uploads/upload.routes.js";
 
 /**
- * Every versioned route lives under one aggregator so a future v2 is a new sibling file and a
- * one-line mount in app.ts — never a change to v1's own code.
+ * Main API Router aggregating all feature routes under /api.
  */
-export const v1Router: Router = Router();
+export const apiRouter: Router = Router();
 
-v1Router.use("/auth", authRouter);
-v1Router.use("/public", publicRouter);
-v1Router.use("/super-admin", superAdminRouter);
-v1Router.use("/users", usersRouter);
-v1Router.use("/chit-groups", chitGroupRouter);
-v1Router.use("/members", memberRouter);
-v1Router.use("/collections", collectionRouter);
-v1Router.use("/auctions", auctionRouter);
-v1Router.use("/payouts", payoutRouter);
-v1Router.use("/finance", financeRouter);
-v1Router.use("/reports", reportRouter);
-v1Router.use("/dashboard", dashboardRouter);
-v1Router.use("/notifications", notificationRouter);
-v1Router.use("/devices", deviceRouter);
-v1Router.use("/uploads", uploadsRouter);
-v1Router.use("/activity-logs", activityLogRouter);
-v1Router.use("/roles", roleRouter);
-v1Router.use("/permissions", permissionRouter);
-v1Router.use("/organization", tenantRouter);
-v1Router.use("/branches", branchRouter);
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/public", publicRouter);
+apiRouter.use("/super-admin", superAdminRouter);
+apiRouter.use("/users", usersRouter);
+apiRouter.use("/chit-groups", chitGroupRouter);
+apiRouter.use("/members", memberRouter);
+apiRouter.use("/collections", collectionRouter);
+apiRouter.use("/auctions", auctionRouter);
+apiRouter.use("/payouts", payoutRouter);
+apiRouter.use("/finance", financeRouter);
+apiRouter.use("/reports", reportRouter);
+apiRouter.use("/dashboard", dashboardRouter);
+apiRouter.use("/notifications", notificationRouter);
+apiRouter.use("/devices", deviceRouter);
+apiRouter.use("/uploads", uploadsRouter);
+apiRouter.use("/activity-logs", activityLogRouter);
+apiRouter.use("/roles", roleRouter);
+apiRouter.use("/permissions", permissionRouter);
+apiRouter.use("/organization", tenantRouter);
+apiRouter.use("/branches", branchRouter);
