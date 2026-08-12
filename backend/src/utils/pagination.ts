@@ -15,20 +15,24 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
-export function toSkipLimit(query: PaginationQuery): { skip: number; limit: number } {
-  return { skip: (query.page - 1) * query.limit, limit: query.limit };
+export function toSkipLimit(query?: Partial<PaginationQuery>): { skip: number; limit: number } {
+  const page = Math.max(1, Number(query?.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
+  return { skip: (page - 1) * limit, limit };
 }
 
 export function buildPaginatedResult<T>(
   items: T[],
   total: number,
-  query: PaginationQuery,
+  query?: Partial<PaginationQuery>,
 ): PaginatedResult<T> {
+  const page = Math.max(1, Number(query?.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
   return {
     items,
-    page: query.page,
-    limit: query.limit,
+    page,
+    limit,
     total,
-    totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    totalPages: Math.max(1, Math.ceil(total / limit)),
   };
 }

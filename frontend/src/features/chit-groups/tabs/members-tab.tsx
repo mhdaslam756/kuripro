@@ -1,4 +1,4 @@
-import { AlertCircle, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, Lock, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -60,9 +60,9 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
-  const isManageable = chitGroup.status === "DRAFT" || chitGroup.status === "ACTIVE";
-  const canAssign = hasPermission("chit_group.enroll_member") && isManageable;
-  const canRemove = hasPermission("chit_group.enroll_member");
+  const isNotStarted = chitGroup.status === "DRAFT";
+  const canAssign = hasPermission("chit_group.enroll_member") && isNotStarted;
+  const canRemove = hasPermission("chit_group.enroll_member") && isNotStarted;
   const items = roster?.items ?? [];
   const enrolled = roster?.total ?? items.length;
   const seatsRemaining = Math.max(0, chitGroup.totalMembers - enrolled);
@@ -93,7 +93,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
   return (
     <div className="flex flex-col gap-4">
       {/* Header: seat info + assign button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-text-primary">
             Group Members
@@ -107,7 +107,11 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
           <Button size="sm" onClick={() => setAssignOpen(true)}>
             <UserPlus size={15} /> {seatsRemaining > 0 ? "Assign members" : "Manage Roster"}
           </Button>
-        ) : null}
+        ) : (
+          <Badge variant="outline" className="gap-1.5 px-2.5 py-1 text-xs text-text-secondary border-border-default">
+            <Lock size={13} className="text-text-secondary" /> Roster Locked (Chit Started)
+          </Badge>
+        )}
       </div>
 
       {isLoading ? (
@@ -180,7 +184,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     {memberIdStr ? (
                       <Link to={`/members/${memberIdStr}?tab=payments`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs font-semibold h-9 rounded-xl">
-                          <Zap size={14} /> Collect Dues
+                          <Zap size={14} /> Mark Collection
                         </Button>
                       </Link>
                     ) : null}
@@ -253,7 +257,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                             {memberIdStr ? (
                               <Link to={`/members/${memberIdStr}?tab=payments`}>
                                 <Button size="sm" variant="outline" className="gap-1 text-xs">
-                                  <Zap size={13} /> Collect
+                                  <Zap size={13} /> Mark Collection
                                 </Button>
                               </Link>
                             ) : null}
@@ -326,6 +330,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
         chitGroupId={chitGroup.id}
         seatsRemaining={seatsRemaining}
         enrolledMemberIds={enrolledMemberIds}
+        isNotStarted={isNotStarted}
       />
     </div>
   );

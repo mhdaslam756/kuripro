@@ -16,6 +16,7 @@ import { permissionRouter } from "../modules/permissions/permission.routes.js";
 import { reportRouter } from "../modules/reports/report.routes.js";
 import { roleRouter } from "../modules/roles/role.routes.js";
 import superAdminRouter from "../modules/super-admin/super-admin.routes.js";
+import { publicRouter } from "../modules/public/public.routes.js";
 import { tenantRouter } from "../modules/tenants/tenant.routes.js";
 import { usersRouter } from "../modules/users/users.routes.js";
 import { uploadsRouter } from "../uploads/upload.routes.js";
@@ -27,6 +28,7 @@ import { uploadsRouter } from "../uploads/upload.routes.js";
 export const v1Router: Router = Router();
 
 v1Router.use("/auth", authRouter);
+v1Router.use("/public", publicRouter);
 v1Router.use("/super-admin", superAdminRouter);
 v1Router.use("/users", usersRouter);
 v1Router.use("/chit-groups", chitGroupRouter);

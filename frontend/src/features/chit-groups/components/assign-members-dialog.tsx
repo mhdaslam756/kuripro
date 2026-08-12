@@ -1,5 +1,6 @@
 import { AlertCircle, Trash2, Search, UserCheck, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,10 @@ interface Props {
   chitGroupId: string;
   seatsRemaining: number;
   enrolledMemberIds?: Set<string>;
+  isNotStarted?: boolean;
 }
 
-export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRemaining }: Props) {
+export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRemaining, isNotStarted = true }: Props) {
   const [activeTab, setActiveTab] = useState<"assign" | "enrolled">("assign");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -215,7 +217,15 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                   <Skeleton className="h-9 w-full" />
                 </div>
               ) : assignable.length === 0 ? (
-                <p className="p-6 text-center text-sm text-text-secondary">No matching members found.</p>
+                <div className="p-8 text-center flex flex-col items-center gap-2">
+                  <p className="text-sm font-medium text-text-primary">No matching members found</p>
+                  <p className="text-xs text-text-secondary">Register members in your organization first to assign them to this chit group.</p>
+                  <Link to="/members" onClick={() => handleClose(false)} className="mt-2">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                      <UserPlus size={14} /> Register new member
+                    </Button>
+                  </Link>
+                </div>
               ) : (
                 <ul className="divide-y divide-border-default">
                   {assignable.map((member) => {
@@ -251,7 +261,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                           </div>
                         </label>
 
-                        {isEnrolled && enrolledInfo ? (
+                        {isEnrolled && enrolledInfo && isNotStarted ? (
                           <Button
                             type="button"
                             size="sm"
@@ -307,7 +317,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                         </p>
                       </div>
 
-                      {!item.hasWon ? (
+                      {!item.hasWon && isNotStarted ? (
                         <Button
                           type="button"
                           size="sm"
@@ -317,9 +327,9 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                         >
                           <Trash2 size={14} /> Remove
                         </Button>
-                      ) : (
+                      ) : item.hasWon ? (
                         <span className="text-xs text-text-secondary italic">Cannot remove (Won)</span>
-                      )}
+                      ) : null}
                     </li>
                       );
                     })}

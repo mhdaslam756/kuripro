@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { api, getDeviceId, setAccessToken, setUnauthorizedHandler } from "./api-client";
 import { queryClient } from "./query-client";
-import { authenticateWithPasskey } from "./webauthn";
 
 export interface AuthUser {
   id: string;
@@ -42,7 +41,6 @@ interface AuthContextValue {
   /** True only while the initial silent-refresh bootstrap is in flight on app load. */
   isLoading: boolean;
   login: (email: string, password: string, rememberDevice?: boolean) => Promise<AuthUser>;
-  loginWithPasskey: (email: string) => Promise<AuthUser>;
   loginWithTokens: (accessToken: string, user: AuthUser) => void;
   registerOrganization: (input: RegisterOrganizerInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -64,7 +62,7 @@ let bootstrapRefreshPromise: Promise<RefreshResponse> | null = null;
 function bootstrapRefresh(): Promise<RefreshResponse> {
   if (!bootstrapRefreshPromise) {
     const API_BASE_URL: string =
-      (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:4000/api/v1";
+      (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:4000/api";
 
     bootstrapRefreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
       method: "POST",
@@ -137,12 +135,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.user;
   }
 
-  async function loginWithPasskey(email: string): Promise<AuthUser> {
-    const res = await authenticateWithPasskey(email);
-    setAccessToken(res.accessToken);
-    setUser(res.user);
-    return res.user;
-  }
 
   async function registerOrganization(input: RegisterOrganizerInput): Promise<void> {
     const res = await api.post<LoginResponse>("/auth/register-organizer", {
@@ -169,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithPasskey, loginWithTokens, registerOrganization, logout, hasPermission }}
+      value={{ user, isLoading, login, loginWithTokens, registerOrganization, logout, hasPermission }}
     >
       {children}
     </AuthContext.Provider>

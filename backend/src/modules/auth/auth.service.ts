@@ -5,8 +5,9 @@ import mongoose from "mongoose";
 import { recordActivity } from "../activity-logs/activity-log.service.js";
 import { deliverOtp } from "../otp/otp.delivery.js";
 import { generateOtp, verifyOtp } from "../otp/otp.service.js";
-import { findRoleById } from "../roles/role.repository.js";
+import { findRoleById, findRoleBySlug } from "../roles/role.repository.js";
 import { seedSystemRolesForOrganization } from "../roles/role.service.js";
+import { registerMember } from "../members/member.service.js";
 import {
   findSessionById,
   findSessionByTokenId,
@@ -27,7 +28,7 @@ import { AppError } from "../../utils/app-error.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { slugify } from "../../utils/slugify.js";
 import type { AuthContext } from "../../types/auth.js";
-import type { RegisterOrganizerInput, LoginInput } from "./auth.validators.js";
+import type { RegisterOrganizerInput, LoginInput, RegisterMemberInput } from "./auth.validators.js";
 import {
   generateAccessToken,
   issueRefreshToken,
@@ -525,3 +526,87 @@ export async function revokeOtherSessions(
   });
 }
 
+// --- Member self-registration ---
+
+export interface RegisterMemberSelfResult {
+  isPendingApproval: true;
+  message: string;
+}
+
+/**
+ * Public self-registration for members. Resolves the organisation by its slug (derived from the
+ * subdomain the member visited), creates a Member record and a linked User account in PENDING_APPROVAL
+ * status. The organiser must approve the account before the member can log in.
+ */
+export async function registerMemberSelf(
+  input: RegisterMemberInput,
+  deviceContext: DeviceContext = {},
+): Promise<RegisterMemberSelfResult> {
+  // 1. Resolve tenant
+  const tenant = await findTenantBySlug(input.tenantSlug);
+  if (!tenant || tenant.status !== "ACTIVE") {
+    throw AppError.notFound("Organisation not found or not active");
+  }
+  const tenantId = tenant._id.toString();
+
+  // 2. Guard: email must be unique
+  const existingUser = await findUserByEmail(input.email);
+  if (existingUser) {
+    throw AppError.conflict("An account with this email already exists");
+  }
+
+  // 3. Resolve MEMBER role for this tenant
+  const memberRole = await findRoleBySlug(tenantId, "MEMBER");
+  if (!memberRole) {
+    throw AppError.internal("Member role not configured for this organisation");
+  }
+
+  const passwordHash = await hashPassword(input.password);
+
+  // 4. Atomic: create Member + User together
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      // Create the member record (reuse the service so memberCode / qrToken generation is handled)
+      const member = await registerMember(tenantId, "system", {
+        name: input.name,
+        phone: input.phone,
+        email: input.email,
+        occupation: { type: "SALARIED" },
+        address: {
+          line1: input.address.line1,
+          city: input.address.city,
+          state: input.address.state,
+          pincode: input.address.pincode,
+          country: "India",
+        },
+      });
+
+      // Create the portal user, linked to the member, in PENDING_APPROVAL so the organiser must approve
+      const user = await createUser(
+        {
+          tenantId: tenant._id,
+          roleId: memberRole._id,
+          name: input.name,
+          email: input.email,
+          phone: input.phone,
+          passwordHash,
+          status: "PENDING_APPROVAL",
+          mustChangePassword: false,
+        },
+        session,
+      );
+
+      // Link member ↔ user
+      member.userId = user._id;
+      await member.save({ session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return {
+    isPendingApproval: true,
+    message: "Your registration has been submitted. You can log in once the organizer approves your account.",
+  };
+}

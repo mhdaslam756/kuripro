@@ -51,7 +51,7 @@ export interface RegisteredOrg {
 export async function registerOrg(overrides: Record<string, unknown> = {}): Promise<RegisteredOrg> {
   const agent = makeAgent();
   const payload = validRegisterPayload(overrides);
-  const res = await agent.post("/api/v1/auth/register-organizer").send(payload);
+  const res = await agent.post("/api/auth/register-organizer").send(payload);
   if (res.status !== 201) {
     throw new Error(`register-organizer failed (${res.status}): ${JSON.stringify(res.body)}`);
   }

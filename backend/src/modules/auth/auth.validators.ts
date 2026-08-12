@@ -87,3 +87,25 @@ export const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// --- Member self-registration ---
+
+const memberAddressSchema = z.object({
+  line1: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  pincode: z.string().regex(/^\d{6}$/, "Pincode must be 6 digits"),
+});
+
+export const registerMemberSchema = z
+  .object({
+    tenantSlug: z.string().min(1, "Tenant slug is required"),
+    name: z.string().min(2, "Full name must be at least 2 characters"),
+    phone: z.string().min(7, "Enter a valid phone number"),
+    email: z.string().email("Enter a valid email address"),
+    password: passwordSchema,
+    address: memberAddressSchema,
+  })
+  .merge(deviceContextSchema);
+
+export type RegisterMemberInput = z.infer<typeof registerMemberSchema>;

@@ -70,7 +70,7 @@ export async function countChitMemberships(
 
 export async function listTicketNumbers(scope: ChitMembershipScope): Promise<number[]> {
   const rows = await ChitMembership.find({ ...scope, status: "ACTIVE" as ChitMembershipStatus })
-    .populate({ path: "memberId", match: { tenantId: { $exists: true } }, select: "_id" });
+    .populate({ path: "memberId", select: "_id" });
   const validTicketNumbers: number[] = [];
   const orphanedIds: Types.ObjectId[] = [];
 
@@ -100,7 +100,7 @@ export async function listChitMemberships(
     .sort({ ticketNumber: 1 })
     .populate<{ memberId: PopulatedMemberRef | null }>({
       path: "memberId",
-      match: { tenantId: { $exists: true } },
+     
       select: "name memberCode phone",
     });
 
@@ -164,7 +164,7 @@ export async function listChitMembershipsByMemberId(
 ): Promise<(Omit<ChitMembershipDocument, "chitGroupId"> & { chitGroupId: PopulatedChitGroupRef })[]> {
   return ChitMembership.find({ tenantId, memberId }).populate<{ chitGroupId: PopulatedChitGroupRef }>({
     path: "chitGroupId",
-    match: { tenantId: { $exists: true } },
+   
     select: "name",
   });
 }

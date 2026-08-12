@@ -10,16 +10,12 @@ import {
   changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
+  registerMemberSchema,
   registerOrganizerSchema,
   requestOtpSchema,
   resetPasswordSchema,
   verifyOtpSchema,
 } from "./auth.validators.js";
-import {
-  webauthnLoginOptionsSchema,
-  webauthnLoginVerifySchema,
-  webauthnRegisterVerifySchema,
-} from "./webauthn.validators.js";
 
 export const authRouter: Router = Router();
 
@@ -45,6 +41,13 @@ authRouter.post(
   authRateLimiter,
   validate({ body: registerOrganizerSchema }),
   authController.registerOrganizer,
+);
+
+authRouter.post(
+  "/register-member",
+  authRateLimiter,
+  validate({ body: registerMemberSchema }),
+  authController.registerMemberSelf,
 );
 
 authRouter.post("/login", authRateLimiter, validate({ body: loginSchema }), authController.login);
@@ -88,38 +91,7 @@ authRouter.post(
 
 authRouter.post("/logout", authController.logout);
 
-// --- WebAuthn / passkeys ---
 
-// Enrollment is done by an already-authenticated user (Device & Security page).
-authRouter.post("/webauthn/register/options", requireAuth, authController.webauthnRegisterOptions);
-authRouter.post(
-  "/webauthn/register/verify",
-  requireAuth,
-  validate({ body: webauthnRegisterVerifySchema }),
-  authController.webauthnRegisterVerify,
-);
-
-// Passkey sign-in is public but rate-limited like other credential endpoints.
-authRouter.post(
-  "/webauthn/login/options",
-  authRateLimiter,
-  validate({ body: webauthnLoginOptionsSchema }),
-  authController.webauthnLoginOptions,
-);
-authRouter.post(
-  "/webauthn/login/verify",
-  authRateLimiter,
-  validate({ body: webauthnLoginVerifySchema }),
-  authController.webauthnLoginVerify,
-);
-
-authRouter.get("/webauthn/credentials", requireAuth, authController.listPasskeys);
-authRouter.delete(
-  "/webauthn/credentials/:id",
-  requireAuth,
-  validate({ params: mongoIdParamSchema }),
-  authController.deletePasskey,
-);
 
 authRouter.get("/sessions", requireAuth, authController.listSessions);
 

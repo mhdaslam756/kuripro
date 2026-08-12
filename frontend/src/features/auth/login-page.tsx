@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { Fingerprint, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import { isWebAuthnSupported } from "@/lib/webauthn";
 import { FirstLoginModal } from "./components/first-login-modal";
 
 const loginSchema = z.object({
@@ -22,18 +21,15 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { login, loginWithPasskey } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
-  const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
   const [lastEnteredPassword, setLastEnteredPassword] = useState("");
-  const passkeySupported = isWebAuthnSupported();
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -54,26 +50,6 @@ export function LoginPage() {
       }
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Something went wrong — please try again");
-    }
-  }
-
-  async function onPasskey() {
-    setFormError(null);
-    const identifier = watch("identifier").trim();
-    if (!identifier) {
-      setFormError("Enter your email, then sign in with your passkey.");
-      return;
-    }
-    setPasskeyBusy(true);
-    try {
-      await loginWithPasskey(identifier);
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      setFormError(
-        error instanceof ApiError ? error.message : "Passkey sign-in was cancelled or failed — try again or use your password.",
-      );
-    } finally {
-      setPasskeyBusy(false);
     }
   }
 
@@ -110,31 +86,12 @@ export function LoginPage() {
           </Button>
         </form>
 
-        {passkeySupported ? (
-          <>
-            <div className="my-5 flex items-center gap-3 text-xs text-text-secondary">
-              <span className="h-px flex-1 bg-border-default" />
-              or
-              <span className="h-px flex-1 bg-border-default" />
-            </div>
-            <Button type="button" variant="outline" size="lg" className="w-full active-bounce" disabled={passkeyBusy} onClick={() => void onPasskey()}>
-              <Fingerprint className="size-4" /> {passkeyBusy ? "Waiting for passkey…" : "Sign in with a passkey"}
-            </Button>
-          </>
-        ) : null}
-
         <p className="mt-6 text-center text-sm text-text-secondary">
           New organization?{" "}
           <Link to="/register" className="font-medium text-accent-link hover:underline">
             Register organization
           </Link>
         </p>
-
-        <div className="mt-4 border-t border-border-default pt-3 text-center">
-          <Link to="/super-admin/login" className="text-xs text-text-secondary hover:text-text-primary underline">
-            Super Admin Portal Login →
-          </Link>
-        </div>
       </div>
 
       <FirstLoginModal

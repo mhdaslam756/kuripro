@@ -26,7 +26,6 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   OTP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
-
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
@@ -67,3 +66,6 @@ function loadEnv(): Env {
 }
 
 export const env = loadEnv();
+
+// Parsed, trimmed array of allowed CORS origins derived from CORS_ORIGIN.
+export const corsOrigins: string[] = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);

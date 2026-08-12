@@ -20,15 +20,13 @@ export function ChannelAvailabilityBanner({ channels }: { channels: ChannelAvail
               <Info className="size-4 text-text-secondary" aria-hidden />
             )}
             <span className="font-medium text-text-primary">{CHANNEL_LABELS[c.channel]}</span>
-            <span className="text-text-secondary">{c.configured ? "connected" : "not configured"}</span>
+            <span className="text-text-secondary">{c.configured ? "Active" : "Inactive"}</span>
           </span>
         ))}
       </div>
       {anyUnconfigured ? (
         <p className="text-xs text-text-secondary">
-          Channels marked <em>not configured</em> have no provider credentials on this server. In
-          development they're logged to the server console so you can still test; in production they'll
-          be marked failed until credentials are added.
+          Channels marked <em>Inactive</em> are not set up for notification delivery yet.
         </p>
       ) : (
         <p className="text-xs text-text-secondary">All channels are connected and ready to deliver.</p>

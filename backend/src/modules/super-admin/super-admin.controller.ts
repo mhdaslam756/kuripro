@@ -4,10 +4,13 @@ import { env } from "../../config/env.js";
 import {
   approveOrganization,
   getPlatformStatistics,
+  getSuperAdminSetupStatus,
   listAllOrganizations,
   rejectOrganization,
   setOrganizationStatus,
+  setupSuperAdmin,
   superAdminLogin,
+  type SetupSuperAdminInput,
 } from "./super-admin.service.js";
 
 const REFRESH_COOKIE_NAME = "kuripro_rt";
@@ -16,9 +19,20 @@ const refreshCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
   sameSite: "strict",
-  path: "/api/v1",
+  path: "/api",
   maxAge: env.JWT_REFRESH_TTL_SECONDS * 1000,
 };
+
+export async function getSuperAdminSetupStatusHandler(_req: Request, res: Response): Promise<void> {
+  const status = await getSuperAdminSetupStatus();
+  res.status(200).json(status);
+}
+
+export async function setupSuperAdminHandler(req: Request, res: Response): Promise<void> {
+  const input = req.body as SetupSuperAdminInput;
+  const result = await setupSuperAdmin(input);
+  res.status(201).json({ message: "Super Admin account created successfully", user: result });
+}
 
 export async function superAdminLoginHandler(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body as { email: string; password: string };

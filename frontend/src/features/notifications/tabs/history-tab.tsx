@@ -196,7 +196,7 @@ export function HistoryTab() {
               </div>
               <DetailRow label="Queued" value={formatDateTime(detail.createdAt)} />
               {detail.sentAt ? <DetailRow label="Sent" value={formatDateTime(detail.sentAt)} /> : null}
-              {detail.providerMessageId ? <DetailRow label="Provider id" value={detail.providerMessageId} mono /> : null}
+              {detail.providerMessageId ? <DetailRow label="Reference ID" value={detail.providerMessageId} mono /> : null}
               {detail.subject ? <DetailRow label="Subject" value={detail.subject} /> : null}
               <div>
                 <span className="text-text-secondary">Message</span>

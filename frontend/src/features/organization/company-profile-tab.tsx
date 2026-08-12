@@ -125,6 +125,45 @@ export function CompanyProfileTab({ organization }: { organization: Organization
           {updateProfile.isPending ? "Saving…" : "Save changes"}
         </Button>
       </div>
+
+      <div className="mt-4 rounded-2xl border border-brand-200 bg-brand-50/50 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-text-primary text-sm flex items-center gap-1.5">
+              🔗 Public Member Registration Link
+            </h3>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Share this link with potential members to let them self-register for your organization.
+            </p>
+          </div>
+          <a
+            href={`/portal/${organization.slug}/register`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-semibold text-accent-primary hover:underline shrink-0"
+          >
+            Open Form ↗
+          </a>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <Input
+            readOnly
+            value={`${window.location.origin}/portal/${organization.slug}/register`}
+            className="font-mono text-xs bg-bg-surface"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void navigator.clipboard.writeText(`${window.location.origin}/portal/${organization.slug}/register`);
+              setSuccessMessage("Public member registration link copied to clipboard!");
+            }}
+          >
+            Copy Link
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

@@ -18,6 +18,8 @@ import { MembersPage } from "@/features/members/members-page";
 import { NotificationsPage } from "@/features/notifications/notifications-page";
 import { OrganizationPage } from "@/features/organization/organization-page";
 import { RolesPage } from "@/features/roles/roles-page";
+import { MemberRegisterPage } from "@/features/public-portal/member-register-page";
+import { MemberLoginPage } from "@/features/public-portal/member-login-page";
 import { ProtectedRoute } from "@/routes/protected-route";
 
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/portal/:slug/register" element={<MemberRegisterPage />} />
+      <Route path="/portal/:slug/login" element={<MemberLoginPage />} />
       <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
       <Route
         path="/super-admin/dashboard"

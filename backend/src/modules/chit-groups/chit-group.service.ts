@@ -186,8 +186,8 @@ export async function assignMember(
   input: EnrollMemberInput,
 ): Promise<ChitMembershipDocument> {
   const chitGroup = await getChitGroupById(tenantId, chitGroupId);
-  if (chitGroup.status !== "DRAFT" && chitGroup.status !== "ACTIVE") {
-    throw AppError.conflict("Members can only be assigned while the chit group is in DRAFT or ACTIVE status");
+  if (chitGroup.status !== "DRAFT") {
+    throw AppError.conflict("Members can only be added while the chit group is NOT STARTED (DRAFT status)");
   }
 
   await assertAssignableMember(tenantId, input.memberId);
@@ -226,8 +226,8 @@ export async function assignMembers(
   input: AssignMembersInput,
 ): Promise<BulkAssignResult> {
   const chitGroup = await getChitGroupById(tenantId, chitGroupId);
-  if (chitGroup.status !== "DRAFT" && chitGroup.status !== "ACTIVE") {
-    throw AppError.conflict("Members can only be assigned while the chit group is in DRAFT or ACTIVE status");
+  if (chitGroup.status !== "DRAFT") {
+    throw AppError.conflict("Members can only be assigned while the chit group is NOT STARTED (DRAFT status)");
   }
 
   const scope = { tenantId, chitGroupId };
@@ -265,8 +265,8 @@ export async function assignMembers(
 
 export async function removeMember(tenantId: string, chitGroupId: string, membershipId: string): Promise<void> {
   const chitGroup = await getChitGroupById(tenantId, chitGroupId);
-  if (chitGroup.status !== "DRAFT" && chitGroup.status !== "ACTIVE") {
-    throw AppError.conflict("Members can only be removed while the chit group is in DRAFT or ACTIVE status");
+  if (chitGroup.status !== "DRAFT") {
+    throw AppError.conflict("Members can only be removed while the chit group is NOT STARTED (DRAFT status)");
   }
 
   const membership = await findChitMembershipByIdOrMemberId(tenantId, chitGroupId, membershipId);

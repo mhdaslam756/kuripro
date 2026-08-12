@@ -11,7 +11,7 @@ describeDb("authenticated API endpoints", () => {
 
   async function createMember(agent: Agent, accessToken: string, name: string, phone: string): Promise<string> {
     const res = await agent
-      .post("/api/v1/members")
+      .post("/api/members")
       .set(bearer(accessToken))
       .send({
         name,
@@ -25,7 +25,7 @@ describeDb("authenticated API endpoints", () => {
 
   it("serves the dashboard summary to an organizer", async () => {
     const { agent, accessToken } = await registerOrg();
-    const res = await agent.get("/api/v1/dashboard/summary").set(bearer(accessToken));
+    const res = await agent.get("/api/dashboard/summary").set(bearer(accessToken));
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("kpis.activeMembers");
     expect(res.body.today).toHaveProperty("total");
@@ -35,7 +35,7 @@ describeDb("authenticated API endpoints", () => {
 
   it("serves a zero-filled dashboard trend series", async () => {
     const { agent, accessToken } = await registerOrg();
-    const res = await agent.get("/api/v1/dashboard/trends?months=6").set(bearer(accessToken));
+    const res = await agent.get("/api/dashboard/trends?months=6").set(bearer(accessToken));
     expect(res.status).toBe(200);
     expect(res.body.months).toHaveLength(6);
     expect(res.body.collectionTrend).toHaveLength(6);
@@ -44,7 +44,7 @@ describeDb("authenticated API endpoints", () => {
 
   it("lists members (empty) for a new organization", async () => {
     const { agent, accessToken } = await registerOrg();
-    const res = await agent.get("/api/v1/members").set(bearer(accessToken));
+    const res = await agent.get("/api/members").set(bearer(accessToken));
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([]);
     expect(res.body.total).toBe(0);
@@ -62,13 +62,13 @@ describeDb("authenticated API endpoints", () => {
       address: { line1: "1 MG Road", city: "Kochi", state: "Kerala", pincode: "682001" },
     });
 
-    const first = await agent.post("/api/v1/members").set(bearer(accessToken)).send(payload("Member One", "9000000001"));
+    const first = await agent.post("/api/members").set(bearer(accessToken)).send(payload("Member One", "9000000001"));
     expect(first.status).toBe(201);
 
     // Regression: `userId` defaults to null, so a sparse unique index on (tenantId, userId) made
     // every member after the first collide with a 409.
     const second = await agent
-      .post("/api/v1/members")
+      .post("/api/members")
       .set(bearer(accessToken))
       .send(payload("Member Two", "9000000002"));
     expect(second.status).toBe(201);
@@ -80,7 +80,7 @@ describeDb("authenticated API endpoints", () => {
     const memberId = await createMember(agent, accessToken, "Invitee", "9000000003");
 
     const res = await agent
-      .post(`/api/v1/members/${memberId}/invite`)
+      .post(`/api/members/${memberId}/invite`)
       .set(bearer(accessToken))
       .send({ email: "invitee@example.com" });
 
@@ -97,7 +97,7 @@ describeDb("authenticated API endpoints", () => {
     // An organizer who also holds a chit slot: one human, one login. Sent uppercase to pin the
     // case-normalization — a raw lookup would miss the stored lowercase address.
     const res = await agent
-      .post(`/api/v1/members/${memberId}/invite`)
+      .post(`/api/members/${memberId}/invite`)
       .set(bearer(accessToken))
       .send({ email: organizerEmail.toUpperCase() });
 
@@ -116,20 +116,20 @@ describeDb("authenticated API endpoints", () => {
     const secondId = await createMember(agent, accessToken, "Second", "9000000006");
 
     const first = await agent
-      .post(`/api/v1/members/${firstId}/invite`)
+      .post(`/api/members/${firstId}/invite`)
       .set(bearer(accessToken))
       .send({ email: organizerEmail });
     expect(first.status).toBe(201);
 
     const second = await agent
-      .post(`/api/v1/members/${secondId}/invite`)
+      .post(`/api/members/${secondId}/invite`)
       .set(bearer(accessToken))
       .send({ email: organizerEmail });
     expect(second.status).toBe(409);
     expect(second.body.error.message).toContain("already has portal access as First");
 
     // The rejected member is untouched and still invitable with another address.
-    const unchanged = await agent.get(`/api/v1/members/${secondId}`).set(bearer(accessToken));
+    const unchanged = await agent.get(`/api/members/${secondId}`).set(bearer(accessToken));
     expect(unchanged.body.member.userId).toBeNull();
   });
 
@@ -139,7 +139,7 @@ describeDb("authenticated API endpoints", () => {
     const memberId = await createMember(agent, accessToken, "Outsider", "9000000007");
 
     const res = await agent
-      .post(`/api/v1/members/${memberId}/invite`)
+      .post(`/api/members/${memberId}/invite`)
       .set(bearer(accessToken))
       .send({ email: other.email });
 
@@ -148,12 +148,12 @@ describeDb("authenticated API endpoints", () => {
   });
 
   it("rejects an authenticated endpoint when no token is presented", async () => {
-    const res = await makeAgent().get("/api/v1/members");
+    const res = await makeAgent().get("/api/members");
     expect(res.status).toBe(401);
   });
 
   it("rejects a malformed/garbage bearer token", async () => {
-    const res = await makeAgent().get("/api/v1/members").set(bearer("not-a-real-jwt"));
+    const res = await makeAgent().get("/api/members").set(bearer("not-a-real-jwt"));
     expect(res.status).toBe(401);
   });
 });

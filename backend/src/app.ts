@@ -43,7 +43,7 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok", pongedAt: result.pongedAt });
   });
 
-  app.use("/api/v1", v1Router);
+  app.use("/api", v1Router);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

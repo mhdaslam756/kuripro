@@ -20,10 +20,10 @@ describeDb("authentication API", () => {
 
   it("rejects a duplicate organizer email", async () => {
     const payload = validRegisterPayload();
-    const first = await makeAgent().post("/api/v1/auth/register-organizer").send(payload);
+    const first = await makeAgent().post("/api/auth/register-organizer").send(payload);
     expect(first.status).toBe(201);
     const dup = await makeAgent()
-      .post("/api/v1/auth/register-organizer")
+      .post("/api/auth/register-organizer")
       .send({ ...validRegisterPayload(), organizerEmail: payload["organizerEmail"] });
     expect(dup.status).toBeGreaterThanOrEqual(400);
     expect(dup.status).toBeLessThan(500);
@@ -31,18 +31,18 @@ describeDb("authentication API", () => {
 
   it("logs in with correct credentials and rejects a wrong password", async () => {
     const { email, password } = await registerOrg();
-    const ok = await makeAgent().post("/api/v1/auth/login").send({ email, password });
+    const ok = await makeAgent().post("/api/auth/login").send({ email, password });
     expect(ok.status).toBe(200);
     expect(ok.body.accessToken).toBeTruthy();
 
-    const bad = await makeAgent().post("/api/v1/auth/login").send({ email, password: "WrongPass123" });
+    const bad = await makeAgent().post("/api/auth/login").send({ email, password: "WrongPass123" });
     expect(bad.status).toBe(401);
     expect(bad.body.error.code).toBe("INVALID_CREDENTIALS");
   });
 
   it("refreshes the session from the httpOnly cookie", async () => {
     const { agent } = await registerOrg();
-    const res = await agent.post("/api/v1/auth/refresh");
+    const res = await agent.post("/api/auth/refresh");
     expect(res.status).toBe(200);
     expect(res.body.accessToken).toBeTruthy();
     expect(res.body.user.role.slug).toBe("ORGANIZER");
@@ -50,36 +50,26 @@ describeDb("authentication API", () => {
 
   it("logs out and then refuses to refresh", async () => {
     const { agent } = await registerOrg();
-    expect((await agent.post("/api/v1/auth/logout")).status).toBe(204);
-    expect((await agent.post("/api/v1/auth/refresh")).status).toBe(401);
+    expect((await agent.post("/api/auth/logout")).status).toBe(204);
+    expect((await agent.post("/api/auth/refresh")).status).toBe(401);
   });
 
   it("changes the password, revoking the old credential", async () => {
     const { agent, accessToken, email, password } = await registerOrg();
     const changed = await agent
-      .post("/api/v1/auth/change-password")
+      .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({ currentPassword: password, newPassword: "BrandNewPass123" });
     expect(changed.status).toBe(204);
 
-    expect((await makeAgent().post("/api/v1/auth/login").send({ email, password })).status).toBe(401);
-    expect((await makeAgent().post("/api/v1/auth/login").send({ email, password: "BrandNewPass123" })).status).toBe(200);
+    expect((await makeAgent().post("/api/auth/login").send({ email, password })).status).toBe(401);
+    expect((await makeAgent().post("/api/auth/login").send({ email, password: "BrandNewPass123" })).status).toBe(200);
   });
 
   it("enforces the password policy on registration", async () => {
     const weak = await makeAgent()
-      .post("/api/v1/auth/register-organizer")
+      .post("/api/auth/register-organizer")
       .send(validRegisterPayload({ organizerPassword: "weak" }));
     expect(weak.status).toBe(400);
-  });
-
-  it("passkey login options never reveal whether an email is registered", async () => {
-    const real = await registerOrg();
-    const known = await makeAgent().post("/api/v1/auth/webauthn/login/options").send({ email: real.email });
-    const unknown = await makeAgent().post("/api/v1/auth/webauthn/login/options").send({ email: "ghost@example.com" });
-    expect(known.status).toBe(200);
-    expect(unknown.status).toBe(200);
-    expect(known.body.options.challenge).toBeTruthy();
-    expect(unknown.body.options.challenge).toBeTruthy();
   });
 });

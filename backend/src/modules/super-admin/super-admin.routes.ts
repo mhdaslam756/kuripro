@@ -5,15 +5,19 @@ import { requireSuperAdmin } from "../../middleware/rbac.js";
 import {
   approveOrganizationHandler,
   getPlatformStatisticsHandler,
+  getSuperAdminSetupStatusHandler,
   listOrganizationsHandler,
   rejectOrganizationHandler,
   setOrganizationStatusHandler,
+  setupSuperAdminHandler,
   superAdminLoginHandler,
 } from "./super-admin.controller.js";
 
 const router = Router();
 
-// Public Super Admin Login route
+// Public Super Admin routes (Setup & Login)
+router.get("/setup-status", getSuperAdminSetupStatusHandler);
+router.post("/setup", setupSuperAdminHandler);
 router.post("/login", superAdminLoginHandler);
 
 // Authenticated Super Admin routes

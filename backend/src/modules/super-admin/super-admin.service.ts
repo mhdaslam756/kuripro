@@ -7,11 +7,9 @@ import { Member } from "../members/member.model.js";
 import { ChitGroup } from "../chit-groups/chit-group.model.js";
 import { issueAuthResult, type AuthResult, type DeviceContext } from "../auth/auth.service.js";
 
-const SUPER_ADMIN_EMAIL = "superadmin@kuripro.com";
-const SUPER_ADMIN_DEFAULT_PASS = "SuperAdmin@123";
 
-/** Idempotent seed to ensure a Super Admin user and role exist in the platform database. */
-export async function seedSuperAdmin(): Promise<void> {
+/** Ensure system role for Super Admin exists. */
+export async function ensureSuperAdminRole() {
   let role = await Role.findOne({ tenantId: null, slug: "SUPER_ADMIN" });
   if (!role) {
     role = await Role.create({
@@ -22,21 +20,53 @@ export async function seedSuperAdmin(): Promise<void> {
       permissionKeys: ["*"],
     });
   }
+  return role;
+}
 
-  let superAdmin = await User.findOne({ tenantId: null, email: SUPER_ADMIN_EMAIL });
-  if (!superAdmin) {
-    const passwordHash = await hashPassword(SUPER_ADMIN_DEFAULT_PASS);
-    await User.create({
-      tenantId: null,
-      roleId: role._id,
-      name: "Super Admin",
-      email: SUPER_ADMIN_EMAIL,
-      phone: "+919999999999",
-      passwordHash,
-      status: "ACTIVE",
-      mustChangePassword: false,
-    });
+/** Idempotently ensures Super Admin role exists on boot. */
+export async function seedSuperAdmin() {
+  await ensureSuperAdminRole();
+}
+
+/** Check if any Super Admin exists in the platform. */
+export async function getSuperAdminSetupStatus(): Promise<{ needsSetup: boolean }> {
+  const count = await User.countDocuments({ tenantId: null });
+  return { needsSetup: count === 0 };
+}
+
+export interface SetupSuperAdminInput {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
+/** Creates initial Super Admin credentials when database has no Super Admin users. */
+export async function setupSuperAdmin(input: SetupSuperAdminInput) {
+  const count = await User.countDocuments({ tenantId: null });
+  if (count > 0) {
+    throw AppError.conflict("Super Admin already exists. Setup is locked.", "SUPER_ADMIN_EXISTS");
   }
+
+  const role = await ensureSuperAdminRole();
+  const passwordHash = await hashPassword(input.password);
+
+  const superAdmin = await User.create({
+    tenantId: null,
+    roleId: role._id,
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone.trim(),
+    passwordHash,
+    status: "ACTIVE",
+    mustChangePassword: false,
+  });
+
+  return {
+    id: superAdmin._id.toString(),
+    name: superAdmin.name,
+    email: superAdmin.email,
+  };
 }
 
 export async function superAdminLogin(
@@ -44,7 +74,7 @@ export async function superAdminLogin(
   pass: string,
   deviceContext: DeviceContext = {},
 ): Promise<AuthResult> {
-  await seedSuperAdmin();
+  await ensureSuperAdminRole();
 
   const user = await User.findOne({ tenantId: null, email: email.trim().toLowerCase() }).select("+passwordHash");
   if (!user) {

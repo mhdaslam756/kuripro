@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   Bell,
   CloudUpload,
-  Fingerprint,
   Smartphone,
   Trash2,
   Wifi,
@@ -12,9 +11,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatDateTime } from "@/lib/format";
 import { promptInstall } from "@/lib/pwa-runtime";
 import {
   disablePush,
@@ -25,10 +21,8 @@ import {
   notificationPermission,
 } from "@/lib/push";
 import { useIsStandalone, useOnlineStatus, usePwa } from "@/lib/use-pwa";
-import { isWebAuthnSupported, platformAuthenticatorAvailable } from "@/lib/webauthn";
 import { countQueue } from "@/features/collections/offline-queue";
 import { flushOutbox } from "@/features/collections/sync-outbox";
-import { useAddPasskey, useDeletePasskey, usePasskeys } from "./use-device";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
@@ -76,7 +70,7 @@ function InstallCard() {
         <Button onClick={() => void promptInstall()}>Install KuriPro</Button>
       ) : (
         <p className="text-sm text-text-secondary">
-          Use your browser's “Install app” / “Add to Home Screen” option, or open KuriPro over HTTPS to enable it.
+          Use your browser's “Install app” or “Add to Home Screen” option to install KuriPro on this device.
         </p>
       )}
     </Capability>
@@ -113,7 +107,7 @@ function PushCard() {
     setBusy(false);
   }
 
-  const status = !supported ? "Not supported" : !configured ? "Not configured" : registered ? "On" : permission === "denied" ? "Blocked" : "Off";
+  const status = !supported ? "Not supported" : !configured ? "Unavailable" : registered ? "On" : permission === "denied" ? "Blocked" : "Off";
   const tone: Tone = registered ? "success" : permission === "denied" ? "danger" : "neutral";
 
   return (
@@ -128,7 +122,7 @@ function PushCard() {
         <p className="text-sm text-text-secondary">This browser doesn't support push notifications.</p>
       ) : !configured ? (
         <p className="text-sm text-text-secondary">
-          Push delivery isn't configured on this build. Add the Firebase web keys to enable it — the rest of the flow is ready.
+          Push notifications are currently unavailable for this organization.
         </p>
       ) : registered ? (
         <Button variant="outline" disabled={busy} onClick={() => void disable()}>
@@ -143,88 +137,6 @@ function PushCard() {
         <p className="mt-2 text-xs text-text-secondary">Notifications are blocked in your browser settings for this site.</p>
       ) : null}
       {error ? <p className="mt-2 text-sm text-bad-fg">{error}</p> : null}
-    </Capability>
-  );
-}
-
-// --- Biometric / passkeys ---
-function PasskeyCard() {
-  const supported = isWebAuthnSupported();
-  const [platformAvailable, setPlatformAvailable] = useState<boolean | null>(null);
-  const { data: passkeys, isLoading } = usePasskeys();
-  const addPasskey = useAddPasskey();
-  const deletePasskey = useDeletePasskey();
-  const [label, setLabel] = useState("");
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    if (supported) void platformAuthenticatorAvailable().then(setPlatformAvailable);
-  }, [supported]);
-
-  async function add() {
-    setError(undefined);
-    try {
-      await addPasskey.mutateAsync(label.trim() || undefined);
-      setLabel("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Passkey registration was cancelled or failed.");
-    }
-  }
-
-  const count = passkeys?.length ?? 0;
-  return (
-    <Capability
-      icon={<Fingerprint className="size-5" />}
-      title="Biometric login (passkeys)"
-      description="Sign in with Face ID, Touch ID or your device PIN instead of a password. Passkeys are phishing-resistant."
-      status={!supported ? "Not supported" : count > 0 ? `${count} registered` : "None yet"}
-      tone={!supported ? "neutral" : count > 0 ? "success" : "info"}
-    >
-      {!supported ? (
-        <p className="text-sm text-text-secondary">This browser doesn't support passkeys.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {platformAvailable === false ? (
-            <p className="text-xs text-text-secondary">
-              No built-in biometric sensor detected — you can still register a security key or phone passkey.
-            </p>
-          ) : null}
-
-          {isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : count > 0 ? (
-            <ul className="flex flex-col divide-y divide-border-default rounded-md border border-border-default">
-              {passkeys!.map((pk) => (
-                <li key={pk.id} className="flex items-center justify-between px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{pk.deviceLabel}</p>
-                    <p className="text-xs text-text-secondary">
-                      Added {formatDateTime(pk.createdAt)}
-                      {pk.lastUsedAt ? ` · last used ${formatDateTime(pk.lastUsedAt)}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void deletePasskey.mutateAsync(pk.id)}
-                    className="rounded p-1.5 text-text-secondary hover:bg-surface-muted hover:text-bad-fg"
-                    aria-label={`Remove ${pk.deviceLabel}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          <div className="flex gap-2">
-            <Input placeholder="Name this device (optional)" value={label} onChange={(e) => setLabel(e.target.value)} />
-            <Button disabled={addPasskey.isPending} onClick={() => void add()}>
-              {addPasskey.isPending ? "Waiting…" : "Add passkey"}
-            </Button>
-          </div>
-          {error ? <p className="text-sm text-bad-fg">{error}</p> : null}
-        </div>
-      )}
     </Capability>
   );
 }
@@ -252,7 +164,7 @@ function OfflineCard() {
     <Capability
       icon={online ? <Wifi className="size-5" /> : <WifiOff className="size-5" />}
       title="Offline mode & storage"
-      description="Collections captured offline are saved to on-device storage (IndexedDB) and synced automatically when you reconnect."
+      description="Collections captured offline are saved securely on your device and synced automatically when you reconnect."
       status={online ? "Online" : "Offline"}
       tone={online ? "success" : "warning"}
     >
@@ -274,14 +186,13 @@ export function DevicePage() {
       <div className="mb-6">
         <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Device &amp; Security</h1>
         <p className="text-sm text-text-secondary">
-          Install the app, sign in with biometrics, and manage notifications and offline data.
+          Install the app and manage notifications and offline data.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <InstallCard />
         <PushCard />
-        <PasskeyCard />
         <OfflineCard />
       </div>
     </div>

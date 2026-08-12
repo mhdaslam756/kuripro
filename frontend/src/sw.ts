@@ -9,7 +9,7 @@ declare const self: ServiceWorkerGlobalScope & {
 
 const CACHE = "kuripro-shell-v1";
 const APP_SHELL = "/index.html";
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api";
 
 // Precache the built assets + app shell so the app opens offline.
 const PRECACHE_URLS = [APP_SHELL, ...self.__WB_MANIFEST.map((entry) => entry.url)];

@@ -2,7 +2,7 @@ import type { Server as HttpServer } from "node:http";
 
 import { Server as SocketIOServer } from "socket.io";
 
-import { env } from "../config/env.js";
+import { corsOrigins } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { socketAuthMiddleware } from "./socket-auth.js";
 import type { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from "./types.js";
@@ -20,7 +20,7 @@ export type AppSocketIOServer = SocketIOServer<
 
 export function initSocketServer(httpServer: HttpServer): AppSocketIOServer {
   const io: AppSocketIOServer = new SocketIOServer(httpServer, {
-    cors: { origin: env.CORS_ORIGIN, credentials: true },
+    cors: { origin: corsOrigins, credentials: true },
   });
 
   io.use(socketAuthMiddleware);

@@ -32,13 +32,13 @@ describe("HTTP security hardening", () => {
   });
 
   it("requires authentication on protected routes", async () => {
-    for (const path of ["/api/v1/members", "/api/v1/dashboard/summary", "/api/v1/collections"]) {
+    for (const path of ["/api/members", "/api/dashboard/summary", "/api/collections"]) {
       expect((await makeAgent().get(path)).status).toBe(401);
     }
   });
 
   it("returns a structured error shape without leaking internals", async () => {
-    const res = await makeAgent().get("/api/v1/members");
+    const res = await makeAgent().get("/api/members");
     expect(res.body).toHaveProperty("error.code");
     expect(res.body).toHaveProperty("error.message");
     const serialized = JSON.stringify(res.body);
@@ -55,7 +55,7 @@ describeDb("data-layer security", () => {
     // A classic `{ "$ne": null }` operator-injection attempt must be rejected by validation, never
     // reach the query layer, and never authenticate.
     const res = await makeAgent()
-      .post("/api/v1/auth/login")
+      .post("/api/auth/login")
       .send({ email: { $ne: null }, password: { $ne: null } });
     expect(res.status).toBe(400);
     expect(res.body.accessToken).toBeUndefined();
@@ -67,8 +67,8 @@ describeDb("data-layer security", () => {
     expect(orgA.user.tenantId).not.toBe(orgB.user.tenantId);
 
     // Each org, using its own token, sees only its own (empty) member list — never the other's data.
-    const aMembers = await orgA.agent.get("/api/v1/members").set(bearer(orgA.accessToken));
-    const bMembers = await orgB.agent.get("/api/v1/members").set(bearer(orgB.accessToken));
+    const aMembers = await orgA.agent.get("/api/members").set(bearer(orgA.accessToken));
+    const bMembers = await orgB.agent.get("/api/members").set(bearer(orgB.accessToken));
     expect(aMembers.status).toBe(200);
     expect(bMembers.status).toBe(200);
     expect(aMembers.body.total).toBe(0);
@@ -78,7 +78,7 @@ describeDb("data-layer security", () => {
   it("rejects a tampered/forged JWT", async () => {
     const forged =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYWNrZXIiLCJ0ZW5hbnRJZCI6IngifQ.not_a_valid_signature";
-    const res = await makeAgent().get("/api/v1/members").set(bearer(forged));
+    const res = await makeAgent().get("/api/members").set(bearer(forged));
     expect(res.status).toBe(401);
   });
 });
