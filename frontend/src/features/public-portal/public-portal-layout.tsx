@@ -1,6 +1,6 @@
 import { Building2, Mail, Phone, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePublicOrg } from "./use-public-portal";

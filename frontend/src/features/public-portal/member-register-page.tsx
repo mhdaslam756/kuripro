@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, CheckCircle2, Lock, UserCheck, UserPlus } from "lucide-react";
+import { AlertCircle, ArrowRight, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -111,8 +111,9 @@ export function MemberRegisterPage() {
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
             {/* Personal Info */}
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Full Name *" required>
+              <Field label="Full Name *" htmlFor="reg-name">
                 <Input
+                  id="reg-name"
                   placeholder="e.g. Rahul Sharma"
                   value={form.name}
                   onChange={(e) => handleChange("name", e.target.value)}
@@ -120,8 +121,9 @@ export function MemberRegisterPage() {
                 />
               </Field>
 
-              <Field label="Mobile Number *" required>
+              <Field label="Mobile Number *" htmlFor="reg-phone">
                 <Input
+                  id="reg-phone"
                   type="tel"
                   placeholder="10-digit mobile number"
                   value={form.phone}
@@ -132,8 +134,9 @@ export function MemberRegisterPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Email Address (Optional)">
+              <Field label="Email Address (Optional)" htmlFor="reg-email">
                 <Input
+                  id="reg-email"
                   type="email"
                   placeholder="name@example.com"
                   value={form.email}
@@ -141,8 +144,9 @@ export function MemberRegisterPage() {
                 />
               </Field>
 
-              <Field label="Create Password *" required>
+              <Field label="Create Password *" htmlFor="reg-password">
                 <Input
+                  id="reg-password"
                   type="password"
                   placeholder="At least 6 characters"
                   value={form.password}
@@ -158,8 +162,9 @@ export function MemberRegisterPage() {
                 Residential Address
               </p>
               <div className="flex flex-col gap-3">
-                <Field label="Street / Door / Flat No. *" required>
+                <Field label="Street / Door / Flat No. *" htmlFor="reg-line1">
                   <Input
+                    id="reg-line1"
                     placeholder="Address Line 1"
                     value={form.line1}
                     onChange={(e) => handleChange("line1", e.target.value)}
@@ -168,8 +173,9 @@ export function MemberRegisterPage() {
                 </Field>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="City *" required>
+                  <Field label="City *" htmlFor="reg-city">
                     <Input
+                      id="reg-city"
                       placeholder="City"
                       value={form.city}
                       onChange={(e) => handleChange("city", e.target.value)}
@@ -177,8 +183,9 @@ export function MemberRegisterPage() {
                     />
                   </Field>
 
-                  <Field label="State *" required>
+                  <Field label="State *" htmlFor="reg-state">
                     <Input
+                      id="reg-state"
                       placeholder="State"
                       value={form.state}
                       onChange={(e) => handleChange("state", e.target.value)}
@@ -186,8 +193,9 @@ export function MemberRegisterPage() {
                     />
                   </Field>
 
-                  <Field label="Pincode *" required>
+                  <Field label="Pincode *" htmlFor="reg-pincode">
                     <Input
+                      id="reg-pincode"
                       placeholder="Pincode"
                       value={form.pincode}
                       onChange={(e) => handleChange("pincode", e.target.value)}
@@ -204,12 +212,12 @@ export function MemberRegisterPage() {
                 Occupation & Employment
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Occupation Type *" required>
+                <Field label="Occupation Type *" htmlFor="reg-occupation">
                   <Select
                     value={form.occupationType}
-                    onValueChange={(val) => handleChange("occupationType", val)}
+                    onValueChange={(val: string) => handleChange("occupationType", val)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="reg-occupation">
                       <SelectValue placeholder="Select Occupation" />
                     </SelectTrigger>
                     <SelectContent>
@@ -222,8 +230,9 @@ export function MemberRegisterPage() {
                   </Select>
                 </Field>
 
-                <Field label="Employer / Company Name">
+                <Field label="Employer / Company Name" htmlFor="reg-employer">
                   <Input
+                    id="reg-employer"
                     placeholder="Company or Business Name"
                     value={form.employerOrBusinessName}
                     onChange={(e) => handleChange("employerOrBusinessName", e.target.value)}

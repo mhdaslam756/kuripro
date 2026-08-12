@@ -3,7 +3,6 @@ import {
   Bell,
   CloudUpload,
   Smartphone,
-  Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react";

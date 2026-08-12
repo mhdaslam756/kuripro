@@ -108,7 +108,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
             <UserPlus size={15} /> {seatsRemaining > 0 ? "Assign members" : "Manage Roster"}
           </Button>
         ) : (
-          <Badge variant="outline" className="gap-1.5 px-2.5 py-1 text-xs text-text-secondary border-border-default">
+          <Badge variant="neutral" className="gap-1.5 px-2.5 py-1 text-xs text-text-secondary border-border-default">
             <Lock size={13} className="text-text-secondary" /> Roster Locked (Chit Started)
           </Badge>
         )}

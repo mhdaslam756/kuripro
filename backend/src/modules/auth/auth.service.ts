@@ -540,7 +540,7 @@ export interface RegisterMemberSelfResult {
  */
 export async function registerMemberSelf(
   input: RegisterMemberInput,
-  deviceContext: DeviceContext = {},
+  _deviceContext: DeviceContext = {},
 ): Promise<RegisterMemberSelfResult> {
   // 1. Resolve tenant
   const tenant = await findTenantBySlug(input.tenantSlug);

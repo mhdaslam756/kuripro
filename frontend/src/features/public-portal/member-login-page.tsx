@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, Lock, LogIn, UserCheck } from "lucide-react";
+import { AlertCircle, LogIn, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -65,8 +65,9 @@ export function MemberLoginPage() {
           ) : null}
 
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
-            <Field label="Mobile Number or Email *" required>
+            <Field label="Mobile Number or Email *" htmlFor="identifier">
               <Input
+                id="identifier"
                 placeholder="Enter your registered phone or email"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
@@ -74,8 +75,9 @@ export function MemberLoginPage() {
               />
             </Field>
 
-            <Field label="Password *" required>
+            <Field label="Password *" htmlFor="password">
               <Input
+                id="password"
                 type="password"
                 placeholder="Enter your password"
                 value={password}

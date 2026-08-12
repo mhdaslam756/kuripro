@@ -1,5 +1,5 @@
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { createApp } from "../../src/app.js";
 import { Tenant } from "../../src/modules/tenants/tenant.model.js";
