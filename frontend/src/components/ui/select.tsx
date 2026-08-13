@@ -14,8 +14,8 @@ export const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-11 w-full items-center justify-between rounded-sm border border-border-default bg-bg-surface px-3 text-sm text-text-primary",
-      "focus:outline-none focus:ring-2 focus:ring-accent-primary/40 focus:border-accent-primary",
+      "flex h-11 min-h-[44px] w-full items-center justify-between rounded-sm border border-border-default bg-bg-surface px-4 text-base sm:text-sm text-text-primary active:scale-[0.99] transition-all",
+      "focus:outline-none focus:ring-2 focus:ring-accent-primary/50 focus:border-accent-primary",
       "data-[placeholder]:text-text-disabled",
       className,
     )}
@@ -23,7 +23,7 @@ export const SelectTrigger = forwardRef<
   >
     {children}
     <SelectPrimitive.Icon>
-      <ChevronDown size={16} className="text-icon-default" />
+      <ChevronDown size={16} className="text-icon-default shrink-0 ml-2" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -37,7 +37,7 @@ export const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 max-h-72 overflow-y-auto rounded-sm border border-border-default bg-bg-surface shadow-md",
+        "z-50 max-h-72 min-w-[8rem] overflow-y-auto rounded-2xl border border-border-default bg-bg-surface p-1 text-text-primary shadow-xl animate-in fade-in-80 duration-150",
         className,
       )}
       position="popper"
@@ -57,8 +57,8 @@ export const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-xs py-2 pl-8 pr-3 text-sm text-text-primary outline-none",
-      "data-[highlighted]:bg-bg-raised",
+      "relative flex cursor-pointer select-none items-center rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold text-text-primary outline-none transition-colors",
+      "data-[highlighted]:bg-brand-50/80 data-[highlighted]:text-accent-primary active:scale-[0.98]",
       className,
     )}
     {...props}

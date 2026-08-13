@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MobileHeader } from "@/components/mobile/mobile-header";
 import { useChitGroups, useCycles } from "@/features/chit-groups/use-chit-groups";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate, formatPaise } from "@/lib/format";
@@ -39,12 +40,16 @@ export function AuctionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Auctions</h1>
-        <p className="text-sm text-text-secondary">
-          Run each cycle's auction — take bids, pick the winner, settle the prize, and archive the minutes.
-        </p>
-      </div>
+      {/* Mobile Top App Bar */}
+      <MobileHeader title="Auctions" subtitle="Run cycle bidding & winner settlements" />
+
+      <div className="p-4 sm:p-0">
+        <div className="mb-6 hidden sm:block">
+          <h1 className="mb-1 font-display text-2xl font-bold text-text-primary">Auction Room</h1>
+          <p className="text-sm text-text-secondary">
+            Run each cycle's auction — take bids, pick the winner, settle the prize, and archive the minutes.
+          </p>
+        </div>
 
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <div className="w-64">
@@ -139,6 +144,7 @@ export function AuctionsPage() {
           </Card>
         </div>
       )}
+      </div>
     </div>
   );
 }

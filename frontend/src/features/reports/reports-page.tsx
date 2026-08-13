@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { MobileHeader } from "@/components/mobile/mobile-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DateRange } from "./components/report-shared";
 import { AuctionsTab } from "./tabs/auctions-tab";
@@ -38,21 +39,27 @@ export function ReportsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Reports</h1>
-        <p className="text-sm text-text-secondary">
-          Operational and financial reports with charts — export any of them to PDF, Excel or CSV.
-        </p>
-      </div>
+      {/* Mobile Top App Bar */}
+      <MobileHeader title="Analytics & Reports" subtitle="Exportable financial & operational audit reports" />
 
-      <Tabs defaultValue="Monthly">
-        <TabsList className="flex-wrap">
-          {TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
-              {tab}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <div className="p-4 sm:p-0">
+        <div className="mb-6 hidden sm:block">
+          <h1 className="mb-1 font-display text-2xl font-bold text-text-primary">Financial & Operational Reports</h1>
+          <p className="text-sm text-text-secondary">
+            Operational and financial reports with charts — export any of them to PDF, Excel or CSV.
+          </p>
+        </div>
+
+        <Tabs defaultValue="Monthly" className="w-full">
+          <div className="overflow-x-auto pb-2 hide-scrollbar">
+            <TabsList className="inline-flex w-auto shrink-0 gap-1 rounded-2xl p-1 bg-bg-raised">
+              {TABS.map((tab) => (
+                <TabsTrigger key={tab} value={tab} className="rounded-xl font-bold text-xs px-3.5 py-1.5 whitespace-nowrap">
+                  {tab}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
         <TabsContent value="Monthly">
           <OverviewTab range={range} onRangeChange={setRange} />
@@ -88,6 +95,7 @@ export function ReportsPage() {
           <ProfitTab range={range} onRangeChange={setRange} />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

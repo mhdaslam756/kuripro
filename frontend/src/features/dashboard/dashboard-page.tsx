@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { Banknote, CalendarClock, Gavel, TrendingUp, Users, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart } from "@/features/reports/charts/area-chart";
@@ -13,6 +12,7 @@ import { formatDateTime, formatPaise, humanize } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { MemberDashboardView } from "./components/member-dashboard-view";
 import { useDashboardActivity, useDashboardSummary, useDashboardTrends } from "./use-dashboard";
+import { MobileHeader } from "@/components/mobile/mobile-header";
 import type { DashboardTrends } from "./types";
 
 function monthLabel(month: string): string {
@@ -281,66 +281,49 @@ const RANGES = [6, 12] as const;
 export function DashboardPage() {
   const { user } = useAuth();
   const [months, setMonths] = useState<number>(6);
-  const [viewMode, setViewMode] = useState<"ORGANIZER" | "MEMBER">("ORGANIZER");
   const { data: trends, isLoading: trendsLoading } = useDashboardTrends(months);
 
-  if (user?.role?.slug === "MEMBER" || viewMode === "MEMBER") {
-    return (
-      <div className="flex flex-col gap-4">
-        {user?.role?.slug !== "MEMBER" ? (
-          <div className="flex items-center justify-between rounded-xl border border-brand-300 bg-brand-50 px-4 py-3 shadow-xs">
-            <div className="flex items-center gap-2 text-accent-primary">
-              <span className="font-semibold text-sm">👀 Member Portal Preview Mode</span>
-              <span className="text-xs text-text-secondary">Viewing how member users experience their dashboard</span>
-            </div>
-            <Button size="sm" variant="outline" className="text-xs font-semibold bg-bg-surface" onClick={() => setViewMode("ORGANIZER")}>
-              Switch Back to Organizer View
-            </Button>
-          </div>
-        ) : null}
-        <MemberDashboardView />
-      </div>
-    );
+  if (user?.role?.slug === "MEMBER") {
+    return <MemberDashboardView />;
   }
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
-      {/* Mobile Quick Action Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar sm:hidden">
-        <Link
-          to="/collections"
-          className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-brand-300 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-accent-primary shadow-xs"
-        >
-          <Banknote size={15} /> Quick Collect
-        </Link>
-        <Link
-          to="/members"
-          className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-border-default bg-bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary shadow-xs"
-        >
-          <Users size={15} /> Register Member
-        </Link>
-        <Link
-          to="/auctions"
-          className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-border-default bg-bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary shadow-xs"
-        >
-          <Gavel size={15} /> Auctions
-        </Link>
-      </div>
+    <div>
+      {/* Mobile Top App Bar */}
+      <MobileHeader
+        title="Dashboard"
+        subtitle="Business overview & live collections"
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold leading-tight text-text-primary sm:text-3xl">Dashboard</h1>
-          <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">Your chit business at a glance — today's money, what's due, and where trends are heading.</p>
-        </div>
-        <div className="flex items-center gap-3 self-start">
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs font-semibold border-brand-300 bg-brand-50 text-accent-primary hover:bg-brand-100"
-            onClick={() => setViewMode("MEMBER")}
+      <div className="flex flex-col gap-5 p-4 sm:p-0 sm:gap-6">
+        {/* Mobile Quick Action Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar sm:hidden">
+          <Link
+            to="/collections"
+            className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-brand-300 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-accent-primary shadow-xs"
           >
-            👀 Preview Member View
-          </Button>
+            <Banknote size={15} /> Quick Collect
+          </Link>
+          <Link
+            to="/members"
+            className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-border-default bg-bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary shadow-xs"
+          >
+            <Users size={15} /> Register Member
+          </Link>
+          <Link
+            to="/auctions"
+            className="active-bounce flex shrink-0 items-center gap-2 rounded-xl border border-border-default bg-bg-surface px-3.5 py-2 text-xs font-semibold text-text-primary shadow-xs"
+          >
+            <Gavel size={15} /> Auctions
+          </Link>
+        </div>
+
+        <div className="hidden sm:flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold leading-tight text-text-primary sm:text-3xl">Dashboard</h1>
+            <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">Your chit business at a glance — today's money, what's due, and where trends are heading.</p>
+          </div>
+        <div className="flex items-center gap-3 self-start">
           <div className="inline-flex rounded-lg border border-border-default bg-bg-surface p-1 shadow-xs">
             {RANGES.map((r) => (
               <button
@@ -369,6 +352,7 @@ export function DashboardPage() {
       )}
 
       <RecentActivity />
+      </div>
     </div>
   );
 }

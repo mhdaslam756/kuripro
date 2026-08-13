@@ -21,10 +21,13 @@ import { RolesPage } from "@/features/roles/roles-page";
 import { MemberRegisterPage } from "@/features/public-portal/member-register-page";
 import { MemberLoginPage } from "@/features/public-portal/member-login-page";
 import { ProtectedRoute } from "@/routes/protected-route";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Toaster position="top-center" richColors closeButton />
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/portal/:slug/register" element={<MemberRegisterPage />} />
@@ -155,5 +158,6 @@ export default function App() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+  </>
   );
 }
