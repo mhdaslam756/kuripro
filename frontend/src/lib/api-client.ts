@@ -64,6 +64,17 @@ async function refreshAccessToken(): Promise<void> {
   return refreshInFlight;
 }
 
+function isPublicAuthEndpoint(path: string): boolean {
+  return (
+    path.startsWith("/auth/") ||
+    path.startsWith("/super-admin/login") ||
+    path.startsWith("/super-admin/setup") ||
+    path.startsWith("/super-admin/seed-env") ||
+    path.startsWith("/super-admin/init-env") ||
+    path.startsWith("/public/")
+  );
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (accessToken) {
@@ -85,9 +96,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     credentials: "include",
   });
 
-  const isAuthEndpoint = path.startsWith("/auth/");
-
-  if (res.status === 401 && !options.skipAuthRetry && !isAuthEndpoint) {
+  if (res.status === 401 && !options.skipAuthRetry && !isPublicAuthEndpoint(path)) {
     try {
       await refreshAccessToken();
       return await request<T>(path, { ...options, skipAuthRetry: true });

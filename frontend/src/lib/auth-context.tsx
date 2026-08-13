@@ -42,6 +42,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string, rememberDevice?: boolean) => Promise<AuthUser>;
   loginWithTokens: (accessToken: string, user: AuthUser) => void;
+  updateUser: (patch: Partial<AuthUser>) => void;
   registerOrganization: (input: RegisterOrganizerInput) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (key: string) => boolean;
@@ -155,13 +156,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function updateUser(patch: Partial<AuthUser>) {
+    setUser((prev) => (prev ? { ...prev, ...patch } : null));
+  }
+
   function hasPermission(key: string): boolean {
-    return user?.permissions.includes(key) ?? false;
+    if (!user) return false;
+    if (user.role?.slug === "SUPER_ADMIN" || user.permissions?.includes("*")) return true;
+    return user.permissions?.includes(key) ?? false;
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithTokens, registerOrganization, logout, hasPermission }}
+      value={{ user, isLoading, login, loginWithTokens, updateUser, registerOrganization, logout, hasPermission }}
     >
       {children}
     </AuthContext.Provider>

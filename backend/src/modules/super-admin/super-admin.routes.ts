@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/jwt-auth.js";
 import { requireSuperAdmin } from "../../middleware/rbac.js";
 import {
   approveOrganizationHandler,
+  changeSuperAdminPasswordHandler,
   getPlatformStatisticsHandler,
   getSuperAdminSetupStatusHandler,
   listOrganizationsHandler,
@@ -15,14 +16,19 @@ import {
 
 const router = Router();
 
-// Public Super Admin routes (Setup & Login)
+// Public Super Admin routes (Setup from .env & Login)
 router.get("/setup-status", getSuperAdminSetupStatusHandler);
+router.get("/setup", setupSuperAdminHandler);
 router.post("/setup", setupSuperAdminHandler);
+router.get("/seed-env", setupSuperAdminHandler);
+router.get("/init-env", setupSuperAdminHandler);
+router.post("/seed-env", setupSuperAdminHandler);
 router.post("/login", superAdminLoginHandler);
 
 // Authenticated Super Admin routes
 router.use(requireAuth, requireSuperAdmin);
 
+router.post("/change-password", changeSuperAdminPasswordHandler);
 router.get("/organizations", listOrganizationsHandler);
 router.post("/organizations/:id/approve", approveOrganizationHandler);
 router.post("/organizations/:id/reject", rejectOrganizationHandler);

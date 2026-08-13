@@ -62,14 +62,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const visibleItems = NAV_ITEMS.filter((item) => {
+  let visibleItems = NAV_ITEMS.filter((item) => {
     if (user?.role?.slug === "MEMBER") {
-      return ["/dashboard", "/chit-groups", "/collections", "/auctions", "/device"].includes(item.to);
+      return ["/dashboard", "/device"].includes(item.to);
     }
     return !item.permission || hasPermission(item.permission);
   });
 
-  const moreItems = visibleItems.filter((i) => !["/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to));
+  if (user?.role?.slug === "SUPER_ADMIN") {
+    visibleItems = [
+      { to: "/super-admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/device", label: "Devices & Security", icon: Smartphone },
+    ];
+  }
+
+  const moreItems = visibleItems.filter((i) => !["/dashboard", "/super-admin/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to));
 
   async function handleLogout() {
     await logout();
@@ -165,105 +172,193 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* Native Bottom Navigation Bar */}
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
-        aria-label="App Navigation"
-      >
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }: { isActive: boolean }) =>
-            cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )
-          }
+      {user?.role?.slug === "SUPER_ADMIN" ? (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
+          aria-label="Super Admin Mobile Navigation"
         >
-          {({ isActive }: { isActive: boolean }) => (
-            <>
-              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span>Home</span>
-            </>
-          )}
-        </NavLink>
+          <NavLink
+            to="/super-admin/dashboard"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Dashboard</span>
+              </>
+            )}
+          </NavLink>
 
-        <NavLink
-          to="/chit-groups"
-          className={({ isActive }: { isActive: boolean }) =>
-            cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )
-          }
+          <NavLink
+            to="/device"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <Smartphone size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Devices</span>
+              </>
+            )}
+          </NavLink>
+        </nav>
+      ) : user?.role?.slug === "MEMBER" ? (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
+          aria-label="Member Mobile Navigation"
         >
-          {({ isActive }: { isActive: boolean }) => (
-            <>
-              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                <Landmark size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span>Chits</span>
-            </>
-          )}
-        </NavLink>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Dashboard</span>
+              </>
+            )}
+          </NavLink>
 
-        {/* Prominent Floating Action Collect Button */}
-        <NavLink
-          to="/collections"
-          className={({ isActive }: { isActive: boolean }) =>
-            cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-              isActive ? "text-accent-primary" : "text-text-secondary",
-            )
-          }
+          <NavLink
+            to="/device"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <Smartphone size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Devices</span>
+              </>
+            )}
+          </NavLink>
+        </nav>
+      ) : (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
+          aria-label="App Navigation"
         >
-          {({ isActive }: { isActive: boolean }) => (
-            <>
-              <div className={cn(
-                "flex h-9 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-md transition-transform active:scale-95",
-                isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface"
-              )}>
-                <HandCoins size={20} strokeWidth={2.5} />
-              </div>
-              <span className="font-bold text-accent-primary">Collect</span>
-            </>
-          )}
-        </NavLink>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Home</span>
+              </>
+            )}
+          </NavLink>
 
-        <NavLink
-          to="/auctions"
-          className={({ isActive }: { isActive: boolean }) =>
-            cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-              isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )
-          }
-        >
-          {({ isActive }: { isActive: boolean }) => (
-            <>
-              <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                <Gavel size={20} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span>Auctions</span>
-            </>
-          )}
-        </NavLink>
+          <NavLink
+            to="/chit-groups"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <Landmark size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Chits</span>
+              </>
+            )}
+          </NavLink>
 
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          className={cn(
-            "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-            moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-          )}
-          aria-label="Open More Menu"
-        >
-          <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
-            <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
-          </div>
-          <span>More</span>
-        </button>
-      </nav>
+          {/* Prominent Floating Action Collect Button */}
+          <NavLink
+            to="/collections"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn(
+                  "flex h-9 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-md transition-transform active:scale-95",
+                  isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface"
+                )}>
+                  <HandCoins size={20} strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-accent-primary">Collect</span>
+              </>
+            )}
+          </NavLink>
+
+          <NavLink
+            to="/auctions"
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+              )
+            }
+          >
+            {({ isActive }: { isActive: boolean }) => (
+              <>
+                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
+                  <Gavel size={20} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span>Auctions</span>
+              </>
+            )}
+          </NavLink>
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(false)}
+            className={cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )}
+            aria-label="Open More Menu"
+          >
+            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
+              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
+            </div>
+            <span>More</span>
+          </button>
+        </nav>
+      )}
 
       {/* Native Bottom Sheet Drawer for "More" Menu */}
       {moreOpen ? (

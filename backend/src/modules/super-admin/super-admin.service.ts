@@ -8,6 +8,8 @@ import { ChitGroup } from "../chit-groups/chit-group.model.js";
 import { issueAuthResult, type AuthResult, type DeviceContext } from "../auth/auth.service.js";
 
 
+import { env } from "../../config/env.js";
+
 /** Ensure system role for Super Admin exists. */
 export async function ensureSuperAdminRole() {
   let role = await Role.findOne({ tenantId: null, slug: "SUPER_ADMIN" });
@@ -23,49 +25,102 @@ export async function ensureSuperAdminRole() {
   return role;
 }
 
-/** Idempotently ensures Super Admin role exists on boot. */
+/** Idempotently ensures Super Admin role & optional .env Super Admin account exist on boot. */
 export async function seedSuperAdmin() {
-  await ensureSuperAdminRole();
+  const role = await ensureSuperAdminRole();
+
+  if (env.SUPER_ADMIN_EMAIL && env.SUPER_ADMIN_PASSWORD) {
+    const email = env.SUPER_ADMIN_EMAIL.trim().toLowerCase();
+    const existing = await User.findOne({ tenantId: null, email });
+    if (!existing) {
+      const passwordHash = await hashPassword(env.SUPER_ADMIN_PASSWORD);
+      await User.create({
+        tenantId: null,
+        roleId: role._id,
+        name: env.SUPER_ADMIN_NAME || "Super Admin",
+        email,
+        phone: env.SUPER_ADMIN_PHONE || "+919999999999",
+        passwordHash,
+        status: "ACTIVE",
+        mustChangePassword: true,
+      });
+    }
+  }
 }
 
 /** Check if any Super Admin exists in the platform. */
-export async function getSuperAdminSetupStatus(): Promise<{ needsSetup: boolean }> {
+export async function getSuperAdminSetupStatus(): Promise<{ needsSetup: boolean; hasEnvConfig: boolean }> {
   const count = await User.countDocuments({ tenantId: null });
-  return { needsSetup: count === 0 };
+  const hasEnvConfig = Boolean(env.SUPER_ADMIN_EMAIL && env.SUPER_ADMIN_PASSWORD);
+  return { needsSetup: count === 0, hasEnvConfig };
 }
 
-export interface SetupSuperAdminInput {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-}
+/** Creates or retrieves initial Super Admin credentials using configuration strictly from .env. */
+export async function setupSuperAdmin() {
+  const email = env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = env.SUPER_ADMIN_PASSWORD;
+  const name = (env.SUPER_ADMIN_NAME || "Super Admin").trim();
+  const phone = (env.SUPER_ADMIN_PHONE || "+919999999999").trim();
 
-/** Creates initial Super Admin credentials when database has no Super Admin users. */
-export async function setupSuperAdmin(input: SetupSuperAdminInput) {
-  const count = await User.countDocuments({ tenantId: null });
-  if (count > 0) {
-    throw AppError.conflict("Super Admin already exists. Setup is locked.", "SUPER_ADMIN_EXISTS");
+  if (!email || !password) {
+    throw AppError.badRequest("SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be configured in .env", "MISSING_ENV_CREDENTIALS");
   }
 
   const role = await ensureSuperAdminRole();
-  const passwordHash = await hashPassword(input.password);
+  let superAdmin = await User.findOne({ tenantId: null, email });
+  let created = false;
 
-  const superAdmin = await User.create({
-    tenantId: null,
-    roleId: role._id,
-    name: input.name.trim(),
-    email: input.email.trim().toLowerCase(),
-    phone: input.phone.trim(),
-    passwordHash,
-    status: "ACTIVE",
-    mustChangePassword: false,
-  });
+  if (!superAdmin) {
+    const passwordHash = await hashPassword(password);
+    superAdmin = await User.create({
+      tenantId: null,
+      roleId: role._id,
+      name,
+      email,
+      phone,
+      passwordHash,
+      status: "ACTIVE",
+      mustChangePassword: true,
+    });
+    created = true;
+  }
 
   return {
     id: superAdmin._id.toString(),
     name: superAdmin.name,
     email: superAdmin.email,
+    mustChangePassword: superAdmin.mustChangePassword,
+    created,
+  };
+}
+
+export async function changeSuperAdminPassword(
+  userId: string,
+  currentPass: string,
+  newPass: string,
+) {
+  if (!newPass || newPass.length < 8) {
+    throw AppError.badRequest("New password must be at least 8 characters long", "INVALID_PASSWORD");
+  }
+
+  const user = await User.findOne({ _id: userId, tenantId: null }).select("+passwordHash");
+  if (!user) {
+    throw AppError.notFound("Super Admin user not found", "USER_NOT_FOUND");
+  }
+
+  const isValid = await verifyPassword(currentPass, user.passwordHash);
+  if (!isValid) {
+    throw AppError.unauthorized("Current password is incorrect", "INVALID_CREDENTIALS");
+  }
+
+  user.passwordHash = await hashPassword(newPass);
+  user.mustChangePassword = false;
+  await user.save();
+
+  return {
+    message: "Password changed successfully",
+    email: user.email,
+    mustChangePassword: false,
   };
 }
 

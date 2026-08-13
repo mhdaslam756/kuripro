@@ -3,19 +3,26 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  Key,
+  Lock,
   LogOut,
   RefreshCw,
   Search,
+  ShieldAlert,
   ShieldCheck,
   Slash,
   Users,
   XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { api, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate } from "@/lib/format";
 import {
@@ -28,11 +35,19 @@ import {
 
 export function SuperAdminDashboardPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState<string>("__all__");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  // Change password modal state (auto opens if mustChangePassword is true)
+  const [changePassOpen, setChangePassOpen] = useState(Boolean(user?.mustChangePassword));
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passError, setPassError] = useState("");
+  const [passLoading, setPassLoading] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = usePlatformStats();
   const { data: orgsData, isLoading: orgsLoading } = useSuperAdminOrganizations(statusFilter, search, page);
@@ -44,6 +59,39 @@ export function SuperAdminDashboardPage() {
   async function handleLogout() {
     await logout();
     navigate("/super-admin/login", { replace: true });
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPassError("");
+
+    if (newPassword.length < 8) {
+      setPassError("New password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPassError("New password and confirm password do not match.");
+      return;
+    }
+
+    setPassLoading(true);
+    try {
+      await api.post("/super-admin/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      toast.success("Super Admin password updated successfully!");
+      updateUser({ mustChangePassword: false });
+      setChangePassOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      setPassError(err instanceof ApiError ? err.message : "Failed to change password.");
+    } finally {
+      setPassLoading(false);
+    }
   }
 
   return (
@@ -71,6 +119,14 @@ export function SuperAdminDashboardPage() {
               <p className="text-sm font-semibold text-text-primary">{user?.name || "Super Admin"}</p>
               <p className="text-xs text-text-secondary">{user?.email}</p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setChangePassOpen(true)}
+              className="active-bounce gap-1.5 border-brand-300 text-accent-primary hover:bg-brand-50"
+            >
+              <Key size={15} /> Change Password
+            </Button>
             <Button variant="outline" size="sm" onClick={() => void handleLogout()} className="active-bounce gap-1.5">
               <LogOut size={15} /> Log out
             </Button>
@@ -80,6 +136,20 @@ export function SuperAdminDashboardPage() {
 
       {/* Main Dashboard Content */}
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
+        {user?.mustChangePassword ? (
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-warn-border bg-warn-bg px-4 py-3 shadow-xs">
+            <div className="flex items-center gap-2 text-warn-fg">
+              <ShieldAlert size={18} className="shrink-0" />
+              <span className="text-xs font-semibold sm:text-sm">
+                First-time login security action required: Please change your default .env password.
+              </span>
+            </div>
+            <Button size="sm" className="bg-warn-fg text-white text-xs" onClick={() => setChangePassOpen(true)}>
+              Change Password Now
+            </Button>
+          </div>
+        ) : null}
+
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">Platform Overview</h1>
           <p className="mt-1 text-sm text-text-secondary">
@@ -206,6 +276,86 @@ export function SuperAdminDashboardPage() {
           )}
         </div>
       </main>
+
+      {/* Change Password Drawer Modal */}
+      <Sheet open={changePassOpen} onOpenChange={setChangePassOpen}>
+        <SheetContent side="bottom" className="sm:max-w-md sm:mx-auto">
+          <SheetHeader className="mb-4">
+            <div className="flex items-center gap-2 text-accent-primary">
+              <Key size={20} />
+              <SheetTitle>Change Super Admin Password</SheetTitle>
+            </div>
+            <SheetDescription>
+              Update your global SaaS administrator password. Password must be at least 8 characters.
+            </SheetDescription>
+          </SheetHeader>
+
+          {passError ? (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-bad-border bg-bad-bg p-3 text-xs font-medium text-bad-fg">
+              <ShieldAlert size={16} className="shrink-0" />
+              <span>{passError}</span>
+            </div>
+          ) : null}
+
+          <form onSubmit={(e) => void handleChangePassword(e)} className="flex flex-col gap-4">
+            <Field label="Current Password *" htmlFor="current-pass">
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Input
+                  id="current-pass"
+                  type="password"
+                  required
+                  placeholder="Enter current password"
+                  className="pl-9"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+            </Field>
+
+            <Field label="New Password *" htmlFor="new-pass">
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Input
+                  id="new-pass"
+                  type="password"
+                  required
+                  placeholder="Minimum 8 characters"
+                  className="pl-9"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+            </Field>
+
+            <Field label="Confirm New Password *" htmlFor="confirm-pass">
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Input
+                  id="confirm-pass"
+                  type="password"
+                  required
+                  placeholder="Re-enter new password"
+                  className="pl-9"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            </Field>
+
+            <div className="mt-2 flex items-center justify-end gap-3">
+              {!user?.mustChangePassword ? (
+                <Button type="button" variant="outline" onClick={() => setChangePassOpen(false)}>
+                  Cancel
+                </Button>
+              ) : null}
+              <Button type="submit" disabled={passLoading} className="active-bounce">
+                {passLoading ? "Updating Password…" : "Update Password"}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

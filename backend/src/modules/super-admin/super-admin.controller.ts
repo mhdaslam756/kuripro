@@ -3,6 +3,7 @@ import type { CookieOptions, Request, Response } from "express";
 import { env } from "../../config/env.js";
 import {
   approveOrganization,
+  changeSuperAdminPassword,
   getPlatformStatistics,
   getSuperAdminSetupStatus,
   listAllOrganizations,
@@ -10,7 +11,6 @@ import {
   setOrganizationStatus,
   setupSuperAdmin,
   superAdminLogin,
-  type SetupSuperAdminInput,
 } from "./super-admin.service.js";
 
 const REFRESH_COOKIE_NAME = "kuripro_rt";
@@ -28,10 +28,20 @@ export async function getSuperAdminSetupStatusHandler(_req: Request, res: Respon
   res.status(200).json(status);
 }
 
-export async function setupSuperAdminHandler(req: Request, res: Response): Promise<void> {
-  const input = req.body as SetupSuperAdminInput;
-  const result = await setupSuperAdmin(input);
-  res.status(201).json({ message: "Super Admin account created successfully", user: result });
+export async function setupSuperAdminHandler(_req: Request, res: Response): Promise<void> {
+  const result = await setupSuperAdmin();
+  res.status(200).json({ message: result.created ? "Super Admin account created successfully from .env" : "Super Admin account already exists", user: result });
+}
+
+export async function changeSuperAdminPasswordHandler(req: Request, res: Response): Promise<void> {
+  const userId = req.auth?.userId;
+  const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const result = await changeSuperAdminPassword(userId, currentPassword || "", newPassword || "");
+  res.status(200).json(result);
 }
 
 export async function superAdminLoginHandler(req: Request, res: Response): Promise<void> {

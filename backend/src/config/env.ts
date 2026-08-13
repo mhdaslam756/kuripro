@@ -48,6 +48,12 @@ const envSchema = z.object({
   WEBAUTHN_RP_ID: z.string().default("localhost"),
   WEBAUTHN_RP_NAME: z.string().default("KuriPro"),
   WEBAUTHN_ORIGIN: z.string().default("http://localhost:5173"),
+
+  // Super Admin bootstrap credentials from environment variables
+  SUPER_ADMIN_EMAIL: z.string().optional(),
+  SUPER_ADMIN_PASSWORD: z.string().optional(),
+  SUPER_ADMIN_NAME: z.string().optional(),
+  SUPER_ADMIN_PHONE: z.string().optional()
 });
 
 export type Env = z.infer<typeof envSchema>;

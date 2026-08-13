@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { CheckCircle2, Lock, Mail, Phone, ShieldAlert, Sparkles, User } from "lucide-react";
+import { CheckCircle2, Lock, Mail, ShieldAlert, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,6 @@ export function SuperAdminLoginPage() {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
-  // Setup fields
-  const [setupName, setSetupName] = useState("");
-  const [setupPhone, setSetupPhone] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -52,24 +48,19 @@ export function SuperAdminLoginPage() {
     }
   }
 
-  async function handleSetup(event: FormEvent) {
-    event.preventDefault();
+  async function handleSetup() {
     setError("");
     setSuccess("");
     setLoading(true);
 
     try {
-      await api.post<{ message: string }>("/super-admin/setup", {
-        name: setupName,
-        email,
-        phone: setupPhone,
-        password,
-      });
-
-      setSuccess("Super Admin created! Now sign in with your new credentials.");
+      await api.get<{ message: string }>("/super-admin/setup");
+      setSuccess("Super Admin initialized from .env! Sign in below.");
+      setEmail("admin@kuripro.com");
+      setPassword("SuperAdminSecret123!");
       setNeedsSetup(false);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Failed to create Super Admin account");
+      setError(err instanceof ApiError ? err.message : "Failed to initialize Super Admin account");
     } finally {
       setLoading(false);
     }
@@ -110,71 +101,21 @@ export function SuperAdminLoginPage() {
         ) : null}
 
         {needsSetup ? (
-          <form onSubmit={(e) => void handleSetup(e)} className="flex flex-col gap-4">
-            <Field label="Full Name *" htmlFor="setup-name">
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                <Input
-                  id="setup-name"
-                  type="text"
-                  required
-                  placeholder="e.g. Master Administrator"
-                  className="pl-9"
-                  value={setupName}
-                  onChange={(e) => setSetupName(e.target.value)}
-                />
-              </div>
-            </Field>
+          <div className="flex flex-col gap-4 text-center">
+            <div className="rounded-xl border border-brand-300 bg-brand-50/80 p-4 text-xs text-text-secondary">
+              <p className="font-semibold text-accent-primary mb-1">⚡ Automatic Environment Initialization</p>
+              Click below to create the Super Admin account using credentials from <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-border-default">.env</code>.
+            </div>
 
-            <Field label="Super Admin Email *" htmlFor="super-email">
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                <Input
-                  id="super-email"
-                  type="email"
-                  required
-                  placeholder="e.g. admin@platform.com"
-                  className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </Field>
-
-            <Field label="Phone Number *" htmlFor="setup-phone">
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                <Input
-                  id="setup-phone"
-                  type="tel"
-                  required
-                  placeholder="e.g. +919876543210"
-                  className="pl-9"
-                  value={setupPhone}
-                  onChange={(e) => setSetupPhone(e.target.value)}
-                />
-              </div>
-            </Field>
-
-            <Field label="Set Password *" htmlFor="super-password">
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                <Input
-                  id="super-password"
-                  type="password"
-                  required
-                  placeholder="At least 8 characters"
-                  className="pl-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </Field>
-
-            <Button type="submit" disabled={loading} className="mt-2 w-full active-bounce font-semibold">
-              {loading ? "Creating Credentials…" : "Create Super Admin Credentials"}
+            <Button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleSetup()}
+              className="w-full active-bounce font-semibold"
+            >
+              {loading ? "Initializing..." : "Initialize Super Admin from .env"}
             </Button>
-          </form>
+          </div>
         ) : (
           <form onSubmit={(e) => void handleLogin(e)} className="flex flex-col gap-4">
             <Field label="Super Admin Email" htmlFor="super-email">
