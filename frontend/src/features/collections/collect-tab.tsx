@@ -217,19 +217,19 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
             {(
               isMemberUser
                 ? [
-                    { key: "ALL", label: `My Installments (${dues?.items.length ?? 0})` },
-                    { key: "UNPAID", label: `My Pending Dues (${unpaid.length})` },
-                    { key: "PAID", label: `My Paid Receipts (${dues?.items.filter((d) => d.status === "PAID").length ?? 0})` },
-                  ]
+                  { key: "ALL", label: `My Installments (${dues?.items.length ?? 0})` },
+                  { key: "UNPAID", label: `My Pending Dues (${unpaid.length})` },
+                  { key: "PAID", label: `My Paid Receipts (${dues?.items.filter((d) => d.status === "PAID").length ?? 0})` },
+                ]
                 : [
-                    { key: "UNPAID", label: `Uncollected / Pending (${unpaid.length})` },
-                    { key: "PAID", label: `Collected / Paid (${dues?.items.filter((d) => d.status === "PAID").length})` },
-                    { key: "ALL", label: `All Members (${dues?.items.length})` },
-                    {
-                      key: "PRIZE_WON",
-                      label: `Kuri Winners (${dues?.items.filter((d) => (d.chitMembershipId as any)?.hasWon).length})`,
-                    },
-                  ]
+                  { key: "UNPAID", label: `Uncollected / Pending (${unpaid.length})` },
+                  { key: "PAID", label: `Collected / Paid (${dues?.items.filter((d) => d.status === "PAID").length})` },
+                  { key: "ALL", label: `All Members (${dues?.items.length})` },
+                  {
+                    key: "PRIZE_WON",
+                    label: `Kuri Winners (${dues?.items.filter((d) => (d.chitMembershipId as any)?.hasWon).length})`,
+                  },
+                ]
             ).map((tab) => (
               <button
                 key={tab.key}
@@ -276,8 +276,6 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
             </Button>
           ) : null}
         </div>
-      ) : duesLoading ? (
-        <Skeleton className="h-64 w-full" />
       ) : (
         <>
           {canRecord && dues?.items.length ? (

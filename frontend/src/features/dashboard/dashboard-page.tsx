@@ -66,42 +66,42 @@ function HighlightCards() {
   return (
     <>
       {/* Mobile Native Hero Card */}
-      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-brand-500/30">
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-brand-200/80">
+      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-white/15">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-200/90">
           <span>Today's Live Collection</span>
-          <span className="rounded-full bg-brand-500/20 px-2.5 py-0.5 text-[10px] text-brand-200">Real-time</span>
+          <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[10px] text-amber-200 font-bold border border-amber-400/30">Real-time</span>
         </div>
         <p className="mt-2 font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.today.total)}</p>
-        <p className="mt-1 text-xs text-brand-100/90">{data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today</p>
+        <p className="mt-1 text-xs text-emerald-100/90">{data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today</p>
         
-        <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
+        <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3.5">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-brand-200/70 font-semibold">Pending Dues</p>
+            <p className="text-[10px] uppercase tracking-wider text-amber-200/80 font-semibold">Pending Dues</p>
             <p className="font-display text-sm font-bold text-white">{formatPaise(data.pending.pendingAmount)}</p>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-red-200/90 font-semibold">Overdue</p>
-            <p className="font-display text-sm font-bold text-red-300">{formatPaise(data.pending.overdueAmount)}</p>
+            <p className="font-display text-sm font-bold text-red-200">{formatPaise(data.pending.overdueAmount)}</p>
           </div>
         </div>
 
         <div className="mt-4 flex items-center gap-2 pt-1">
           <Link
             to="/collections"
-            className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white text-n900 py-2.5 text-xs font-bold shadow-md"
+            className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white text-[#173B3F] py-2.5 text-xs font-bold shadow-md hover:bg-emerald-50"
           >
             <Banknote size={15} /> Collect Dues
           </Link>
           <Link
             to="/members"
-            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20"
+            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20 hover:bg-white/25"
             aria-label="Add Member"
           >
             <Users size={16} />
           </Link>
           <Link
             to="/auctions"
-            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20"
+            className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 text-xs font-semibold border border-white/20 hover:bg-white/25"
             aria-label="Live Auction"
           >
             <Gavel size={16} />
