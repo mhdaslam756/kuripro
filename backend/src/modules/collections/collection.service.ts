@@ -52,6 +52,8 @@ const CLEARANCE_METHODS = new Set(["CHEQUE", "CARD"]);
 
 // --- Auto Due: raising a cycle's installments ---
 
+import { sendBulk } from "../notifications/notification.service.js";
+
 export interface RaiseDuesResult {
   raised: number;
   alreadyRaised: number;
@@ -61,6 +63,7 @@ export interface RaiseDuesResult {
 export async function raiseCycleDues(
   tenantId: string,
   input: RaiseDuesInput,
+  createdBy?: string,
 ): Promise<RaiseDuesResult> {
   const chitGroup = await findChitGroupById(input.chitGroupId, tenantId);
   if (!chitGroup) throw AppError.notFound("Chit group not found");
@@ -103,6 +106,38 @@ export async function raiseCycleDues(
     }));
 
   await insertInstallments(toCreate);
+
+  if (toCreate.length > 0) {
+    const formattedAmount = (netInstallment / 100).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const dueDateStr = new Date(cycle.scheduledDate).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const subject = `Payment Due: ${chitGroup.name} (Cycle ${cycle.cycleNumber})`;
+    const body = `Dear {{memberName}}, dues of ₹${formattedAmount} for ${chitGroup.name} (Cycle ${cycle.cycleNumber}) are due on ${dueDateStr}. Please pay on time. — {{orgName}}`;
+
+    void sendBulk(tenantId, createdBy || "SYSTEM", {
+      audience: "CHIT_GROUP",
+      chitGroupId: input.chitGroupId,
+      channel: "PUSH",
+      type: "REMINDER",
+      subject,
+      body,
+    }).catch(() => null);
+
+    void sendBulk(tenantId, createdBy || "SYSTEM", {
+      audience: "CHIT_GROUP",
+      chitGroupId: input.chitGroupId,
+      channel: "SMS",
+      type: "REMINDER",
+      subject,
+      body,
+    }).catch(() => null);
+  }
 
   return { raised: toCreate.length, alreadyRaised: alreadyRaised.size, totalMembers: memberships.length };
 }
@@ -221,7 +256,7 @@ export async function recordCollection(
           status: needsClearance ? "PENDING_CLEARANCE" : "COMPLETED",
           isAdvance,
           isOffline: options.isOffline ?? false,
-          clientReceiptId: options.clientReceiptId,
+          ...(options.clientReceiptId ? { clientReceiptId: options.clientReceiptId } : {}),
           receiptNumber,
           receiptToken,
           collectedBy,

@@ -34,7 +34,7 @@ export async function upsertSession(data: UpsertSessionInput): Promise<SessionDo
         expiresAt: data.expiresAt,
       },
     },
-    { new: true, upsert: true },
+    { returnDocument: "after", upsert: true },
   );
 
   return session;

@@ -7,7 +7,7 @@ export async function getNextSequence(tenantId: string, name: string, session?: 
   const counter = await Counter.findOneAndUpdate(
     { tenantId, name },
     { $inc: { value: 1 } },
-    { upsert: true, new: true, session },
+    { upsert: true, returnDocument: "after", session },
   );
   return counter.value;
 }

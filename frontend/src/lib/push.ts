@@ -39,7 +39,9 @@ async function getMessagingInstance() {
   return getMessaging(app);
 }
 
-export type EnablePushResult = { ok: true; token: string } | { ok: false; error: string };
+export type EnablePushResult =
+  | { ok: true; token: string; error?: undefined }
+  | { ok: false; error: string; token?: undefined };
 
 /** Requests notification permission, obtains an FCM token, and registers it with the backend. */
 export async function enablePush(): Promise<EnablePushResult> {

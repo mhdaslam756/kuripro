@@ -82,7 +82,10 @@ collectionSchema.index({ paymentId: 1 });
 collectionSchema.index({ receiptNumber: 1 }, { unique: true });
 collectionSchema.index({ receiptToken: 1 }, { unique: true });
 /** Offline idempotency: at most one collection per (tenant, clientReceiptId). */
-collectionSchema.index({ tenantId: 1, clientReceiptId: 1 }, { unique: true, sparse: true });
+collectionSchema.index(
+  { tenantId: 1, clientReceiptId: 1 },
+  { unique: true, partialFilterExpression: { clientReceiptId: { $type: "string" } } },
+);
 
 collectionSchema.plugin(tenantScopedPlugin);
 

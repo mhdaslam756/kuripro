@@ -22,11 +22,13 @@ import { MemberRegisterPage } from "@/features/public-portal/member-register-pag
 import { MemberLoginPage } from "@/features/public-portal/member-login-page";
 import { ProtectedRoute } from "@/routes/protected-route";
 import { Toaster } from "@/components/ui/sonner";
+import { AppInstallNotificationToasts } from "@/components/pwa/install-notification-toasts";
 
 export default function App() {
   return (
     <>
       <Toaster position="top-center" richColors closeButton />
+      {/* <AppInstallNotificationToasts /> */}
       <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

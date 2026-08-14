@@ -11,7 +11,7 @@ export interface MobileHeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   actions?: ReactNode;
-  className?: string;
+  className?: string; 
 }
 
 /**
@@ -60,14 +60,14 @@ export function MobileHeader({
 
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-base font-bold text-text-primary leading-tight">
-            {title}
-          </h1>
-          {subtitle ? (
+          {title}
+        </h1>
+        {subtitle ? (
             <p className="truncate text-[11px] font-medium text-text-secondary">
-              {subtitle}
-            </p>
-          ) : null}
-        </div>
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
       </div>
 
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

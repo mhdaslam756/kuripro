@@ -43,7 +43,10 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/@") ||
     url.pathname.startsWith("/node_modules/") ||
     url.pathname.startsWith("/api/") ||
-    url.pathname.includes("__vite")
+    url.pathname.includes("__vite") ||
+    url.pathname.endsWith(".tsx") ||
+    url.pathname.endsWith(".ts") ||
+    url.pathname.includes("manifest.webmanifest")
   ) {
     return;
   }

@@ -20,7 +20,7 @@ import type {
 
 export async function raiseDues(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
-  const result = await collectionService.raiseCycleDues(tenantId, req.body as RaiseDuesInput);
+  const result = await collectionService.raiseCycleDues(tenantId, req.body as RaiseDuesInput, req.auth?.userId);
   res.status(201).json(result);
 }
 

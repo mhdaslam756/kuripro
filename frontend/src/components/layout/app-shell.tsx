@@ -83,10 +83,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate("/login", { replace: true });
   }
 
+  const firstName = user?.name?.trim().split(" ")[0] || "User";
+
   return (
-    <div className="min-h-[100dvh] bg-bg-app lg:flex">
+    <div className="min-h-[100dvh] bg-bg-app lg:flex select-none">
       {/* Desktop Sidebar */}
-      <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex">
+      <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex select-text">
         <div className="mb-8 flex items-center gap-3 px-2">
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 font-display text-lg font-bold text-text-on-brand shadow-md">K</div>
           <div>
@@ -115,48 +117,56 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Native Mobile App Bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-default/80 bg-bg-surface/90 px-4 pt-[max(0.6rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 font-display text-base font-bold text-text-on-brand shadow-sm">
-              K
-            </div>
+        {/* Native Mobile App Header */}
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/70 bg-bg-surface/92 px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
+          {/* Mobile Header Left: Profile Avatar Button + Greeting */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs active:scale-95 transition-transform"
+              aria-label="Open Profile & Menu"
+            >
+              {user?.name?.trim().charAt(0).toUpperCase() || "K"}
+              <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-bg-surface" />
+            </button>
             <div>
-              <p className="font-display text-base font-bold leading-none text-accent-primary">KuriPro</p>
-              <p className="text-[10px] font-medium text-text-secondary">Fintech Platform</p>
+              <p className="font-display text-sm font-bold leading-none text-accent-primary">
+                Hi, {firstName}
+              </p>
+              <p className="mt-0.5 text-[10px] font-semibold text-text-secondary">
+                {user?.role?.name || "KuriPro Platform"}
+              </p>
             </div>
           </div>
 
-          <div className="hidden lg:flex lg:items-center lg:gap-2">
+          {/* Desktop Header Left */}
+          <div className="hidden lg:flex lg:items-center lg:gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white">K</div>
             <span className="text-sm font-semibold text-text-primary">KuriPro Management Platform</span>
           </div>
 
+          {/* Header Right Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
             <NavLink
               to="/notifications"
-              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-colors hover:text-text-primary lg:hidden active-bounce"
+              className="relative flex size-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-all hover:text-text-primary lg:hidden active-bounce"
               aria-label="Notifications"
             >
               <Bell size={18} />
             </NavLink>
+
             <div className="hidden lg:block"><ThemeToggle /></div>
-            <div className="flex items-center gap-2 lg:gap-3">
-              <div className="hidden text-right sm:block">
+
+            <div className="hidden lg:flex lg:items-center lg:gap-3">
+              <div className="text-right">
                 <p className="text-sm font-semibold text-text-primary">{user?.name}</p>
                 <p className="text-xs text-text-secondary">{user?.role.name}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setMoreOpen(true)}
-                className="flex size-9 items-center justify-center rounded-full bg-brand-100 font-bold text-accent-primary ring-2 ring-brand-200/60 lg:hidden active-bounce"
-                aria-label="Open User Menu"
-              >
-                {user?.name?.trim().charAt(0).toUpperCase() || "U"}
-              </button>
-              <button
-                type="button"
                 onClick={() => void handleLogout()}
-                className="hidden h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-bad-bg hover:text-bad-fg sm:flex"
+                className="flex size-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-bad-bg hover:text-bad-fg"
                 aria-label="Log out"
               >
                 <LogOut size={17} />
@@ -165,8 +175,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Main Body */}
-        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8">
+        {/* Main App Content Area */}
+        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>
         </main>
       </div>
@@ -214,6 +224,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               </>
             )}
           </NavLink>
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
+              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )}
+            aria-label="More Menu"
+          >
+            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
+              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
+            </div>
+            <span>More</span>
+          </button>
         </nav>
       ) : user?.role?.slug === "MEMBER" ? (
         <nav
@@ -257,6 +282,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               </>
             )}
           </NavLink>
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
+              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+            )}
+            aria-label="More Menu"
+          >
+            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
+              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
+            </div>
+            <span>More</span>
+          </button>
         </nav>
       ) : (
         <nav
@@ -345,12 +385,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <button
             type="button"
-            onClick={() => setMoreOpen(false)}
+            onClick={() => setMoreOpen(true)}
             className={cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
+              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
               moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
             )}
-            aria-label="Open More Menu"
+            aria-label="More Menu"
           >
             <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
               <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
@@ -362,18 +402,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Native Bottom Sheet Drawer for "More" Menu */}
       {moreOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More Options Menu">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-            aria-label="Close Sheet"
+        <div className="fixed inset-0 z-[9999] lg:hidden" role="dialog" aria-modal="true" aria-label="More Options Menu">
+          {/* Dark Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[32px] border-t border-border-default bg-bg-surface px-5 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-250">
-            {/* Grab handle */}
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border-strong/30" />
 
-            {/* Profile Overview Banner */}
+          {/* Sliding Bottom Drawer */}
+          <div className="fixed inset-x-0 bottom-0 z-10 max-h-[85dvh] overflow-y-auto rounded-t-[28px] border-t border-border-default bg-bg-surface px-5 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-250">
+            {/* Top Handle */}
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border-strong/40" />
+
+            {/* User Profile Info Header */}
             <div className="mb-5 flex items-center justify-between rounded-2xl border border-border-default bg-bg-raised p-4">
               <div className="flex items-center gap-3">
                 <div className="flex size-11 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-sm">
@@ -389,7 +430,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => setMoreOpen(false)}
                 className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs"
-                aria-label="Close"
+                aria-label="Close menu"
               >
                 <X size={18} />
               </button>

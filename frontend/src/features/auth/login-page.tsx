@@ -58,9 +58,9 @@ export function LoginPage() {
       <div className="absolute -left-24 -top-24 size-80 rounded-full bg-brand-200/35 blur-3xl" />
       <div className="absolute -bottom-28 -right-20 size-96 rounded-full bg-[var(--good-100)]/80 blur-3xl" />
       <div className="relative w-full max-w-sm rounded-xl border border-border-default bg-bg-surface/95 p-6 shadow-[0_18px_50px_rgb(30_33_42/0.12)] backdrop-blur sm:p-8">
-        <div className="mb-7">
-          <div className="mb-5 flex size-11 items-center justify-center rounded-md bg-accent-primary font-display text-xl font-bold text-text-on-brand shadow-[0_6px_16px_rgb(114_83_32/0.22)]">K</div>
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent-primary"><ShieldCheck className="size-3.5" /> Secure workspace</p>
+          <div className="mb-7">
+            <div className="mb-5 flex size-11 items-center justify-center rounded-md bg-accent-primary font-display text-xl font-bold text-text-on-brand shadow-[0_6px_16px_rgb(114_83_32/0.22)]">K</div>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent-primary"><ShieldCheck className="size-3.5" /> Secure workspace</p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-text-primary">Welcome back</h1>
           <p className="mt-2 text-sm leading-6 text-text-secondary">Log in with your phone number or email to access your workspace.</p>
         </div>
@@ -103,5 +103,5 @@ export function LoginPage() {
         }}
       />
     </div>
-  );
+);
 }
