@@ -1,4 +1,4 @@
-import { AlertCircle, Lock, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, Lock, MessageSquare, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -15,6 +15,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui/table";
+import { openWhatsAppChat } from "@/features/collections/components/whatsapp-reminder-dialog";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AssignMembersDialog } from "../components/assign-members-dialog";
@@ -181,6 +182,18 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                   </div>
 
                   <div className="mt-3.5 flex items-center justify-end gap-2 border-t border-border-default/60 pt-3">
+                    {phone ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        aria-label="WhatsApp member"
+                        className="h-9 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 rounded-xl gap-1"
+                        onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
+                      >
+                        <MessageSquare size={14} /> WhatsApp
+                      </Button>
+                    ) : null}
                     {memberIdStr ? (
                       <Link to={`/members/${memberIdStr}?tab=payments`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs font-semibold h-9 rounded-xl">
@@ -254,9 +267,21 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {phone ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs h-8 px-2.5"
+                                onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
+                                title="WhatsApp Member"
+                              >
+                                <MessageSquare size={13} /> WhatsApp
+                              </Button>
+                            ) : null}
                             {memberIdStr ? (
                               <Link to={`/members/${memberIdStr}?tab=payments`}>
-                                <Button size="sm" variant="outline" className="gap-1 text-xs">
+                                <Button size="sm" variant="outline" className="gap-1 text-xs h-8">
                                   <Zap size={13} /> Mark Collection
                                 </Button>
                               </Link>

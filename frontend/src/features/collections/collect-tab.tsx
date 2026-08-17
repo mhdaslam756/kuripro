@@ -1,4 +1,4 @@
-import { CloudUpload, RefreshCw, Trophy, Zap } from "lucide-react";
+import { CloudUpload, MessageSquare, RefreshCw, Trophy, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { CollectDialog } from "./components/collect-dialog";
 import { DueStatusBadge } from "./components/collection-badges";
 import { ReceiptDialog } from "./components/receipt-dialog";
+import { WhatsAppReminderDialog } from "./components/whatsapp-reminder-dialog";
 import { clearSyncedFromQueue, countQueue, getQueue } from "./offline-queue";
 import type { Installment } from "./types";
 import {
@@ -69,6 +70,7 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
   const noDuesRaised = Boolean(cycleId) && cycleId !== "ALL" && !duesLoading && (dues?.items.length ?? 0) === 0;
 
   const [collectTarget, setCollectTarget] = useState<Installment | null>(null);
+  const [reminderTarget, setReminderTarget] = useState<Installment | null>(null);
   const [receiptId, setReceiptId] = useState<string | undefined>();
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -375,13 +377,25 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                     </div>
                     {canRecord ? (
                       !settled ? (
-                        <Button
-                          size="md"
-                          className="active-bounce gap-1.5 px-4 font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs"
-                          onClick={() => setCollectTarget(due)}
-                        >
-                          <Zap size={16} /> Collect
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="md"
+                            type="button"
+                            variant="outline"
+                            className="active-bounce gap-1.5 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10"
+                            onClick={() => setReminderTarget(due)}
+                            title="Send WhatsApp Reminder"
+                          >
+                            <MessageSquare size={14} /> Remind
+                          </Button>
+                          <Button
+                            size="md"
+                            className="active-bounce gap-1.5 px-4 font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs"
+                            onClick={() => setCollectTarget(due)}
+                          >
+                            <Zap size={16} /> Collect
+                          </Button>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <Badge variant="success" className="text-xs px-2.5 py-1 font-medium">
@@ -468,13 +482,25 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                         {canRecord ? (
                           <TableCell className="text-right">
                             {!settled ? (
-                              <Button
-                                size="sm"
-                                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold gap-1.5 shadow-xs"
-                                onClick={() => setCollectTarget(due)}
-                              >
-                                <Zap size={14} /> Collect
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  type="button"
+                                  variant="outline"
+                                  className="border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs px-2.5 h-8"
+                                  onClick={() => setReminderTarget(due)}
+                                  title="Send WhatsApp Reminder"
+                                >
+                                  <MessageSquare size={13} /> Remind
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold gap-1.5 shadow-xs h-8"
+                                  onClick={() => setCollectTarget(due)}
+                                >
+                                  <Zap size={14} /> Collect
+                                </Button>
+                              </div>
                             ) : (
                               <div className="flex items-center justify-end gap-2">
                                 <Badge variant="success" className="gap-1 text-xs px-2 py-0.5 font-medium">
@@ -521,6 +547,15 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
             setCollectTarget(null);
             refreshOfflineCount();
           }}
+        />
+      ) : null}
+
+      {reminderTarget ? (
+        <WhatsAppReminderDialog
+          open={Boolean(reminderTarget)}
+          onOpenChange={(o) => !o && setReminderTarget(null)}
+          installment={reminderTarget}
+          chitGroupName={groupName}
         />
       ) : null}
 
