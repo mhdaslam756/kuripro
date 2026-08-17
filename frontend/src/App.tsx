@@ -28,7 +28,7 @@ export default function App() {
   return (
     <>
       <Toaster position="top-center" richColors closeButton />
-      {/* <AppInstallNotificationToasts /> */}
+      <AppInstallNotificationToasts />
       <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

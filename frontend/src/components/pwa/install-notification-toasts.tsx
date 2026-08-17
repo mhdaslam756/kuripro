@@ -2,13 +2,10 @@ import { Bell, Download, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { enablePush, isPushSupported, notificationPermission } from "@/lib/push";
+import { enablePush } from "@/lib/push";
 import { promptInstall } from "@/lib/pwa-runtime";
-import { useIsStandalone, usePwa } from "@/lib/use-pwa";
 
 export function AppInstallNotificationToasts() {
-  const pwa = usePwa();
-  const isStandalone = useIsStandalone();
 
   const [showInstallToast, setShowInstallToast] = useState(false);
   const [showPushToast, setShowPushToast] = useState(false);
