@@ -5,6 +5,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
+import { UserAccountMenu } from "./user-account-menu";
 
 interface NavItem {
   to: string;
@@ -119,24 +120,23 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Native Mobile App Header */}
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/70 bg-bg-surface/92 px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          {/* Mobile Header Left: Profile Avatar Button + Greeting */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMoreOpen(true)}
-              className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs active:scale-95 transition-transform"
-              aria-label="Open Profile & Menu"
+          {/* Mobile Header Left: Profile Avatar + Greeting */}
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <div
+              className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs"
             >
               {user?.name?.trim().charAt(0).toUpperCase() || "K"}
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-bg-surface" />
-            </button>
+            </div>
             <div>
-              <p className="font-display text-sm font-bold leading-none text-accent-primary">
-                Hi, {firstName}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold text-text-secondary">
-                {user?.role?.name || "KuriPro Platform"}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-display text-sm font-bold leading-none text-accent-primary">
+                  {firstName}
+                </p>
+                <span className="rounded-md bg-brand-100 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-accent-primary">
+                  {user?.role?.name || "User"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -158,26 +158,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <div className="hidden lg:block"><ThemeToggle /></div>
 
-            <div className="hidden lg:flex lg:items-center lg:gap-3">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-text-primary">{user?.name}</p>
-                <p className="text-xs text-text-secondary">{user?.role.name}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                className="flex size-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-bad-bg hover:text-bad-fg"
-                aria-label="Log out"
-              >
-                <LogOut size={17} />
-              </button>
+            {/* Desktop User Account Menu & Switcher */}
+            <div className="hidden lg:block">
+              <UserAccountMenu />
             </div>
           </div>
         </header>
 
         {/* Main App Content Area */}
         <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
-          <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1440px]">
+
+
+            {children}
+          </div>
         </main>
       </div>
 
@@ -415,25 +409,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border-strong/40" />
 
             {/* User Profile Info Header */}
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-border-default bg-bg-raised p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-sm">
-                  {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+            <div className="mb-5 rounded-2xl border border-border-default bg-bg-raised p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-11 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-sm">
+                    {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div>
+                    <p className="font-display text-base font-bold text-text-primary">{user?.name || "User"}</p>
+                    <p className="text-xs font-semibold text-text-secondary">{user?.role?.name || "Organizer"}</p>
+                    {user?.email ? <p className="text-[11px] text-text-secondary truncate max-w-[170px]">{user.email}</p> : null}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-display text-base font-bold text-text-primary">{user?.name || "User"}</p>
-                  <p className="text-xs font-semibold text-text-secondary">{user?.role?.name || "Organizer"}</p>
-                  {user?.email ? <p className="text-[11px] text-text-secondary">{user.email}</p> : null}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs"
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(false)}
-                className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs"
-                aria-label="Close menu"
-              >
-                <X size={18} />
-              </button>
+
+
             </div>
 
             <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary">App Features &amp; Settings</p>
@@ -475,6 +473,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : null}
+
     </div>
   );
 }

@@ -38,13 +38,14 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
 
   const enrolledMembers = roster?.items ?? [];
   const enrolledMap = useMemo(() => {
-    const map = new Map<string, { membershipId: string; ticketNumber: number; hasWon: boolean }>();
+    const map = new Map<string, { membershipId: string; ticketNumber: number; hasWon: boolean }[]>();
     for (const item of enrolledMembers) {
       const memberId = typeof item.memberId === "object" && item.memberId
         ? (item.memberId.id || item.memberId._id || "")
         : typeof item.memberId === "string" ? item.memberId : "";
       if (memberId) {
-        map.set(memberId, {
+        if (!map.has(memberId)) map.set(memberId, []);
+        map.get(memberId)!.push({
           membershipId: item.id || (item as any)._id,
           ticketNumber: item.ticketNumber,
           hasWon: item.hasWon,
@@ -229,21 +230,21 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               ) : (
                 <ul className="divide-y divide-border-default">
                   {assignable.map((member) => {
-                    const enrolledInfo = enrolledMap.get(member.id);
-                    const isEnrolled = Boolean(enrolledInfo);
+                    const enrolledEntries = enrolledMap.get(member.id);
+                    const isEnrolled = Boolean(enrolledEntries && enrolledEntries.length > 0);
                     const checked = selected.has(member.id);
-                    const disabled = isEnrolled || (!checked && selected.size >= seatsRemaining);
+                    const disabled = !checked && selected.size >= seatsRemaining;
 
                     return (
-                      <li key={member.id} className={`flex items-center justify-between px-3 py-2.5 hover:bg-bg-raised transition-colors ${isEnrolled ? "bg-bg-surface/50" : ""}`}>
+                      <li key={member.id} className={`flex items-center justify-between px-3 py-2.5 hover:bg-bg-raised transition-colors`}>
                         <label
                           className={`flex items-center gap-3 flex-1 min-w-0 ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
                         >
                           <input
                             type="checkbox"
-                            checked={checked || isEnrolled}
+                            checked={checked}
                             disabled={disabled}
-                            onChange={() => !isEnrolled && toggle(member.id)}
+                            onChange={() => toggle(member.id)}
                             className="rounded border-border-default"
                           />
                           <div className="truncate">
@@ -251,7 +252,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                               <p className="text-sm font-medium text-text-primary truncate">{member.name}</p>
                               {isEnrolled ? (
                                 <Badge variant="success" className="text-[11px] gap-1 py-0">
-                                  <UserCheck size={11} /> Assigned #{enrolledInfo?.ticketNumber}
+                                  <UserCheck size={11} /> {enrolledEntries!.length > 1 ? `${enrolledEntries!.length} tickets` : `Ticket #${enrolledEntries![0]!.ticketNumber}`}
                                 </Badge>
                               ) : null}
                             </div>
@@ -260,18 +261,6 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                             </p>
                           </div>
                         </label>
-
-                        {isEnrolled && enrolledInfo && isNotStarted ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-text-secondary hover:text-bad-fg hover:bg-bad-bg/10 gap-1 ml-2 text-xs"
-                            onClick={() => setMemberToRemove({ id: enrolledInfo.membershipId, name: member.name })}
-                          >
-                            <Trash2 size={13} /> Remove
-                          </Button>
-                        ) : null}
                       </li>
                     );
                   })}

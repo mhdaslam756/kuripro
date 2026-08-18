@@ -54,13 +54,14 @@ function parseMember(membership: ChitMembership) {
 }
 
 export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const { data: roster, isLoading, isError } = useChitMembers(chitGroup.id);
   const removeMember = useRemoveMember(chitGroup.id);
   const [assignOpen, setAssignOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
+  const isMemberRole = user?.role?.slug === "MEMBER";
   const isNotStarted = chitGroup.status === "DRAFT";
   const canAssign = hasPermission("chit_group.enroll_member") && isNotStarted;
   const canRemove = hasPermission("chit_group.enroll_member") && isNotStarted;
@@ -124,6 +125,10 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
       ) : isError ? (
         <div className="rounded-md border border-bad-border/60 bg-bad-bg/10 px-4 py-8 text-center">
           <p className="text-sm text-bad-fg">Couldn't load members. Please try again.</p>
+        </div>
+      ) : isMemberRole ? (
+        <div className="rounded-md border border-border-default bg-bg-surface px-4 py-8 text-center">
+          <p className="text-sm text-text-secondary">{enrolled} of {chitGroup.totalMembers} seats filled in this group.</p>
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-md border border-dashed border-border-default py-12 text-center flex flex-col items-center gap-2">

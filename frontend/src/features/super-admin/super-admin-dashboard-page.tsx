@@ -13,6 +13,7 @@ import {
   Slash,
   Users,
   XCircle,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { api, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate } from "@/lib/format";
+import { AccountSwitcherDialog } from "@/components/layout/account-switcher-dialog";
 import {
   useApproveOrganization,
   usePlatformStats,
@@ -36,6 +38,7 @@ import {
 export function SuperAdminDashboardPage() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<string>("__all__");
   const [search, setSearch] = useState("");
@@ -119,6 +122,14 @@ export function SuperAdminDashboardPage() {
               <p className="text-sm font-semibold text-text-primary">{user?.name || "Super Admin"}</p>
               <p className="text-xs text-text-secondary">{user?.email}</p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSwitcherOpen(true)}
+              className="active-bounce gap-1.5 border-brand-300 text-accent-primary hover:bg-brand-50"
+            >
+              <ArrowLeftRight size={15} /> Switch Account
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -356,6 +367,8 @@ export function SuperAdminDashboardPage() {
           </form>
         </SheetContent>
       </Sheet>
+
+      <AccountSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </div>
   );
 }

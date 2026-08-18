@@ -16,7 +16,7 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full overflow-y-auto rounded-t-[32px] border-t border-border-default bg-bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl focus:outline-none animate-in slide-in-from-bottom duration-250 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-h-[88vh] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:p-6",
+        "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full overflow-y-auto overflow-x-hidden box-border rounded-t-[32px] border-t border-border-default bg-bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl focus:outline-none animate-in slide-in-from-bottom duration-250 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-h-[88vh] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:p-6",
         className,
       )}
       {...props}

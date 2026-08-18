@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { api, getDeviceId, setAccessToken, setUnauthorizedHandler } from "./api-client";
 import { queryClient } from "./query-client";
+import { saveAccount } from "./saved-accounts";
 
 export interface AuthUser {
   id: string;
@@ -105,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setAccessToken(res.accessToken);
         setUser(res.user);
+        saveAccount(res.user);
       } catch {
         // No valid session — the user just stays logged out, this isn't an error to surface.
       } finally {
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function loginWithTokens(accessToken: string, authUser: AuthUser) {
     setAccessToken(accessToken);
     setUser(authUser);
+    saveAccount(authUser);
   }
 
   async function login(email: string, password: string, rememberDevice = false): Promise<AuthUser> {
@@ -133,9 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setAccessToken(res.accessToken);
     setUser(res.user);
+    saveAccount(res.user);
     return res.user;
   }
-
 
   async function registerOrganization(input: RegisterOrganizerInput): Promise<void> {
     const res = await api.post<LoginResponse>("/auth/register-organizer", {
@@ -145,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setAccessToken(res.accessToken);
     setUser(res.user);
+    saveAccount(res.user);
   }
 
   async function logout(): Promise<void> {
