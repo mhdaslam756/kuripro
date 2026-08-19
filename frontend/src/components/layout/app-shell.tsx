@@ -58,6 +58,154 @@ function ThemeToggle() {
   );
 }
 
+// ── Mobile Bottom Tab Item ─────────────────────────────────────────────────────
+
+interface MobileTabItemProps {
+  to: string;
+  label: string;
+  icon: typeof Building2;
+  /** If true, render as a prominent "center action" pill */
+  primary?: boolean;
+}
+
+function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItemProps) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "active-bounce relative flex flex-1 flex-col items-center gap-1 py-1.5 text-[10px] font-semibold transition-all select-none",
+          primary
+            ? isActive
+              ? "text-accent-primary"
+              : "text-text-secondary"
+            : isActive
+            ? "text-accent-primary"
+            : "text-text-secondary hover:text-text-primary",
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {primary ? (
+            /* Primary "collect" pill — elevated gradient button */
+            <div
+              className={cn(
+                "flex h-[42px] w-[54px] items-center justify-center rounded-[16px] shadow-lg transition-all",
+                "bg-gradient-to-br from-brand-600 to-brand-800 text-white",
+                isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface shadow-brand-900/40",
+              )}
+            >
+              <Icon size={20} strokeWidth={2.5} />
+            </div>
+          ) : (
+            /* Standard tab — pill background when active */
+            <div
+              className={cn(
+                "relative flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
+                isActive && "bg-brand-100/80 dark:bg-brand-900/40",
+              )}
+            >
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              {/* Active indicator pip */}
+              {isActive && (
+                <span
+                  className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-primary"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          )}
+          <span className={cn(primary && "font-bold text-accent-primary")}>
+            {label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+// ── More button ────────────────────────────────────────────────────────────────
+
+interface MobileMoreButtonProps {
+  onClick: () => void;
+  active: boolean;
+}
+
+function MobileMoreButton({ onClick, active }: MobileMoreButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "active-bounce relative flex flex-1 flex-col items-center gap-1 py-1.5 text-[10px] font-semibold transition-all select-none",
+        active ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+      )}
+      aria-label="More Menu"
+    >
+      <div
+        className={cn(
+          "flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
+          active && "bg-brand-100/80",
+        )}
+      >
+        <Menu size={20} strokeWidth={active ? 2.5 : 2} />
+      </div>
+      <span>More</span>
+    </button>
+  );
+}
+
+// ── Bottom Nav bar variants by role ───────────────────────────────────────────
+
+interface BottomNavProps {
+  onMoreOpen: () => void;
+  moreOpen: boolean;
+}
+
+function SuperAdminBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      aria-label="Super Admin Mobile Navigation"
+    >
+      <MobileTabItem to="/super-admin/dashboard" label="Dashboard" icon={LayoutDashboard} />
+      <MobileTabItem to="/device" label="Devices" icon={Smartphone} />
+      <MobileMoreButton onClick={onMoreOpen} active={moreOpen} />
+    </nav>
+  );
+}
+
+function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      aria-label="Member Mobile Navigation"
+    >
+      <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
+      <MobileTabItem to="/device" label="Security" icon={ShieldCheck} />
+      <MobileMoreButton onClick={onMoreOpen} active={moreOpen} />
+    </nav>
+  );
+}
+
+function OrganizerBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      aria-label="App Navigation"
+    >
+      <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
+      <MobileTabItem to="/chit-groups" label="Chits" icon={Landmark} />
+      <MobileTabItem to="/collections" label="Collect" icon={HandCoins} primary />
+      <MobileTabItem to="/auctions" label="Auctions" icon={Gavel} />
+      <MobileMoreButton onClick={onMoreOpen} active={moreOpen} />
+    </nav>
+  );
+}
+
+// ── Main AppShell ─────────────────────────────────────────────────────────────
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
@@ -77,7 +225,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     ];
   }
 
-  const moreItems = visibleItems.filter((i) => !["/dashboard", "/super-admin/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to));
+  const moreItems = visibleItems.filter(
+    (i) => !["/dashboard", "/super-admin/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to),
+  );
 
   async function handleLogout() {
     await logout();
@@ -118,14 +268,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Native Mobile App Header */}
+        {/* Sticky Top Header */}
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/70 bg-bg-surface/92 px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          {/* Mobile Header Left: Profile Avatar + Greeting */}
+          {/* Mobile Header Left: Avatar + Greeting */}
           <div className="flex items-center gap-2.5 lg:hidden">
-            <div
-              className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs"
-            >
+            <div className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs">
               {user?.name?.trim().charAt(0).toUpperCase() || "K"}
+              {/* Online presence dot */}
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-bg-surface" />
             </div>
             <div>
@@ -137,6 +286,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {user?.role?.name || "User"}
                 </span>
               </div>
+              <p className="mt-0.5 text-[10px] text-text-secondary leading-none">Welcome back 👋</p>
             </div>
           </div>
 
@@ -148,17 +298,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {/* Header Right Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
+            {/* Mobile: Notification bell */}
             <NavLink
               to="/notifications"
               className="relative flex size-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-all hover:text-text-primary lg:hidden active-bounce"
               aria-label="Notifications"
             >
               <Bell size={18} />
+              {/* Unread dot — always visible as a trust signal / placeholder */}
+              <span
+                className="absolute right-1.5 top-1.5 size-2 rounded-full bg-bad-fg ring-2 ring-bg-surface"
+                aria-hidden="true"
+              />
             </NavLink>
 
             <div className="hidden lg:block"><ThemeToggle /></div>
 
-            {/* Desktop User Account Menu & Switcher */}
+            {/* Desktop User Account Menu */}
             <div className="hidden lg:block">
               <UserAccountMenu />
             </div>
@@ -168,233 +324,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Main App Content Area */}
         <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
           <div className="mx-auto w-full max-w-[1440px]">
-
-
             {children}
           </div>
         </main>
       </div>
 
-      {/* Native Bottom Navigation Bar */}
+      {/* ── Bottom Navigation Bar (role-adaptive) ── */}
       {user?.role?.slug === "SUPER_ADMIN" ? (
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
-          aria-label="Super Admin Mobile Navigation"
-        >
-          <NavLink
-            to="/super-admin/dashboard"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Dashboard</span>
-              </>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/device"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <Smartphone size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Devices</span>
-              </>
-            )}
-          </NavLink>
-
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className={cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
-              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )}
-            aria-label="More Menu"
-          >
-            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
-              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
-            </div>
-            <span>More</span>
-          </button>
-        </nav>
+        <SuperAdminBottomNav onMoreOpen={() => setMoreOpen(true)} moreOpen={moreOpen} />
       ) : user?.role?.slug === "MEMBER" ? (
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
-          aria-label="Member Mobile Navigation"
-        >
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Dashboard</span>
-              </>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/device"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <Smartphone size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Devices</span>
-              </>
-            )}
-          </NavLink>
-
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className={cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
-              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )}
-            aria-label="More Menu"
-          >
-            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
-              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
-            </div>
-            <span>More</span>
-          </button>
-        </nav>
+        <MemberBottomNav onMoreOpen={() => setMoreOpen(true)} moreOpen={moreOpen} />
       ) : (
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/80 bg-bg-surface/92 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)] backdrop-blur-2xl lg:hidden"
-          aria-label="App Navigation"
-        >
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <LayoutDashboard size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Home</span>
-              </>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/chit-groups"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <Landmark size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Chits</span>
-              </>
-            )}
-          </NavLink>
-
-          {/* Prominent Floating Action Collect Button */}
-          <NavLink
-            to="/collections"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn(
-                  "flex h-9 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-md transition-transform active:scale-95",
-                  isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface"
-                )}>
-                  <HandCoins size={20} strokeWidth={2.5} />
-                </div>
-                <span className="font-bold text-accent-primary">Collect</span>
-              </>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/auctions"
-            className={({ isActive }: { isActive: boolean }) =>
-              cn(
-                "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all",
-                isActive ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-              )
-            }
-          >
-            {({ isActive }: { isActive: boolean }) => (
-              <>
-                <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100/90")}>
-                  <Gavel size={20} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span>Auctions</span>
-              </>
-            )}
-          </NavLink>
-
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className={cn(
-              "active-bounce flex flex-1 flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all select-none",
-              moreOpen ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
-            )}
-            aria-label="More Menu"
-          >
-            <div className={cn("flex h-8 w-12 items-center justify-center rounded-full transition-colors", moreOpen && "bg-brand-100/90")}>
-              <Menu size={20} strokeWidth={moreOpen ? 2.5 : 2} />
-            </div>
-            <span>More</span>
-          </button>
-        </nav>
+        <OrganizerBottomNav onMoreOpen={() => setMoreOpen(true)} moreOpen={moreOpen} />
       )}
 
-      {/* Native Bottom Sheet Drawer for "More" Menu */}
+      {/* ── "More" Bottom Sheet Drawer ── */}
       {moreOpen ? (
         <div className="fixed inset-0 z-[9999] lg:hidden" role="dialog" aria-modal="true" aria-label="More Options Menu">
           {/* Dark Backdrop */}
@@ -408,12 +352,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Top Handle */}
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border-strong/40" />
 
-            {/* User Profile Info Header */}
+            {/* User Profile Card in Drawer */}
             <div className="mb-5 rounded-2xl border border-border-default bg-bg-raised p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-11 items-center justify-center rounded-full bg-brand-600 font-bold text-white shadow-sm">
+                  <div className="relative flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-bold text-white shadow-sm text-base">
                     {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+                    <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 ring-2 ring-bg-raised" />
                   </div>
                   <div>
                     <p className="font-display text-base font-bold text-text-primary">{user?.name || "User"}</p>
@@ -424,19 +369,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setMoreOpen(false)}
-                  className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs"
+                  className="flex size-9 items-center justify-center rounded-full bg-bg-surface text-text-secondary hover:text-text-primary shadow-xs active-bounce"
                   aria-label="Close menu"
                 >
                   <X size={18} />
                 </button>
               </div>
-
-
             </div>
 
-            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary">App Features &amp; Settings</p>
+            <p className="mb-2 native-section-label">App Features &amp; Settings</p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="native-section">
               {moreItems.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
@@ -444,21 +387,29 @@ export function AppShell({ children }: { children: ReactNode }) {
                   onClick={() => setMoreOpen(false)}
                   className={({ isActive }: { isActive: boolean }) =>
                     cn(
-                      "active-bounce flex min-h-[4.25rem] items-center justify-between rounded-2xl border border-border-default bg-bg-surface p-3.5 shadow-xs transition-all",
-                      isActive && "border-brand-400 bg-brand-50/90 text-accent-primary font-bold shadow-sm"
+                      "native-row native-row-pressable",
+                      isActive && "text-accent-primary",
                     )
                   }
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-accent-primary">
-                      <Icon size={18} />
-                    </span>
-                    <span className="text-xs font-semibold text-text-primary">{label}</span>
-                  </div>
-                  <ChevronRight size={14} className="text-text-secondary" />
+                  {({ isActive }: { isActive: boolean }) => (
+                    <>
+                      <span className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+                        isActive ? "bg-brand-100 text-accent-primary" : "bg-bg-raised text-text-secondary",
+                      )}>
+                        <Icon size={18} />
+                      </span>
+                      <span className={cn("flex-1 text-sm font-semibold", isActive ? "text-accent-primary" : "text-text-primary")}>
+                        {label}
+                      </span>
+                      <ChevronRight size={15} className="text-text-secondary" />
+                    </>
+                  )}
                 </NavLink>
               ))}
             </div>
+
 
             <div className="mt-6 flex items-center justify-between border-t border-border-default/80 pt-4">
               <ThemeToggle />

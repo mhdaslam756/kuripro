@@ -231,6 +231,7 @@
   .mobile-card {
     @apply rounded-2xl border border-border-default/80 bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.98] active:bg-bg-raised;
   }
+  /* ── Mobile Banking: Hero balance card ── */
   .mobile-hero-card {
     background: linear-gradient(135deg, #102d30 0%, #173b3f 50%, #0d2224 100%);
     color: #ffffff;
@@ -239,6 +240,213 @@
     background: linear-gradient(135deg, #102d30 0%, #173b3f 50%, #0d2224 100%);
     color: #ffffff;
   }
+  /* Member dashboard hero card — richer amber-teal gradient */
+  .mobile-balance-card {
+    background: linear-gradient(145deg, #102d30 0%, #1d464b 40%, #7d5f26 100%);
+    color: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px -12px rgba(16, 45, 48, 0.55), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    position: relative;
+    overflow: hidden;
+  }
+  .mobile-balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(176,138,62,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  /* ── Quick action circular icon button ── */
+  .mobile-quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+  }
+  .mobile-quick-action:active {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  .mobile-quick-action-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    transition: background 0.15s;
+  }
+  .mobile-quick-action-icon:active {
+    background: rgba(255,255,255,0.22);
+  }
+  .mobile-quick-action-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: rgba(255,255,255,0.9);
+    text-align: center;
+    line-height: 1.2;
+  }
+  /* ── Quick actions on light bg (organizer dark-on-light) ── */
+  .mobile-quick-action-light .mobile-quick-action-icon {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    color: var(--accent-primary);
+  }
+  .mobile-quick-action-light .mobile-quick-action-label {
+    color: var(--text-secondary);
+  }
+  /* ── Transaction row ── */
+  .mobile-tx-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .mobile-tx-row:last-child {
+    border-bottom: none;
+  }
+  .mobile-tx-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .mobile-tx-amount-credit {
+    color: var(--good-fg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    text-align: right;
+  }
+  .mobile-tx-amount-debit {
+    color: var(--bad-fg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    text-align: right;
+  }
+  /* ── Chit group card (1.6:1 ratio, swipeable) ── */
+  .mobile-chit-card {
+    width: 240px;
+    aspect-ratio: 1.6 / 1;
+    border-radius: 20px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #173b3f 0%, #1d464b 60%, #7d5f26 100%);
+    box-shadow: 0 10px 30px -8px rgba(16,45,48,0.5), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    color: #fff;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.15s ease;
+  }
+  .mobile-chit-card:active {
+    transform: scale(0.97);
+  }
+  .mobile-chit-card::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    right: -30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(176,138,62,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  /* ── Bottom nav active pip ── */
+  .tab-pip {
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    transition: all 0.2s ease;
+  }
+  /* ── Safe area nav padding ── */
+  .pb-safe-nav {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* ── Skeleton shimmer ── */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-raised);
+    border-radius: 12px;
+  }
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.12) 40%,
+      rgba(255,255,255,0.22) 50%,
+      rgba(255,255,255,0.12) 60%,
+      transparent 100%
+    );
+    animation: shimmer-slide 1.6s infinite;
+    will-change: transform;
+  }
+  /* On light theme, tweak shimmer opacity */
+  :root:not([data-theme="dark"]) .skeleton-shimmer::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0,0,0,0.04) 40%,
+      rgba(0,0,0,0.08) 50%,
+      rgba(0,0,0,0.04) 60%,
+      transparent 100%
+    );
+  }
+  /* Balance skeleton (inside dark hero card) */
+  .skeleton-balance {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+  }
+  .skeleton-balance::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.18) 40%,
+      rgba(255,255,255,0.3) 50%,
+      rgba(255,255,255,0.18) 60%,
+      transparent 100%
+    );
+    animation: shimmer-slide 1.6s infinite;
+    will-change: transform;
+  }
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -246,15 +454,80 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* ── Native app section/row (no card-per-item) ── */
+  /* Rounded floating section — use inside padded containers */
+  .native-section {
+    background: var(--bg-surface);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  /* Edge-to-edge section — use with -mx-4 / -mx-0 wrappers */
+  .native-section-flush {
+    background: var(--bg-surface);
+    overflow: hidden;
+  }
+  /* Section label above a native-section block */
+  .native-section-label {
+    padding: 6px 2px 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  /* Individual row inside a native section — divider only, no individual card */
+  .native-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    min-height: 56px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s ease;
+    position: relative;
+  }
+  .native-row:last-child {
+    border-bottom: none;
+  }
+  .native-row.native-row-pressable:active {
+    background: var(--bg-raised);
+  }
+  /* Flat KPI stat row inside a native section */
+  .native-kpi-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    min-height: 52px;
+  }
+  .native-kpi-row:last-child {
+    border-bottom: none;
+  }
 }
 
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
 /* ---------- Native Mobile PWA App Experience ---------- */
