@@ -1,4 +1,4 @@
-import { AlertCircle, Trash2, Search, UserCheck, UserPlus, Users } from "lucide-react";
+import { AlertCircle, Trash2, Search, UserCheck, UserPlus, Users, PieChart, Plus, Minus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -22,10 +22,16 @@ interface Props {
   isNotStarted?: boolean;
 }
 
+interface MemberSelection {
+  count: number;
+  shareType: "FULL" | "HALF";
+}
+
 export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRemaining, isNotStarted = true }: Props) {
   const [activeTab, setActiveTab] = useState<"assign" | "enrolled">("assign");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [defaultShareType, setDefaultShareType] = useState<"FULL" | "HALF">("FULL");
+  const [selectedMembers, setSelectedMembers] = useState<Map<string, MemberSelection>>(new Map());
   const [result, setResult] = useState<BulkAssignResult | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
@@ -36,18 +42,26 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
   const assign = useAssignMembers(chitGroupId);
   const removeMember = useRemoveMember(chitGroupId);
 
-  const enrolledMembers = roster?.items ?? [];
+  const enrolledMembers = useMemo(() => roster?.items ?? [], [roster?.items]);
   const enrolledMap = useMemo(() => {
-    const map = new Map<string, { membershipId: string; ticketNumber: number; hasWon: boolean }[]>();
+    const map = new Map<
+      string,
+      { membershipId: string; ticketNumber: number; subTicket?: string; shareType?: string; hasWon: boolean }[]
+    >();
     for (const item of enrolledMembers) {
-      const memberId = typeof item.memberId === "object" && item.memberId
-        ? (item.memberId.id || item.memberId._id || "")
-        : typeof item.memberId === "string" ? item.memberId : "";
+      const memberId =
+        typeof item.memberId === "object" && item.memberId
+          ? item.memberId.id || item.memberId._id || ""
+          : typeof item.memberId === "string"
+          ? item.memberId
+          : "";
       if (memberId) {
         if (!map.has(memberId)) map.set(memberId, []);
         map.get(memberId)!.push({
           membershipId: item.id || (item as any)._id,
           ticketNumber: item.ticketNumber,
+          subTicket: item.subTicket,
+          shareType: item.shareType,
           hasWon: item.hasWon,
         });
       }
@@ -57,26 +71,95 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
 
   const assignable = useMemo(() => membersData?.items ?? [], [membersData]);
 
+  const { totalSelectedShares, totalSelectedTickets, totalHalfCount, totalFullCount } = useMemo(() => {
+    let shares = 0;
+    let tickets = 0;
+    let halfs = 0;
+    let fulls = 0;
+    for (const item of selectedMembers.values()) {
+      const sharePerItem = item.shareType === "HALF" ? 0.5 : 1;
+      shares += item.count * sharePerItem;
+      tickets += item.count;
+      if (item.shareType === "HALF") halfs += item.count;
+      else fulls += item.count;
+    }
+    return {
+      totalSelectedShares: shares,
+      totalSelectedTickets: tickets,
+      totalHalfCount: halfs,
+      totalFullCount: fulls,
+    };
+  }, [selectedMembers]);
+
   const filteredEnrolled = useMemo(() => {
     if (!search.trim()) return enrolledMembers;
     const q = search.toLowerCase();
     return enrolledMembers.filter((m) => {
       const mem = typeof m.memberId === "object" && m.memberId ? m.memberId : null;
       if (!mem) return false;
+      const ticketStr = `#${m.ticketNumber}${m.subTicket || ""}`.toLowerCase();
       return (
         (mem.name || "").toLowerCase().includes(q) ||
         (mem.phone || "").toLowerCase().includes(q) ||
         (mem.memberCode || "").toLowerCase().includes(q) ||
-        `#${m.ticketNumber}`.includes(q)
+        ticketStr.includes(q)
       );
     });
   }, [enrolledMembers, search]);
 
   function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < seatsRemaining) next.add(id);
+    setSelectedMembers((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        const needed = defaultShareType === "HALF" ? 0.5 : 1;
+        if (totalSelectedShares + needed <= seatsRemaining + 0.001) {
+          next.set(id, { count: 1, shareType: defaultShareType });
+        }
+      }
+      return next;
+    });
+  }
+
+  function setMemberShare(id: string, type: "FULL" | "HALF") {
+    setSelectedMembers((prev) => {
+      const next = new Map(prev);
+      const current = next.get(id);
+      if (!current) return next;
+      const currentTotal = current.count * (current.shareType === "HALF" ? 0.5 : 1);
+      const newTotal = current.count * (type === "HALF" ? 0.5 : 1);
+      const diff = newTotal - currentTotal;
+      if (diff <= 0 || totalSelectedShares + diff <= seatsRemaining + 0.001) {
+        next.set(id, { ...current, shareType: type });
+      }
+      return next;
+    });
+  }
+
+  function incrementCount(id: string) {
+    setSelectedMembers((prev) => {
+      const next = new Map(prev);
+      const current = next.get(id);
+      if (!current) return next;
+      const step = current.shareType === "HALF" ? 0.5 : 1;
+      if (totalSelectedShares + step <= seatsRemaining + 0.001) {
+        next.set(id, { ...current, count: current.count + 1 });
+      }
+      return next;
+    });
+  }
+
+  function decrementCount(id: string) {
+    setSelectedMembers((prev) => {
+      const next = new Map(prev);
+      const current = next.get(id);
+      if (!current) return next;
+      if (current.count > 1) {
+        next.set(id, { ...current, count: current.count - 1 });
+      } else {
+        next.delete(id);
+      }
       return next;
     });
   }
@@ -84,9 +167,18 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
   async function handleAssign() {
     setActionError(null);
     try {
-      const res = await assign.mutateAsync([...selected]);
+      const assignments: { memberId: string; shareType: "FULL" | "HALF" }[] = [];
+      for (const [memberId, config] of selectedMembers.entries()) {
+        for (let i = 0; i < config.count; i++) {
+          assignments.push({
+            memberId,
+            shareType: config.shareType,
+          });
+        }
+      }
+      const res = await assign.mutateAsync({ assignments });
       setResult(res);
-      setSelected(new Set());
+      setSelectedMembers(new Map());
     } catch (err) {
       if (err instanceof ApiError) {
         setActionError(err.message);
@@ -116,7 +208,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
 
   function handleClose(next: boolean) {
     if (!next) {
-      setSelected(new Set());
+      setSelectedMembers(new Map());
       setResult(null);
       setSearch("");
       setMemberToRemove(null);
@@ -128,11 +220,11 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[85vh] max-w-xl overflow-hidden flex flex-col">
+      <DialogContent className="max-h-[88vh] max-w-xl overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Assign & Manage Members</DialogTitle>
           <DialogDescription>
-            {seatsRemaining} seat{seatsRemaining === 1 ? "" : "s"} remaining out of {roster?.total ? roster.total + seatsRemaining : seatsRemaining}.
+            {seatsRemaining} ticket capacity remaining out of {roster?.total ? roster.total + seatsRemaining : seatsRemaining}.
           </DialogDescription>
         </DialogHeader>
 
@@ -164,7 +256,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
         {result ? (
           <div className="flex flex-col gap-3 py-2">
             <p className="text-sm">
-              <span className="text-good-fg font-medium">{result.assigned} member(s) assigned successfully.</span>
+              <span className="text-good-fg font-medium">{result.assigned} membership(s) assigned successfully.</span>
               {result.skipped.length > 0 ? (
                 <span className="text-text-secondary"> · {result.skipped.length} skipped</span>
               ) : null}
@@ -194,7 +286,40 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               </TabsTrigger>
             </TabsList>
 
-            <div className="relative mt-3">
+            {activeTab === "assign" ? (
+              <div className="mt-3 flex items-center justify-between gap-2 p-2 bg-bg-raised/60 rounded-lg border border-border-default text-xs">
+                <div className="flex items-center gap-1.5 font-medium text-text-secondary">
+                  <PieChart size={14} className="text-accent-primary" />
+                  <span>Default Mode:</span>
+                </div>
+                <div className="flex items-center gap-1 bg-bg-surface p-0.5 rounded-md border border-border-default">
+                  <button
+                    type="button"
+                    onClick={() => setDefaultShareType("FULL")}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                      defaultShareType === "FULL"
+                        ? "bg-accent-primary text-white shadow-sm"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    Full Chit (1.0)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDefaultShareType("HALF")}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                      defaultShareType === "HALF"
+                        ? "bg-accent-primary text-white shadow-sm"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    ½ Half Chit (0.5)
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="relative mt-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
               <Input
                 className="pl-9"
@@ -210,7 +335,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               </div>
             ) : null}
 
-            <TabsContent value="assign" className="flex-1 overflow-y-auto min-h-[220px] max-h-[320px] mt-3 border border-border-default rounded-md p-0">
+            <TabsContent value="assign" className="flex-1 overflow-y-auto min-h-[220px] max-h-[300px] mt-2 border border-border-default rounded-md p-0">
               {isLoadingMembers ? (
                 <div className="flex flex-col gap-2 p-3">
                   <Skeleton className="h-9 w-full" />
@@ -232,27 +357,34 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                   {assignable.map((member) => {
                     const enrolledEntries = enrolledMap.get(member.id);
                     const isEnrolled = Boolean(enrolledEntries && enrolledEntries.length > 0);
-                    const checked = selected.has(member.id);
-                    const disabled = !checked && selected.size >= seatsRemaining;
+                    const selection = selectedMembers.get(member.id);
+                    const isChecked = Boolean(selection);
+                    const needed = defaultShareType === "HALF" ? 0.5 : 1;
+                    const disabled = !isChecked && totalSelectedShares + needed > seatsRemaining + 0.001;
 
                     return (
-                      <li key={member.id} className={`flex items-center justify-between px-3 py-2.5 hover:bg-bg-raised transition-colors`}>
+                      <li key={member.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-bg-raised transition-colors gap-2">
                         <label
                           className={`flex items-center gap-3 flex-1 min-w-0 ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
                         >
                           <input
                             type="checkbox"
-                            checked={checked}
+                            checked={isChecked}
                             disabled={disabled}
                             onChange={() => toggle(member.id)}
                             className="rounded border-border-default"
                           />
                           <div className="truncate">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-sm font-medium text-text-primary truncate">{member.name}</p>
                               {isEnrolled ? (
                                 <Badge variant="success" className="text-[11px] gap-1 py-0">
-                                  <UserCheck size={11} /> {enrolledEntries!.length > 1 ? `${enrolledEntries!.length} tickets` : `Ticket #${enrolledEntries![0]!.ticketNumber}`}
+                                  <UserCheck size={11} />
+                                  {enrolledEntries!.length > 1
+                                    ? `${enrolledEntries!.length} tickets (${enrolledEntries!.map((e) => `#${e.ticketNumber}${e.subTicket || ""}`).join(", ")})`
+                                    : `Ticket #${enrolledEntries![0]!.ticketNumber}${enrolledEntries![0]!.subTicket || ""}${
+                                        enrolledEntries![0]!.shareType === "HALF" ? " (½)" : ""
+                                      }`}
                                 </Badge>
                               ) : null}
                             </div>
@@ -261,6 +393,60 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                             </p>
                           </div>
                         </label>
+
+                        {isChecked && selection ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Share Type Toggle */}
+                            <div className="flex items-center gap-0.5 bg-bg-surface p-0.5 rounded border border-border-default">
+                              <button
+                                type="button"
+                                onClick={() => setMemberShare(member.id, "FULL")}
+                                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                                  selection.shareType === "FULL"
+                                    ? "bg-accent-primary text-white shadow-xs"
+                                    : "text-text-secondary hover:text-text-primary"
+                                }`}
+                              >
+                                Full
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMemberShare(member.id, "HALF")}
+                                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                                  selection.shareType === "HALF"
+                                    ? "bg-accent-primary text-white shadow-xs"
+                                    : "text-text-secondary hover:text-text-primary"
+                                }`}
+                              >
+                                ½ Half
+                              </button>
+                            </div>
+
+                            {/* Quantity Stepper */}
+                            <div className="flex items-center gap-1 bg-bg-surface px-1 py-0.5 rounded-lg border border-border-default">
+                              <button
+                                type="button"
+                                aria-label="Decrease tickets"
+                                onClick={() => decrementCount(member.id)}
+                                className="flex size-5 items-center justify-center rounded bg-bg-raised text-text-primary hover:bg-border-default transition-colors text-xs font-bold"
+                              >
+                                <Minus size={11} />
+                              </button>
+                              <span className="min-w-[24px] text-center font-mono text-xs font-bold text-text-primary">
+                                {selection.count}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label="Increase tickets"
+                                disabled={totalSelectedShares + (selection.shareType === "HALF" ? 0.5 : 1) > seatsRemaining + 0.001}
+                                onClick={() => incrementCount(member.id)}
+                                className="flex size-5 items-center justify-center rounded bg-bg-raised text-text-primary hover:bg-border-default disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-bold"
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -268,7 +454,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               )}
             </TabsContent>
 
-            <TabsContent value="enrolled" className="flex-1 overflow-y-auto min-h-[220px] max-h-[320px] mt-3 border border-border-default rounded-md p-0">
+            <TabsContent value="enrolled" className="flex-1 overflow-y-auto min-h-[220px] max-h-[320px] mt-2 border border-border-default rounded-md p-0">
               {isLoadingRoster ? (
                 <div className="flex flex-col gap-2 p-3">
                   <Skeleton className="h-9 w-full" />
@@ -282,46 +468,53 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                 </div>
               ) : (
                 <ul className="divide-y divide-border-default">
-                    {filteredEnrolled.map((item) => {
-                      const mem = typeof item.memberId === "object" && item.memberId ? item.memberId : null;
-                      const memName = mem?.name || "Member";
-                      const memCode = mem?.memberCode || "";
-                      const memPhone = mem?.phone || "";
-                      const membershipId = item.id || (item as any)._id || "";
+                  {filteredEnrolled.map((item) => {
+                    const mem = typeof item.memberId === "object" && item.memberId ? item.memberId : null;
+                    const memName = mem?.name || "Member";
+                    const memCode = mem?.memberCode || "";
+                    const memPhone = mem?.phone || "";
+                    const membershipId = item.id || (item as any)._id || "";
+                    const isHalf = item.shareType === "HALF" || (item.share !== undefined && item.share < 1);
+                    const ticketLabel = `#${item.ticketNumber}${item.subTicket || ""}`;
 
-                      return (
-                    <li key={membershipId || item.ticketNumber} className="flex items-center justify-between px-3.5 py-2.5 hover:bg-bg-raised">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-bg-raised text-text-primary">
-                            #{item.ticketNumber}
-                          </span>
-                          <p className="text-sm font-medium text-text-primary">{memName}</p>
-                          {item.hasWon ? (
-                            <Badge variant="info" className="text-[10px] py-0">Won</Badge>
-                          ) : null}
+                    return (
+                      <li key={membershipId || item.ticketNumber} className="flex items-center justify-between px-3.5 py-2.5 hover:bg-bg-raised">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-bg-raised text-text-primary">
+                              {ticketLabel}
+                            </span>
+                            <p className="text-sm font-medium text-text-primary">{memName}</p>
+                            {isHalf ? (
+                              <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                                ½ Half Chit
+                              </Badge>
+                            ) : null}
+                            {item.hasWon ? (
+                              <Badge variant="info" className="text-[10px] py-0">Won</Badge>
+                            ) : null}
+                          </div>
+                          <p className="font-mono text-xs text-text-secondary mt-0.5">
+                            {memCode}{memCode && memPhone ? " · " : ""}{memPhone}
+                          </p>
                         </div>
-                        <p className="font-mono text-xs text-text-secondary mt-0.5">
-                          {memCode}{memCode && memPhone ? " · " : ""}{memPhone}
-                        </p>
-                      </div>
 
-                      {!item.hasWon && isNotStarted ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-text-secondary hover:text-bad-fg hover:bg-bad-bg/10 gap-1 text-xs"
-                          onClick={() => setMemberToRemove({ id: membershipId, name: memName })}
-                        >
-                          <Trash2 size={14} /> Remove
-                        </Button>
-                      ) : item.hasWon ? (
-                        <span className="text-xs text-text-secondary italic">Cannot remove (Won)</span>
-                      ) : null}
-                    </li>
-                      );
-                    })}
+                        {!item.hasWon && isNotStarted ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-text-secondary hover:text-bad-fg hover:bg-bad-bg/10 gap-1 text-xs"
+                            onClick={() => setMemberToRemove({ id: membershipId, name: memName })}
+                          >
+                            <Trash2 size={14} /> Remove
+                          </Button>
+                        ) : item.hasWon ? (
+                          <span className="text-xs text-text-secondary italic">Cannot remove (Won)</span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </TabsContent>
@@ -331,8 +524,19 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                 Close
               </Button>
               {activeTab === "assign" ? (
-                <Button disabled={selected.size === 0 || assign.isPending} onClick={() => void handleAssign()}>
-                  {assign.isPending ? "Assigning…" : `Assign ${selected.size || ""}`.trim()}
+                <Button disabled={selectedMembers.size === 0 || assign.isPending} onClick={() => void handleAssign()}>
+                  {assign.isPending
+                    ? "Assigning…"
+                    : `Assign ${selectedMembers.size} Member${selectedMembers.size === 1 ? "" : "s"}${
+                        totalSelectedTickets > 0
+                          ? ` (${[
+                              totalFullCount > 0 ? `${totalFullCount} Full` : null,
+                              totalHalfCount > 0 ? `${totalHalfCount} Half` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")} · ${totalSelectedShares} Capacity)`
+                          : ""
+                      }`}
                 </Button>
               ) : null}
             </DialogFooter>

@@ -203,6 +203,9 @@ interface MobileChitCardsProps {
     name: string;
     registrationNumber: string;
     ticketNumber: number | string;
+    subTicket?: string;
+    shareType?: "FULL" | "HALF";
+    share?: number;
     chitValueRupees: number;
     installmentAmount: number;
     completedCyclesCount: number;
@@ -230,6 +233,8 @@ function MobileChitCards({ groups }: MobileChitCardsProps) {
         <div className="flex gap-3 pb-2">
           {groups.map((group, idx) => {
             const progress = Math.min(100, Math.round((group.completedCyclesCount / group.totalMembers) * 100));
+            const isHalf = group.shareType === "HALF" || (group.share !== undefined && group.share < 1);
+            const ticketLabel = `#${group.ticketNumber}${group.subTicket || ""}${isHalf ? " (½)" : ""}`;
             return (
               <Link
                 key={group.id}
@@ -243,7 +248,7 @@ function MobileChitCards({ groups }: MobileChitCardsProps) {
                     <p className="mt-0.5 font-mono text-[10px] text-white/60 truncate">{group.registrationNumber}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-amber-200 border border-white/15">
-                    #{group.ticketNumber}
+                    {ticketLabel}
                   </span>
                 </div>
                 <div>
@@ -491,7 +496,16 @@ export function MemberDashboardView() {
                           <h3 className="font-display text-lg font-bold text-text-primary">{group.name}</h3>
                           <p className="text-xs font-mono text-text-secondary mt-0.5">{group.registrationNumber}</p>
                         </div>
-                        <Badge variant="neutral" className="font-mono text-xs font-bold px-2 py-0.5">Ticket #{group.ticketNumber}</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="neutral" className="font-mono text-xs font-bold px-2 py-0.5">
+                            Ticket #{group.ticketNumber}{(group as any).subTicket || ""}
+                          </Badge>
+                          {(group as any).shareType === "HALF" || ((group as any).share !== undefined && (group as any).share < 1) ? (
+                            <Badge variant="neutral" className="text-[10px] py-0.5 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                              ½ Half
+                            </Badge>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-xs border-t border-border-default pt-3">
                         <div><p className="text-text-secondary">Chit Value</p><p className="font-display text-base font-bold text-text-primary">{formatPaise(group.chitValueRupees * 100)}</p></div>

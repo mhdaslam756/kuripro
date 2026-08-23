@@ -56,12 +56,27 @@ export type UpdateChitGroupInput = z.infer<typeof updateChitGroupSchema>;
 export const enrollMemberSchema = z.object({
   memberId: objectIdSchema,
   ticketNumber: z.number().int().min(1).optional(),
+  shareType: z.enum(["FULL", "HALF"]).default("FULL"),
+  subTicket: z.string().optional(),
 });
 
 export type EnrollMemberInput = z.infer<typeof enrollMemberSchema>;
 
 export const assignMembersSchema = z.object({
-  memberIds: z.array(objectIdSchema).min(1).max(100),
+  memberIds: z.array(objectIdSchema).min(1).max(100).optional(),
+  shareType: z.enum(["FULL", "HALF"]).default("FULL"),
+  assignments: z
+    .array(
+      z.object({
+        memberId: objectIdSchema,
+        shareType: z.enum(["FULL", "HALF"]).default("FULL"),
+        ticketNumber: z.number().int().min(1).optional(),
+        subTicket: z.string().optional(),
+      }),
+    )
+    .optional(),
+}).refine((data) => (data.memberIds && data.memberIds.length > 0) || (data.assignments && data.assignments.length > 0), {
+  message: "Either memberIds or assignments array must be provided",
 });
 
 export type AssignMembersInput = z.infer<typeof assignMembersSchema>;

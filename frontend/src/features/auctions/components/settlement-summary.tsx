@@ -56,7 +56,9 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
         <div className="rounded-md border border-good-border bg-good-bg px-4 py-3">
           <p className="text-xs uppercase tracking-wide text-good-fg">Winner</p>
           <p className="mt-0.5 text-lg font-semibold text-text-primary">
-            #{settlement.winner.ticketNumber} · {settlement.winner.name}
+            #{settlement.winner.ticketNumber}
+            {settlement.winner.subTicket || ""}
+            {settlement.winner.shareType === "HALF" ? " (½ Half)" : ""} · {settlement.winner.name}
             <span className="ml-2 font-mono text-xs text-text-secondary">{settlement.winner.memberCode}</span>
           </p>
         </div>

@@ -72,7 +72,7 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
   return (
     <NavLink
       to={to}
-      className={({ isActive }) =>
+      className={({ isActive }: { isActive: boolean }) =>
         cn(
           "active-bounce relative flex flex-1 flex-col items-center gap-1 py-1.5 text-[10px] font-semibold transition-all select-none",
           primary
@@ -85,7 +85,7 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
         )
       }
     >
-      {({ isActive }) => (
+      {({ isActive }: { isActive: boolean }) => (
         <>
           {primary ? (
             /* Primary "collect" pill — elevated gradient button */

@@ -74,7 +74,10 @@ interface Props {
 
 export function WhatsAppReminderDialog({ open, onOpenChange, installment, chitGroupName }: Props) {
   const membership = typeof installment.chitMembershipId === "object" ? installment.chitMembershipId : null;
-  const ticketNumber = membership?.ticketNumber ?? "—";
+  const rawTicket = membership?.ticketNumber ?? "—";
+  const subTicket = membership?.subTicket ?? "";
+  const isHalf = membership?.shareType === "HALF" || (membership?.share !== undefined && membership.share < 1);
+  const ticketNumber = rawTicket !== "—" ? `${rawTicket}${subTicket}${isHalf ? " (½)" : ""}` : "—";
   const memberObj = membership?.memberId && typeof membership.memberId === "object" ? (membership.memberId as any) : null;
   const memberName = memberObj?.name ?? "Member";
   const phone = memberObj?.phone ?? "";

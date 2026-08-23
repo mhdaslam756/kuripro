@@ -15,6 +15,9 @@ export interface BidMember {
 export interface BidMembership {
   _id: string;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: BidMember;
 }
 export interface Bid {
@@ -30,6 +33,9 @@ export interface Bid {
 export interface EligibleMember {
   membershipId: string;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: string;
   name: string;
   memberCode: string;
@@ -39,7 +45,14 @@ export interface EligibleMember {
 }
 
 export interface AuctionSettlement {
-  winner: { membershipId: string; ticketNumber: number; name: string; memberCode: string };
+  winner: {
+    membershipId: string;
+    ticketNumber: number;
+    subTicket?: string;
+    shareType?: string;
+    name: string;
+    memberCode: string;
+  };
   discountAmount: number;
   commissionAmount: number;
   dividendPerMember: number;

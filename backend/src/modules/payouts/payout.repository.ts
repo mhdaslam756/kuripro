@@ -59,7 +59,7 @@ export async function savePayout(payout: PayoutDocument, session?: ClientSession
 
 /** Model-level delete (keeps the tenant filter so the tenant-scope guard is satisfied). Used by auction re-pick. */
 export async function deletePayoutByCycle(tenantId: string, chitCycleId: string, session?: ClientSession): Promise<void> {
-  await Payout.deleteOne({ tenantId, chitCycleId }, { session });
+  await Payout.deleteMany({ tenantId, chitCycleId }, { session });
 }
 
 export async function listPayouts(

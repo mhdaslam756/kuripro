@@ -62,9 +62,11 @@ export function BidPanel({ state, bids }: Props) {
                   <SelectContent>
                     {state.eligibleMembers.map((m) => {
                       const isUnpaid = m.hasPaidCurrentCycle === false;
+                      const isHalf = m.shareType === "HALF" || (m.share !== undefined && m.share < 1);
+                      const ticketLabel = `#${m.ticketNumber}${m.subTicket || ""}${isHalf ? " (½)" : ""}`;
                       return (
                         <SelectItem key={m.membershipId} value={m.membershipId} disabled={isUnpaid}>
-                          #{m.ticketNumber} · {m.name} {isUnpaid ? "⚠️ (Payment Pending - Ineligible)" : ""}
+                          {ticketLabel} · {m.name} {isUnpaid ? "⚠️ (Payment Pending - Ineligible)" : ""}
                         </SelectItem>
                       );
                     })}
@@ -102,14 +104,13 @@ export function BidPanel({ state, bids }: Props) {
               <button
                 key={inc}
                 type="button"
+                className="rounded-lg border border-border-default bg-bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary transition-all active:scale-95 hover:bg-bg-raised hover:text-text-primary"
                 onClick={() => {
-                  const curr = Number(discount) || minRupees;
-                  const next = Math.min(curr + inc, maxRupees);
-                  setDiscount(String(next));
+                  const current = Number(discount) || 0;
+                  setDiscount(String(current + inc));
                 }}
-                className="active-bounce rounded-md border border-border-default bg-bg-surface px-2.5 py-1 text-xs font-semibold text-text-primary hover:bg-brand-50 hover:text-accent-primary"
               >
-                +₹{inc.toLocaleString()}
+                +₹{inc.toLocaleString("en-IN")}
               </button>
             ))}
           </div>
@@ -122,95 +123,125 @@ export function BidPanel({ state, bids }: Props) {
         </p>
       ) : null}
 
-      {bids.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border-default py-10 text-center">
-          <p className="text-sm text-text-secondary">No bids recorded for this cycle yet.</p>
-        </div>
-      ) : (
-        <>
-          {/* Mobile View: Bids Card List */}
-          <div className="grid gap-2.5 md:hidden">
-            {bids.map((bid) => (
-              <div
-                key={bid.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface p-3.5 shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
-                      #{bid.chitMembershipId.ticketNumber}
-                    </span>
-                    <span className="font-semibold text-text-primary text-sm">
-                      {bid.chitMembershipId.memberId.name}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-display text-base font-bold text-text-primary">
-                    {formatPaise(bid.discountAmount)} <span className="text-xs font-sans font-normal text-text-secondary">({bid.discountPercent}%)</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BidStatusBadge status={bid.status} />
-                  {canBid && biddingOpen && bid.status === "ACTIVE" ? (
-                    <button
-                      type="button"
-                      aria-label="Withdraw bid"
-                      className="p-1.5 text-text-secondary hover:text-bad-fg"
-                      onClick={() => void withdrawBid.mutateAsync(bid.id)}
-                    >
-                      <X size={18} />
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop View: Bids Table */}
-          <div className="hidden md:block">
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Ticket</TableHeaderCell>
-                    <TableHeaderCell>Member</TableHeaderCell>
-                    <TableHeaderCell>Discount</TableHeaderCell>
-                    <TableHeaderCell>%</TableHeaderCell>
-                    <TableHeaderCell>Status</TableHeaderCell>
-                    {canBid && biddingOpen ? <TableHeaderCell /> : null}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {bids.map((bid) => (
-                    <TableRow key={bid.id}>
-                      <TableCell className="font-mono">#{bid.chitMembershipId.ticketNumber}</TableCell>
-                      <TableCell className="font-medium">{bid.chitMembershipId.memberId.name}</TableCell>
-                      <TableCell>{formatPaise(bid.discountAmount)}</TableCell>
-                      <TableCell className="text-text-secondary">{bid.discountPercent}%</TableCell>
-                      <TableCell>
-                        <BidStatusBadge status={bid.status} />
-                      </TableCell>
-                      {canBid && biddingOpen ? (
-                        <TableCell className="text-right">
-                          {bid.status === "ACTIVE" ? (
-                            <button
-                              type="button"
-                              aria-label="Withdraw bid"
-                              className="text-text-secondary hover:text-bad-fg"
-                              onClick={() => void withdrawBid.mutateAsync(bid.id)}
-                            >
-                              <X size={16} />
-                            </button>
-                          ) : null}
-                        </TableCell>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-text-primary">Bids ({bids.length})</p>
+        {bids.length === 0 ? (
+          <p className="text-sm text-text-secondary">No bids submitted yet.</p>
+        ) : (
+          <>
+            {/* Mobile View: Bids Card List */}
+            <div className="grid gap-2.5 md:hidden">
+              {bids.map((bid) => {
+                const isHalf =
+                  bid.chitMembershipId.shareType === "HALF" ||
+                  (bid.chitMembershipId.share !== undefined && bid.chitMembershipId.share < 1);
+                const ticketLabel = `#${bid.chitMembershipId.ticketNumber}${bid.chitMembershipId.subTicket || ""}`;
+                return (
+                  <div
+                    key={bid.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border-default bg-bg-surface p-3.5 shadow-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
+                          {ticketLabel}
+                        </span>
+                        {isHalf ? (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-accent-primary/10 text-accent-primary border border-accent-primary/20">
+                            ½ Half
+                          </span>
+                        ) : null}
+                        <span className="font-semibold text-text-primary text-sm">
+                          {bid.chitMembershipId.memberId.name}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-display text-base font-bold text-text-primary">
+                        {formatPaise(bid.discountAmount)}{" "}
+                        <span className="text-xs font-sans font-normal text-text-secondary">
+                          ({bid.discountPercent}%)
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BidStatusBadge status={bid.status} />
+                      {canBid && biddingOpen && bid.status === "ACTIVE" ? (
+                        <button
+                          type="button"
+                          aria-label="Withdraw bid"
+                          className="p-1.5 text-text-secondary hover:text-bad-fg"
+                          onClick={() => void withdrawBid.mutateAsync(bid.id)}
+                        >
+                          <X size={18} />
+                        </button>
                       ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop View: Bids Table */}
+            <div className="hidden md:block">
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>Ticket</TableHeaderCell>
+                      <TableHeaderCell>Member</TableHeaderCell>
+                      <TableHeaderCell>Discount</TableHeaderCell>
+                      <TableHeaderCell>%</TableHeaderCell>
+                      <TableHeaderCell>Status</TableHeaderCell>
+                      {canBid && biddingOpen ? <TableHeaderCell /> : null}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </div>
-        </>
-      )}
+                  </TableHead>
+                  <TableBody>
+                    {bids.map((bid) => {
+                      const isHalf =
+                        bid.chitMembershipId.shareType === "HALF" ||
+                        (bid.chitMembershipId.share !== undefined && bid.chitMembershipId.share < 1);
+                      const ticketLabel = `#${bid.chitMembershipId.ticketNumber}${bid.chitMembershipId.subTicket || ""}`;
+                      return (
+                        <TableRow key={bid.id}>
+                          <TableCell className="font-mono">
+                            <div className="flex items-center gap-1.5">
+                              <span>{ticketLabel}</span>
+                              {isHalf ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-accent-primary/10 text-accent-primary border border-accent-primary/20">
+                                  ½ Half
+                                </span>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{bid.chitMembershipId.memberId.name}</TableCell>
+                          <TableCell>{formatPaise(bid.discountAmount)}</TableCell>
+                          <TableCell className="text-text-secondary">{bid.discountPercent}%</TableCell>
+                          <TableCell>
+                            <BidStatusBadge status={bid.status} />
+                          </TableCell>
+                          {canBid && biddingOpen ? (
+                            <TableCell className="text-right">
+                              {bid.status === "ACTIVE" ? (
+                                <button
+                                  type="button"
+                                  aria-label="Withdraw bid"
+                                  className="text-text-secondary hover:text-bad-fg"
+                                  onClick={() => void withdrawBid.mutateAsync(bid.id)}
+                                >
+                                  <X size={16} />
+                                </button>
+                              ) : null}
+                            </TableCell>
+                          ) : null}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

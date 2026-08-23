@@ -42,6 +42,32 @@ export async function connectDatabase(): Promise<void> {
   }
 
   await mongoose.connect(env.MONGODB_URI);
+  await syncObsoleteIndexes();
+}
+
+async function syncObsoleteIndexes(): Promise<void> {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return;
+
+    // 1. Drop old single-ticket unique index on chitmemberships if still present
+    const cmColl = db.collection("chitmemberships");
+    const cmIndexes = await cmColl.indexes();
+    if (cmIndexes.some((i) => i.name === "chitGroupId_1_ticketNumber_1")) {
+      logger.info("Dropping obsolete index chitGroupId_1_ticketNumber_1 on chitmemberships");
+      await cmColl.dropIndex("chitGroupId_1_ticketNumber_1").catch(() => {});
+    }
+
+    // 2. Drop old single-payout unique index on payouts if still present
+    const payoutColl = db.collection("payouts");
+    const payoutIndexes = await payoutColl.indexes();
+    if (payoutIndexes.some((i) => i.name === "chitCycleId_1")) {
+      logger.info("Dropping obsolete index chitCycleId_1 on payouts");
+      await payoutColl.dropIndex("chitCycleId_1").catch(() => {});
+    }
+  } catch (err) {
+    logger.warn({ err }, "Index synchronization non-fatal error");
+  }
 }
 
 export async function disconnectDatabase(): Promise<void> {

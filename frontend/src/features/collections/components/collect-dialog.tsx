@@ -89,6 +89,8 @@ export function CollectDialog({ open, onOpenChange, installment, chitGroupName, 
           <DialogTitle>Collect payment</DialogTitle>
           <DialogDescription>
             {member.name} · {member.memberCode} · Ticket #{installment.chitMembershipId.ticketNumber}
+            {installment.chitMembershipId.subTicket || ""}
+            {installment.chitMembershipId.shareType === "HALF" ? " (½ Half)" : ""}
           </DialogDescription>
         </DialogHeader>
 

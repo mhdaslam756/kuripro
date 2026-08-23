@@ -323,6 +323,9 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
               const hasWon = Boolean((due.chitMembershipId as any)?.hasWon);
               const membership = typeof due.chitMembershipId === "object" ? due.chitMembershipId : null;
               const ticketNumber = membership?.ticketNumber ?? "—";
+              const subTicket = membership?.subTicket ?? "";
+              const isHalf = membership?.shareType === "HALF" || (membership?.share !== undefined && membership.share < 1);
+              const ticketLabel = ticketNumber !== "—" ? `#${ticketNumber}${subTicket}` : "—";
               const memberObj = membership?.memberId && typeof membership.memberId === "object" ? (membership.memberId as any) : null;
               const memberName = memberObj?.name ?? "Member";
               const memberCode = memberObj?.memberCode ?? "";
@@ -344,8 +347,13 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-xs font-bold text-accent-primary bg-brand-50 px-2 py-0.5 rounded-md">
-                            #{ticketNumber}
+                            {ticketLabel}
                           </span>
+                          {isHalf ? (
+                            <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                              ½ Half
+                            </Badge>
+                          ) : null}
                           <span className="font-semibold text-text-primary text-base">
                             {memberName}
                           </span>
@@ -443,6 +451,9 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                     const hasWon = Boolean((due.chitMembershipId as any)?.hasWon);
                     const membership = typeof due.chitMembershipId === "object" ? due.chitMembershipId : null;
                     const ticketNumber = membership?.ticketNumber ?? "—";
+                    const subTicket = membership?.subTicket ?? "";
+                    const isHalf = membership?.shareType === "HALF" || (membership?.share !== undefined && membership.share < 1);
+                    const ticketLabel = ticketNumber !== "—" ? `#${ticketNumber}${subTicket}` : "—";
                     const memberObj = membership?.memberId && typeof membership.memberId === "object" ? (membership.memberId as any) : null;
                     const memberName = memberObj?.name ?? "Member";
                     const memberCode = memberObj?.memberCode ?? "";
@@ -455,7 +466,16 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                             ) : null}
                           </TableCell>
                         ) : null}
-                        <TableCell className="font-mono">#{ticketNumber}</TableCell>
+                        <TableCell className="font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <span>{ticketLabel}</span>
+                            {isHalf ? (
+                              <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                                ½ Half
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <span>{memberName}</span>

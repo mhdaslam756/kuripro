@@ -49,7 +49,7 @@ const payoutSchema = new Schema<PayoutDoc>(
   baseSchemaOptions,
 );
 
-payoutSchema.index({ chitCycleId: 1 }, { unique: true });
+payoutSchema.index({ chitCycleId: 1, chitMembershipId: 1 }, { unique: true });
 payoutSchema.index({ tenantId: 1, status: 1 });
 payoutSchema.index({ tenantId: 1, chitGroupId: 1, createdAt: -1 });
 payoutSchema.index({ tenantId: 1, memberId: 1 });

@@ -29,6 +29,9 @@ export interface DueMember {
 export interface DueMembership {
   _id: string;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: DueMember;
 }
 

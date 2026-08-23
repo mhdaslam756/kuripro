@@ -152,15 +152,24 @@ export async function applyDividendToCycleInstallments(
   dividendPerMember: number,
 ): Promise<number> {
   if (dividendPerMember <= 0) return 0;
-  const netAmount = Math.max(0, baseAmount - dividendPerMember);
-  const installments = await Payment.find({ tenantId, chitCycleId, amountDue: baseAmount });
+  const installments = await Payment.find({ tenantId, chitCycleId }).populate<{
+    chitMembershipId: { share?: number; shareType?: string };
+  }>("chitMembershipId");
+  let count = 0;
   for (const installment of installments) {
-    installment.amountDue = netAmount;
-    installment.status = computeInstallmentStatus(installment.amountPaid, netAmount, installment.dueDate);
-    if (installment.status === "PAID" && !installment.paidAt) installment.paidAt = new Date();
-    await installment.save();
+    const mem = installment.chitMembershipId as { share?: number; shareType?: string } | null;
+    const share = mem?.share ?? (mem?.shareType === "HALF" ? 0.5 : 1);
+    const fullExpectedBase = Math.round(baseAmount * share);
+    if (installment.amountDue === fullExpectedBase) {
+      const netAmount = Math.max(0, Math.round((baseAmount - dividendPerMember) * share));
+      installment.amountDue = netAmount;
+      installment.status = computeInstallmentStatus(installment.amountPaid, netAmount, installment.dueDate);
+      if (installment.status === "PAID" && !installment.paidAt) installment.paidAt = new Date();
+      await installment.save();
+      count += 1;
+    }
   }
-  return installments.length;
+  return count;
 }
 
 /** Reverses `applyDividendToCycleInstallments` — restores installments still at the net amount back to base. */
@@ -171,15 +180,24 @@ export async function restoreDividendOnCycleInstallments(
   dividendPerMember: number,
 ): Promise<number> {
   if (dividendPerMember <= 0) return 0;
-  const netAmount = Math.max(0, baseAmount - dividendPerMember);
-  const installments = await Payment.find({ tenantId, chitCycleId, amountDue: netAmount });
+  const installments = await Payment.find({ tenantId, chitCycleId }).populate<{
+    chitMembershipId: { share?: number; shareType?: string };
+  }>("chitMembershipId");
+  let count = 0;
   for (const installment of installments) {
-    installment.amountDue = baseAmount;
-    installment.status = computeInstallmentStatus(installment.amountPaid, baseAmount, installment.dueDate);
-    if (installment.status !== "PAID") installment.paidAt = undefined;
-    await installment.save();
+    const mem = installment.chitMembershipId as { share?: number; shareType?: string } | null;
+    const share = mem?.share ?? (mem?.shareType === "HALF" ? 0.5 : 1);
+    const netExpected = Math.max(0, Math.round((baseAmount - dividendPerMember) * share));
+    const fullBase = Math.round(baseAmount * share);
+    if (installment.amountDue === netExpected) {
+      installment.amountDue = fullBase;
+      installment.status = computeInstallmentStatus(installment.amountPaid, fullBase, installment.dueDate);
+      if (installment.status !== "PAID") installment.paidAt = undefined;
+      await installment.save();
+      count += 1;
+    }
   }
-  return installments.length;
+  return count;
 }
 
 /** Distinct membership ids that currently hold an OVERDUE installment — for reminder audiences. */

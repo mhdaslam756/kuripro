@@ -22,8 +22,10 @@ import {
   deleteChitMembership,
   findChitMembershipByIdOrMemberId,
   listChitMemberships as repoListChitMemberships,
-  listTicketNumbers,
+  listTicketSlotInfos,
+  sumChitMembershipShares,
   type PopulatedMemberRef,
+  type TicketSlotInfo,
 } from "./chit-membership.repository.js";
 import { computeEndDate, computeScheduleDates, FREQUENCY_LABELS } from "./chit-schedule.js";
 import type {
@@ -173,9 +175,33 @@ async function assertAssignableMember(tenantId: string, memberId: string): Promi
   }
 }
 
-function nextAvailableTicketNumber(totalMembers: number, taken: Set<number>): number {
-  for (let ticketNumber = 1; ticketNumber <= totalMembers; ticketNumber += 1) {
-    if (!taken.has(ticketNumber)) return ticketNumber;
+function findNextAvailableSlot(
+  totalMembers: number,
+  slotMap: Map<number, TicketSlotInfo>,
+  shareType: "FULL" | "HALF",
+): { ticketNumber: number; subTicket?: string } {
+  if (shareType === "HALF") {
+    // 1. Look for an existing ticket that already has 1 half share (subTicket A or B)
+    for (let t = 1; t <= totalMembers; t += 1) {
+      const slot = slotMap.get(t);
+      if (slot && !slot.isFull) {
+        if (!slot.hasSubTicketA) return { ticketNumber: t, subTicket: "A" };
+        if (!slot.hasSubTicketB) return { ticketNumber: t, subTicket: "B" };
+      }
+    }
+    // 2. Otherwise look for the first completely empty ticket
+    for (let t = 1; t <= totalMembers; t += 1) {
+      if (!slotMap.has(t)) {
+        return { ticketNumber: t, subTicket: "A" };
+      }
+    }
+  } else {
+    // FULL share: look for the first completely empty ticket
+    for (let t = 1; t <= totalMembers; t += 1) {
+      if (!slotMap.has(t)) {
+        return { ticketNumber: t, subTicket: undefined };
+      }
+    }
   }
   throw AppError.conflict("This chit group's roster is already full");
 }
@@ -193,26 +219,66 @@ export async function assignMember(
   await assertAssignableMember(tenantId, input.memberId);
 
   const scope = { tenantId, chitGroupId };
+  const shareType = input.shareType ?? "FULL";
+  const share = shareType === "HALF" ? 0.5 : 1;
 
-  const enrolledCount = await countChitMemberships(scope);
-  if (enrolledCount >= chitGroup.totalMembers) {
+  const currentTotalShares = await sumChitMembershipShares(scope);
+  if (currentTotalShares + share > chitGroup.totalMembers + 0.001) {
     throw AppError.conflict("This chit group's roster is already full");
   }
 
-  const taken = new Set(await listTicketNumbers(scope));
+  const slotInfos = await listTicketSlotInfos(scope);
+  const slotMap = new Map(slotInfos.map((s) => [s.ticketNumber, s]));
+
   let ticketNumber = input.ticketNumber;
+  let subTicket = input.subTicket;
+
   if (ticketNumber !== undefined) {
-    if (ticketNumber > chitGroup.totalMembers) {
+    if (ticketNumber < 1 || ticketNumber > chitGroup.totalMembers) {
       throw AppError.badRequest(`ticketNumber must be between 1 and ${chitGroup.totalMembers}`);
     }
-    if (taken.has(ticketNumber)) {
-      throw AppError.conflict(`Ticket number ${ticketNumber} is already assigned`);
+    const existingSlot = slotMap.get(ticketNumber);
+    if (shareType === "FULL") {
+      if (existingSlot && existingSlot.totalShare > 0) {
+        throw AppError.conflict(`Ticket number ${ticketNumber} is already occupied`);
+      }
+      subTicket = undefined;
+    } else {
+      // HALF
+      if (existingSlot) {
+        if (existingSlot.isFull || existingSlot.totalShare >= 1) {
+          throw AppError.conflict(`Ticket number ${ticketNumber} is already fully occupied`);
+        }
+        if (!subTicket) {
+          subTicket = !existingSlot.hasSubTicketA ? "A" : "B";
+        } else {
+          if (subTicket === "A" && existingSlot.hasSubTicketA) {
+            throw AppError.conflict(`Ticket number ${ticketNumber}A is already assigned`);
+          }
+          if (subTicket === "B" && existingSlot.hasSubTicketB) {
+            throw AppError.conflict(`Ticket number ${ticketNumber}B is already assigned`);
+          }
+        }
+      } else {
+        if (!subTicket) subTicket = "A";
+      }
     }
   } else {
-    ticketNumber = nextAvailableTicketNumber(chitGroup.totalMembers, taken);
+    const allocated = findNextAvailableSlot(chitGroup.totalMembers, slotMap, shareType);
+    ticketNumber = allocated.ticketNumber;
+    subTicket = allocated.subTicket;
   }
 
-  return createChitMembership({ tenantId, chitGroupId, memberId: input.memberId, ticketNumber, status: "ACTIVE" });
+  return createChitMembership({
+    tenantId,
+    chitGroupId,
+    memberId: input.memberId,
+    ticketNumber,
+    shareType,
+    share,
+    subTicket,
+    status: "ACTIVE",
+  });
 }
 
 export interface BulkAssignResult {
@@ -231,21 +297,40 @@ export async function assignMembers(
   }
 
   const scope = { tenantId, chitGroupId };
-  const taken = new Set(await listTicketNumbers(scope));
-  const members = await listMembersByIds(input.memberIds, tenantId);
+  let currentTotalShares = await sumChitMembershipShares(scope);
+
+  const slotInfos = await listTicketSlotInfos(scope);
+  const slotMap = new Map(slotInfos.map((s) => [s.ticketNumber, { ...s }]));
+
+  const rawAssignments =
+    input.assignments && input.assignments.length > 0
+      ? input.assignments
+      : (input.memberIds || []).map((memberId) => ({
+          memberId,
+          shareType: input.shareType ?? ("FULL" as const),
+          ticketNumber: undefined,
+          subTicket: undefined,
+        }));
+
+  const allMemberIds = rawAssignments.map((a) => a.memberId);
+  const members = await listMembersByIds(allMemberIds, tenantId);
   const memberById = new Map(members.map((member) => [member._id.toString(), member]));
 
   const skipped: { memberId: string; reason: string }[] = [];
   let assigned = 0;
 
-  for (const memberId of input.memberIds) {
-    if (taken.size >= chitGroup.totalMembers) {
-      skipped.push({ memberId, reason: "Roster is full" });
+  for (const item of rawAssignments) {
+    const shareType = item.shareType ?? "FULL";
+    const share = shareType === "HALF" ? 0.5 : 1;
+
+    if (currentTotalShares + share > chitGroup.totalMembers + 0.001) {
+      skipped.push({ memberId: item.memberId, reason: "Roster is full" });
       continue;
     }
-    const member = memberById.get(memberId);
+
+    const member = memberById.get(item.memberId);
     if (!member) {
-      skipped.push({ memberId, reason: "Member not found in this organization" });
+      skipped.push({ memberId: item.memberId, reason: "Member not found in this organization" });
       continue;
     }
 
@@ -254,10 +339,67 @@ export async function assignMembers(
       await member.save();
     }
 
-    const ticketNumber = nextAvailableTicketNumber(chitGroup.totalMembers, taken);
-    await createChitMembership({ tenantId, chitGroupId, memberId, ticketNumber, status: "ACTIVE" });
-    taken.add(ticketNumber);
-    assigned += 1;
+    let ticketNumber = item.ticketNumber;
+    let subTicket = item.subTicket;
+
+    try {
+      if (ticketNumber !== undefined) {
+        if (ticketNumber < 1 || ticketNumber > chitGroup.totalMembers) {
+          skipped.push({ memberId: item.memberId, reason: `Ticket must be between 1 and ${chitGroup.totalMembers}` });
+          continue;
+        }
+        const existing = slotMap.get(ticketNumber);
+        if (shareType === "FULL") {
+          if (existing && existing.totalShare > 0) {
+            skipped.push({ memberId: item.memberId, reason: `Ticket #${ticketNumber} is occupied` });
+            continue;
+          }
+          subTicket = undefined;
+        } else {
+          if (existing && (existing.isFull || existing.totalShare >= 1)) {
+            skipped.push({ memberId: item.memberId, reason: `Ticket #${ticketNumber} is full` });
+            continue;
+          }
+          if (!subTicket) {
+            subTicket = existing?.hasSubTicketA ? "B" : "A";
+          }
+        }
+      } else {
+        const allocated = findNextAvailableSlot(chitGroup.totalMembers, slotMap, shareType);
+        ticketNumber = allocated.ticketNumber;
+        subTicket = allocated.subTicket;
+      }
+
+      await createChitMembership({
+        tenantId,
+        chitGroupId,
+        memberId: item.memberId,
+        ticketNumber,
+        shareType,
+        share,
+        subTicket,
+        status: "ACTIVE",
+      });
+
+      // Update in-memory slotMap
+      const currentSlot = slotMap.get(ticketNumber) || {
+        ticketNumber,
+        totalShare: 0,
+        hasSubTicketA: false,
+        hasSubTicketB: false,
+        isFull: false,
+      };
+      currentSlot.totalShare += share;
+      if (subTicket === "A") currentSlot.hasSubTicketA = true;
+      if (subTicket === "B") currentSlot.hasSubTicketB = true;
+      if (currentSlot.totalShare >= 1 || shareType === "FULL") currentSlot.isFull = true;
+      slotMap.set(ticketNumber, currentSlot);
+
+      currentTotalShares += share;
+      assigned += 1;
+    } catch (err: any) {
+      skipped.push({ memberId: item.memberId, reason: err?.message || "Failed to assign slot" });
+    }
   }
 
   return { assigned, skipped };
@@ -423,7 +565,7 @@ export interface ChitSummaryReport {
     allotmentMethod: string;
     foremanCommissionPercent: number;
   };
-  roster: { enrolled: number; seatsRemaining: number };
+  roster: { enrolled: number; enrolledShares: number; seatsRemaining: number };
   cycles: { total: number; scheduled: number; settled: number; currentCycleNumber: number };
   financials: {
     maxCommissionPerCycle: number;
@@ -437,8 +579,9 @@ export async function getChitSummaryReport(tenantId: string, chitGroupId: string
   const chitGroup = await getChitGroupById(tenantId, chitGroupId);
   const scope = { tenantId, chitGroupId };
 
-  const [enrolled, allCycles] = await Promise.all([
+  const [enrolled, enrolledShares, allCycles] = await Promise.all([
     countChitMemberships(scope),
+    sumChitMembershipShares(scope),
     repoListChitCycles(scope, { page: 1, limit: chitGroup.totalMembers }),
   ]);
 
@@ -466,7 +609,11 @@ export async function getChitSummaryReport(tenantId: string, chitGroupId: string
       allotmentMethod: chitGroup.auctionRules.allotmentMethod,
       foremanCommissionPercent: chitGroup.auctionRules.foremanCommissionPercent,
     },
-    roster: { enrolled, seatsRemaining: Math.max(0, chitGroup.totalMembers - enrolled) },
+    roster: {
+      enrolled,
+      enrolledShares,
+      seatsRemaining: Math.max(0, chitGroup.totalMembers - enrolledShares),
+    },
     cycles: {
       total: chitGroup.totalMembers,
       scheduled: allCycles.total,

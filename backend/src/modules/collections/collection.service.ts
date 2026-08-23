@@ -96,14 +96,18 @@ export async function raiseCycleDues(
 
   const toCreate = memberships
     .filter((membership) => !alreadyRaised.has(membership._id.toString()))
-    .map((membership) => ({
-      tenantId,
-      chitGroupId: input.chitGroupId,
-      chitCycleId: input.chitCycleId,
-      chitMembershipId: membership._id.toString(),
-      amountDue: netInstallment,
-      dueDate: cycle.scheduledDate,
-    }));
+    .map((membership) => {
+      const share = membership.share ?? (membership.shareType === "HALF" ? 0.5 : 1);
+      const amountDue = Math.round(netInstallment * share);
+      return {
+        tenantId,
+        chitGroupId: input.chitGroupId,
+        chitCycleId: input.chitCycleId,
+        chitMembershipId: membership._id.toString(),
+        amountDue,
+        dueDate: cycle.scheduledDate,
+      };
+    });
 
   await insertInstallments(toCreate);
 

@@ -317,18 +317,25 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
     totalPaid += paidForGroup;
     totalOutstanding += outstandingForGroup;
 
+    const memberShare = m.share ?? (m.shareType === "HALF" ? 0.5 : 1);
+    const memberInstallmentAmount = Math.round(chitGroup.installmentAmount * memberShare);
+
     groupsList.push({
       id: chitGroup._id.toString(),
       name: chitGroup.name,
       registrationNumber: chitGroup.registrationNumber,
       chitValueRupees: Math.round(chitGroup.chitValue / 100),
       ticketNumber: m.ticketNumber,
+      shareType: m.shareType ?? "FULL",
+      share: memberShare,
+      subTicket: m.subTicket,
       frequency: chitGroup.frequency,
       totalMembers: chitGroup.totalMembers,
       completedCyclesCount: settledCyclesCount,
       currentCycleNumber: cycleNumber,
       currentCyclePaidCount,
-      installmentAmount: chitGroup.installmentAmount,
+      installmentAmount: memberInstallmentAmount,
+      baseInstallmentAmount: chitGroup.installmentAmount,
       status: chitGroup.status,
       hasWon: Boolean(m.hasWon),
     });

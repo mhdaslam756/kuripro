@@ -17,10 +17,11 @@ import { findChitGroupById, saveChitGroup } from "../chit-groups/chit-group.repo
 import type { ChitGroupDocument } from "../chit-groups/chit-group.model.js";
 import {
   findChitMembershipById,
+  findChitMembershipsByTicket,
   listActiveMembershipsByGroup,
   saveChitMembership,
 } from "../chit-groups/chit-membership.repository.js";
-import type { ChitMembershipDocument } from "../chit-groups/chit-membership.model.js";
+import { ChitMembership, type ChitMembershipDocument } from "../chit-groups/chit-membership.model.js";
 import {
   countSettledCycles,
   findChitCycleById,
@@ -316,21 +317,73 @@ export async function settleCycle(
       await updateBidStatusesForCycle(tenantId, cycleId, ["ACTIVE"], "LOST", session);
       if (winningBid) await setBidStatus(tenantId, winningBid._id.toString(), "WINNING", session);
 
-      membership.hasWon = true;
-      membership.wonInCycleId = cycle._id;
-      await saveChitMembership(membership, session);
+      const isHalfShare = membership.shareType === "HALF" || (membership.share !== undefined && membership.share < 1);
+      const coHolders = isHalfShare
+        ? (
+            await findChitMembershipsByTicket(
+              { tenantId, chitGroupId: chitGroup._id.toString() },
+              membership.ticketNumber,
+            )
+          ).filter((m) => m._id.toString() !== membership._id.toString() && !m.hasWon)
+        : [];
 
-      await createPayout(
-        {
-          tenantId,
-          chitGroupId: chitGroup._id.toString(),
-          chitCycleId: cycle._id.toString(),
-          chitMembershipId: membership._id.toString(),
-          memberId: membership.memberId.toString(),
-          amount: result.prizeAmount,
-        },
-        session,
-      );
+      if (coHolders.length > 0) {
+        const partner = coHolders[0]!;
+        membership.hasWon = true;
+        membership.wonInCycleId = cycle._id;
+        await saveChitMembership(membership, session);
+
+        partner.hasWon = true;
+        partner.wonInCycleId = cycle._id;
+        await saveChitMembership(partner, session);
+
+        const payout1 = Math.round(result.prizeAmount * (membership.share ?? 0.5));
+        const payout2 = result.prizeAmount - payout1;
+
+        await createPayout(
+          {
+            tenantId,
+            chitGroupId: chitGroup._id.toString(),
+            chitCycleId: cycle._id.toString(),
+            chitMembershipId: membership._id.toString(),
+            memberId: membership.memberId.toString(),
+            amount: payout1,
+          },
+          session,
+        );
+
+        await createPayout(
+          {
+            tenantId,
+            chitGroupId: chitGroup._id.toString(),
+            chitCycleId: cycle._id.toString(),
+            chitMembershipId: partner._id.toString(),
+            memberId: partner.memberId.toString(),
+            amount: payout2,
+          },
+          session,
+        );
+      } else {
+        membership.hasWon = true;
+        membership.wonInCycleId = cycle._id;
+        await saveChitMembership(membership, session);
+
+        const memberPayout = isHalfShare
+          ? Math.round(result.prizeAmount * (membership.share ?? 0.5))
+          : result.prizeAmount;
+
+        await createPayout(
+          {
+            tenantId,
+            chitGroupId: chitGroup._id.toString(),
+            chitCycleId: cycle._id.toString(),
+            chitMembershipId: membership._id.toString(),
+            memberId: membership.memberId.toString(),
+            amount: memberPayout,
+          },
+          session,
+        );
+      }
 
       // Auto Dividend: reduce the next cycle's already-raised installments by the dividend.
       const nextCycle = await findChitCycleByNumber(tenantId, chitGroup._id.toString(), cycle.cycleNumber + 1);
@@ -358,7 +411,7 @@ export async function settleCycle(
     chitCycleId: cycle._id.toString(),
     actorUserId,
     type: "SETTLED",
-    message: `Cycle #${cycle.cycleNumber} settled — ticket #${membership.ticketNumber} won ${formatPaiseAsINR(result.prizeAmount)} (${input.method})`,
+    message: `Cycle #${cycle.cycleNumber} settled — ticket #${membership.ticketNumber}${membership.subTicket ? membership.subTicket : ""} won ${formatPaiseAsINR(result.prizeAmount)} (${input.method})`,
     metadata: {
       method: input.method,
       winnerMembershipId: membership._id.toString(),
@@ -425,6 +478,19 @@ export async function repickWinner(
         winnerMembership.hasWon = false;
         winnerMembership.wonInCycleId = undefined;
         await saveChitMembership(winnerMembership, session);
+
+        // Also undo any co-holders who won in this same cycle
+        const coWinners = await ChitMembership.find({
+          tenantId,
+          chitGroupId: chitGroup._id.toString(),
+          wonInCycleId: cycle._id,
+          _id: { $ne: winnerMembership._id },
+        });
+        for (const co of coWinners) {
+          co.hasWon = false;
+          co.wonInCycleId = undefined;
+          await saveChitMembership(co, session);
+        }
       }
 
       // Bids go back to ACTIVE so a fresh winner can be chosen.

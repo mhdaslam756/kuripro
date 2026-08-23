@@ -146,6 +146,9 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
             {items.map((membership, idx) => {
               const { memberId: memberIdStr, membershipId, name, memberCode, phone } = parseMember(membership);
               const keyId = membershipId || `ticket-${membership.ticketNumber}-${idx}`;
+              const isHalf = membership.shareType === "HALF" || (membership.share !== undefined && membership.share < 1);
+              const ticketLabel = `#${membership.ticketNumber}${membership.subTicket || ""}`;
+              const memberInstallment = Math.round(chitGroup.installmentAmount * (membership.share ?? (isHalf ? 0.5 : 1)));
 
               return (
                 <div
@@ -158,10 +161,15 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                         {(name.trim().charAt(0) || "M").toUpperCase()}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs font-bold text-accent-primary">
-                            #{membership.ticketNumber}
+                            {ticketLabel}
                           </span>
+                          {isHalf ? (
+                            <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                              ½ Half
+                            </Badge>
+                          ) : null}
                           {memberIdStr ? (
                             <Link to={`/members/${memberIdStr}`} className="font-semibold text-text-primary text-base hover:text-accent-primary">
                               {name}
@@ -171,7 +179,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           )}
                         </div>
                         <p className="mt-0.5 font-mono text-xs text-text-secondary">
-                          {memberCode ? `${memberCode} · ` : ""}{phone || "No phone"}
+                          {memberCode ? `${memberCode} · ` : ""}{phone || "No phone"} · ₹{(memberInstallment / 100).toLocaleString("en-IN")}/mo
                         </p>
                       </div>
                     </div>
@@ -235,6 +243,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                   <TableRow>
                     <TableHeaderCell>Ticket</TableHeaderCell>
                     <TableHeaderCell>Member</TableHeaderCell>
+                    <TableHeaderCell>Share / Installment</TableHeaderCell>
                     <TableHeaderCell>Phone</TableHeaderCell>
                     <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell className="text-right">Actions</TableHeaderCell>
@@ -244,10 +253,22 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                   {items.map((membership, idx) => {
                     const { memberId: memberIdStr, membershipId, name, memberCode, phone } = parseMember(membership);
                     const keyId = membershipId || `ticket-${membership.ticketNumber}-${idx}`;
+                    const isHalf = membership.shareType === "HALF" || (membership.share !== undefined && membership.share < 1);
+                    const ticketLabel = `#${membership.ticketNumber}${membership.subTicket || ""}`;
+                    const memberInstallment = Math.round(chitGroup.installmentAmount * (membership.share ?? (isHalf ? 0.5 : 1)));
 
                     return (
                       <TableRow key={keyId}>
-                        <TableCell className="font-mono">#{membership.ticketNumber}</TableCell>
+                        <TableCell className="font-mono font-semibold">
+                          <div className="flex items-center gap-1.5">
+                            <span>{ticketLabel}</span>
+                            {isHalf ? (
+                              <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                                ½ Half
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">
                           {memberIdStr ? (
                             <Link to={`/members/${memberIdStr}`} className="hover:text-accent-primary">
@@ -259,6 +280,12 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           {memberCode ? (
                             <span className="ml-2 font-mono text-xs text-text-secondary">{memberCode}</span>
                           ) : null}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <span className="font-semibold text-text-primary">
+                            ₹{(memberInstallment / 100).toLocaleString("en-IN")}
+                          </span>
+                          <span className="text-text-secondary">/mo {isHalf ? "(50% share)" : "(Full)"}</span>
                         </TableCell>
                         <TableCell className="text-text-secondary">{phone || "—"}</TableCell>
                         <TableCell>

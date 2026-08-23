@@ -101,10 +101,17 @@ export function useChitMembers(id: string | undefined) {
   });
 }
 
+export type MemberAssignmentInput = {
+  memberId: string;
+  shareType?: "FULL" | "HALF";
+  ticketNumber?: number;
+  subTicket?: string;
+};
+
 export function useAssignMember(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { memberId: string; ticketNumber?: number }) =>
+    mutationFn: (input: { memberId: string; ticketNumber?: number; shareType?: "FULL" | "HALF"; subTicket?: string }) =>
       api.post<{ membership: ChitMembership }>(`/chit-groups/${id}/members`, input),
     onSuccess: () => invalidateRoster(queryClient, id),
   });
@@ -113,8 +120,15 @@ export function useAssignMember(id: string) {
 export function useAssignMembers(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (memberIds: string[]) =>
-      api.post<BulkAssignResult>(`/chit-groups/${id}/members/bulk`, { memberIds }),
+    mutationFn: (
+      payload:
+        | string[]
+        | { assignments: MemberAssignmentInput[] }
+        | { memberIds: string[]; shareType?: "FULL" | "HALF" },
+    ) => {
+      const body = Array.isArray(payload) ? { memberIds: payload } : payload;
+      return api.post<BulkAssignResult>(`/chit-groups/${id}/members/bulk`, body);
+    },
     onSuccess: () => invalidateRoster(queryClient, id),
   });
 }

@@ -76,8 +76,10 @@ export function WinnerSelection({ state, bids }: Props) {
         {method === "LOWEST_BID" ? (
           topBid ? (
             <p className="rounded-md border border-good-border bg-good-bg px-3 py-2 text-sm text-good-fg">
-              Winner: #{topBid.chitMembershipId.ticketNumber} {topBid.chitMembershipId.memberId.name} — discount{" "}
-              {formatPaise(topBid.discountAmount)}
+              Winner: #{topBid.chitMembershipId.ticketNumber}
+              {topBid.chitMembershipId.subTicket || ""}
+              {topBid.chitMembershipId.shareType === "HALF" || (topBid.chitMembershipId.share !== undefined && topBid.chitMembershipId.share < 1) ? " (½)" : ""}{" "}
+              {topBid.chitMembershipId.memberId.name} — discount {formatPaise(topBid.discountAmount)}
             </p>
           ) : (
             <p className="rounded-md border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">
@@ -95,9 +97,11 @@ export function WinnerSelection({ state, bids }: Props) {
               <SelectContent>
                 {state.eligibleMembers.map((m) => {
                   const isUnpaid = m.hasPaidCurrentCycle === false;
+                  const isHalf = m.shareType === "HALF" || (m.share !== undefined && m.share < 1);
+                  const ticketLabel = `#${m.ticketNumber}${m.subTicket || ""}${isHalf ? " (½)" : ""}`;
                   return (
                     <SelectItem key={m.membershipId} value={m.membershipId} disabled={isUnpaid}>
-                      #{m.ticketNumber} · {m.name}
+                      {ticketLabel} · {m.name}
                       {isUnpaid ? " ⚠️ (Payment Pending - Ineligible)" : m.hasActiveBid ? " (has bid)" : ""}
                     </SelectItem>
                   );

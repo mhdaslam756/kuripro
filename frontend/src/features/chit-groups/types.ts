@@ -78,6 +78,9 @@ export interface ChitMembership {
   chitGroupId: string;
   memberId: ChitMembershipMember | string;
   ticketNumber: number;
+  shareType?: "FULL" | "HALF";
+  share?: number;
+  subTicket?: string;
   status: "ACTIVE" | "DEFAULTED" | "EXITED";
   hasWon: boolean;
   joinedAt: string;
@@ -133,7 +136,7 @@ export interface ChitSummaryReport {
     allotmentMethod: string;
     foremanCommissionPercent: number;
   };
-  roster: { enrolled: number; seatsRemaining: number };
+  roster: { enrolled: number; enrolledShares?: number; seatsRemaining: number };
   cycles: { total: number; scheduled: number; settled: number; currentCycleNumber: number };
   financials: {
     maxCommissionPerCycle: number;

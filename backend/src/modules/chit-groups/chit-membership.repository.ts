@@ -68,25 +68,73 @@ export async function countChitMemberships(
   return ChitMembership.countDocuments({ ...scope, status: "ACTIVE" as ChitMembershipStatus, ...extraFilter });
 }
 
-export async function listTicketNumbers(scope: ChitMembershipScope): Promise<number[]> {
+export async function sumChitMembershipShares(
+  scope: ChitMembershipScope,
+  extraFilter: Record<string, unknown> = {},
+): Promise<number> {
+  const result = await ChitMembership.aggregate<{ _id: null; totalShares: number }>([
+    { $match: { ...scope, status: "ACTIVE" as ChitMembershipStatus, ...extraFilter } },
+    { $group: { _id: null, totalShares: { $sum: { $ifNull: ["$share", 1] } } } },
+  ]);
+  return result[0]?.totalShares ?? 0;
+}
+
+export async function findChitMembershipsByTicket(
+  scope: ChitMembershipScope,
+  ticketNumber: number,
+): Promise<ChitMembershipDocument[]> {
+  return ChitMembership.find({ ...scope, ticketNumber, status: "ACTIVE" as ChitMembershipStatus });
+}
+
+export async function findChitMembershipByTicketAndSubTicket(
+  scope: ChitMembershipScope,
+  ticketNumber: number,
+  subTicket?: string,
+): Promise<ChitMembershipDocument | null> {
+  const filter: Record<string, unknown> = { ...scope, ticketNumber };
+  if (subTicket) {
+    filter.subTicket = subTicket;
+  }
+  return ChitMembership.findOne(filter);
+}
+
+export interface TicketSlotInfo {
+  ticketNumber: number;
+  totalShare: number;
+  hasSubTicketA: boolean;
+  hasSubTicketB: boolean;
+  isFull: boolean;
+}
+
+export async function listTicketSlotInfos(scope: ChitMembershipScope): Promise<TicketSlotInfo[]> {
   const rows = await ChitMembership.find({ ...scope, status: "ACTIVE" as ChitMembershipStatus })
     .populate({ path: "memberId", select: "_id" });
-  const validTicketNumbers: number[] = [];
-  const orphanedIds: Types.ObjectId[] = [];
 
-  for (const row of rows) {
-    if (row.memberId) {
-      validTicketNumbers.push(row.ticketNumber);
-    } else {
-      orphanedIds.push(row._id);
-    }
+  const validRows = rows.filter((r) => Boolean(r.memberId));
+  const slotMap = new Map<number, TicketSlotInfo>();
+
+  for (const row of validRows) {
+    const existing = slotMap.get(row.ticketNumber) || {
+      ticketNumber: row.ticketNumber,
+      totalShare: 0,
+      hasSubTicketA: false,
+      hasSubTicketB: false,
+      isFull: false,
+    };
+    const rowShare = row.share ?? (row.shareType === "HALF" ? 0.5 : 1);
+    existing.totalShare += rowShare;
+    if (row.subTicket === "A") existing.hasSubTicketA = true;
+    if (row.subTicket === "B") existing.hasSubTicketB = true;
+    if (existing.totalShare >= 1 || row.shareType === "FULL") existing.isFull = true;
+    slotMap.set(row.ticketNumber, existing);
   }
 
-  if (orphanedIds.length > 0) {
-    await ChitMembership.deleteMany({ _id: { $in: orphanedIds } });
-  }
+  return Array.from(slotMap.values());
+}
 
-  return validTicketNumbers;
+export async function listTicketNumbers(scope: ChitMembershipScope): Promise<number[]> {
+  const slotInfos = await listTicketSlotInfos(scope);
+  return slotInfos.filter((s) => s.isFull).map((s) => s.ticketNumber);
 }
 
 export async function listChitMemberships(
