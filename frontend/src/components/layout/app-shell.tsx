@@ -92,8 +92,8 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
             <div
               className={cn(
                 "flex h-[42px] w-[54px] items-center justify-center rounded-[16px] shadow-lg transition-all",
-                "bg-gradient-to-br from-brand-600 to-brand-800 text-white",
-                isActive && "ring-2 ring-brand-400 ring-offset-2 ring-offset-bg-surface shadow-brand-900/40",
+                "bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white",
+                isActive && "ring-2 ring-[#8B5CF6] ring-offset-2 ring-offset-bg-surface shadow-[#6D28D9]/40",
               )}
             >
               <Icon size={20} strokeWidth={2.5} />
@@ -103,20 +103,20 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
             <div
               className={cn(
                 "relative flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
-                isActive && "bg-brand-100/80 dark:bg-brand-900/40",
+                isActive && "bg-[#6D28D9]/20 text-[#A855F7]",
               )}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               {/* Active indicator pip */}
               {isActive && (
                 <span
-                  className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-primary"
+                  className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#8B5CF6]"
                   aria-hidden="true"
                 />
               )}
             </div>
           )}
-          <span className={cn(primary && "font-bold text-accent-primary")}>
+          <span className={cn(primary && "font-bold text-[#A855F7]")}>
             {label}
           </span>
         </>
@@ -146,7 +146,7 @@ function MobileMoreButton({ onClick, active }: MobileMoreButtonProps) {
       <div
         className={cn(
           "flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
-          active && "bg-brand-100/80",
+          active && "bg-[#6D28D9]/20 text-[#A855F7]",
         )}
       >
         <Menu size={20} strokeWidth={active ? 2.5 : 2} />
@@ -241,9 +241,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex select-text">
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 font-display text-lg font-bold text-text-on-brand shadow-md">K</div>
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-lg font-bold text-white shadow-md shadow-[#6D28D9]/25">K</div>
           <div>
-            <p className="font-display text-xl font-bold leading-none text-accent-primary">KuriPro</p>
+            <p className="font-display text-xl font-bold leading-none text-white">KuriPro</p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">Chit Management</p>
           </div>
         </div>
@@ -255,8 +255,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={({ isActive }: { isActive: boolean }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-secondary transition-all",
-                  "hover:bg-brand-50/70 hover:text-text-primary",
-                  isActive && "bg-brand-100/80 text-accent-primary font-semibold shadow-xs border border-brand-200/50",
+                  "hover:bg-[#1A1330] hover:text-text-primary",
+                  isActive && "bg-[#6D28D9]/20 text-white font-semibold shadow-xs border border-[#8B5CF6]/30",
                 )
               }
             >
@@ -272,17 +272,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/70 bg-bg-surface/92 px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
           {/* Mobile Header Left: Avatar + Greeting */}
           <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white shadow-xs">
+            <div className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-sm font-bold text-white shadow-xs">
               {user?.name?.trim().charAt(0).toUpperCase() || "K"}
               {/* Online presence dot */}
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-bg-surface" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="font-display text-sm font-bold leading-none text-accent-primary">
+                <p className="font-display text-sm font-bold leading-none text-white">
                   {firstName}
                 </p>
-                <span className="rounded-md bg-brand-100 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-accent-primary">
+                <span className="rounded-md bg-[#6D28D9]/20 border border-[#8B5CF6]/30 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-[#A855F7]">
                   {user?.role?.name || "User"}
                 </span>
               </div>
@@ -292,7 +292,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {/* Desktop Header Left */}
           <div className="hidden lg:flex lg:items-center lg:gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 font-display text-sm font-bold text-white">K</div>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-sm font-bold text-white shadow-xs">K</div>
             <span className="text-sm font-semibold text-text-primary">KuriPro Management Platform</span>
           </div>
 

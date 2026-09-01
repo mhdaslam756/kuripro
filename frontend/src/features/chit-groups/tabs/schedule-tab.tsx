@@ -53,15 +53,30 @@ export function ScheduleTab({ chitGroup }: { chitGroup: ChitGroup }) {
               <div className="mt-3 flex items-end justify-between border-t border-border-default/60 pt-2.5">
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Installment</p>
-                  <p className="font-display text-base font-bold text-text-primary">{formatPaise(entry.baseInstallment)}</p>
+                  <p className="font-display text-base font-bold text-white">{formatPaise(entry.baseInstallment)}</p>
                 </div>
                 {isActive && cycle?.prizeAmount ? (
                   <div className="text-right">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-good-fg">Prize Won</p>
-                    <p className="font-display text-base font-bold text-good-fg">{formatPaise(cycle.prizeAmount)}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-[#22C55E]">Prize Won</p>
+                    <p className="font-display text-base font-bold text-[#22C55E]">{formatPaise(cycle.prizeAmount)}</p>
                   </div>
                 ) : null}
               </div>
+
+              {isActive && cycle?.winner && (
+                <div className="mt-2.5 flex items-center justify-between rounded-xl bg-[#6D28D9]/15 border border-[#8B5CF6]/25 px-3 py-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-[#A855F7]">👑 Winner:</span>
+                    <span className="font-semibold text-white truncate max-w-[140px]">{cycle.winner.name}</span>
+                    {cycle.coWinner && (
+                      <span className="text-[#A1A1AA] text-[11px] truncate max-w-[100px]">& {cycle.coWinner.name}</span>
+                    )}
+                  </div>
+                  <span className="font-mono text-[10px] font-bold text-[#A855F7] shrink-0">
+                    Ticket #{cycle.winner.ticketNumber}{cycle.winner.subTicket || ""}{cycle.coWinner ? ` & #${cycle.coWinner.ticketNumber}${cycle.coWinner.subTicket || ""}` : ""}
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}
@@ -78,6 +93,7 @@ export function ScheduleTab({ chitGroup }: { chitGroup: ChitGroup }) {
                 <TableHeaderCell>Base installment</TableHeaderCell>
                 {isActive ? <TableHeaderCell>Status</TableHeaderCell> : null}
                 {isActive ? <TableHeaderCell>Prize</TableHeaderCell> : null}
+                {isActive ? <TableHeaderCell>Winner</TableHeaderCell> : null}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -91,7 +107,30 @@ export function ScheduleTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     {isActive ? (
                       <TableCell>{cycle ? <CycleStatusBadge status={cycle.status} /> : "—"}</TableCell>
                     ) : null}
-                    {isActive ? <TableCell>{cycle?.prizeAmount ? formatPaise(cycle.prizeAmount) : "—"}</TableCell> : null}
+                    {isActive ? (
+                      <TableCell className="font-semibold text-white">
+                        {cycle?.prizeAmount ? formatPaise(cycle.prizeAmount) : "—"}
+                      </TableCell>
+                    ) : null}
+                    {isActive ? (
+                      <TableCell>
+                        {cycle?.winner ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-white">
+                              {cycle.winner.name}
+                              {cycle.coWinner ? ` & ${cycle.coWinner.name}` : ""}
+                            </span>
+                            <span className="font-mono text-[11px] text-[#A855F7]">
+                              Ticket #{cycle.winner.ticketNumber}{cycle.winner.subTicket || ""}
+                              {cycle.coWinner ? ` & #${cycle.coWinner.ticketNumber}${cycle.coWinner.subTicket || ""}` : ""}
+                              {cycle.winner.memberCode ? ` (${cycle.winner.memberCode})` : ""}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-text-secondary">—</span>
+                        )}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 );
               })}

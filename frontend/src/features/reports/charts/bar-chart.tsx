@@ -11,7 +11,7 @@ interface Props {
 }
 
 /** Simple theme-aware vertical bar chart with value labels on hover (title) and axis labels. */
-export function BarChart({ data, height = 180, color = "var(--color-brand-600)", formatValue }: Props) {
+export function BarChart({ data, height = 180, color = "#8B5CF6", formatValue }: Props) {
   if (data.length === 0) {
     return <p className="py-8 text-center text-sm text-text-secondary">No data to chart.</p>;
   }

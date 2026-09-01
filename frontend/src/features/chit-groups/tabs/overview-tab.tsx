@@ -24,8 +24,13 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
   const activate = useActivateChitGroup(chitGroup.id);
   const { data: roster } = useChitMembers(chitGroup.id);
 
-  const enrolled = roster?.total ?? 0;
-  const rosterFull = enrolled === chitGroup.totalMembers;
+  const items = roster?.items ?? [];
+  const totalShares = items.reduce(
+    (sum, m) => sum + (m.share ?? (m.shareType === "HALF" ? 0.5 : 1)),
+    0,
+  );
+  const enrolledCount = items.length;
+  const rosterFull = totalShares >= chitGroup.totalMembers - 0.001;
   const canActivate = hasPermission("chit_group.activate") && chitGroup.status === "DRAFT";
 
   return (
@@ -45,7 +50,7 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
 
       {chitGroup.status === "DRAFT" && !rosterFull ? (
         <p className="rounded-md border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">
-          Roster is {enrolled}/{chitGroup.totalMembers} filled. Assign all members before activating.
+          Roster is {totalShares}/{chitGroup.totalMembers} slots filled ({enrolledCount} members). Fill all {chitGroup.totalMembers} slots before activating.
         </p>
       ) : null}
 
@@ -64,7 +69,7 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
             <dl className="grid grid-cols-2 gap-4">
               <Detail label="Registration no." value={chitGroup.registrationNumber} />
               <Detail label="Chit value" value={formatPaise(chitGroup.chitValue)} />
-              <Detail label="Members" value={String(chitGroup.totalMembers)} />
+              <Detail label="Total slots" value={String(chitGroup.totalMembers)} />
               <Detail label="Installment / cycle" value={formatPaise(chitGroup.installmentAmount)} />
               <Detail label="Allotment" value={humanize(chitGroup.auctionRules.allotmentMethod)} />
               <Detail label="Commission" value={`${chitGroup.auctionRules.foremanCommissionPercent}%`} />
@@ -89,7 +94,7 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
               <Detail label="Duration" value={`${chitGroup.totalMembers} cycles`} />
               <Detail label="Start date" value={formatDate(chitGroup.startDate)} />
               <Detail label="End date" value={formatDate(chitGroup.endDate)} />
-              <Detail label="Roster" value={`${enrolled} / ${chitGroup.totalMembers}`} />
+              <Detail label="Roster" value={`${totalShares} / ${chitGroup.totalMembers} slots (${enrolledCount} members)`} />
               <Detail label="Current cycle" value={chitGroup.currentCycleNumber ? `#${chitGroup.currentCycleNumber}` : "—"} />
             </dl>
           </CardContent>

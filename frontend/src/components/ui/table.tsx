@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function TableContainer({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("-mx-1 overflow-x-auto rounded-lg border border-border-default bg-bg-surface shadow-sm [scrollbar-width:thin]", className)} {...props} />
+    <div className={cn("-mx-1 overflow-x-auto rounded-xl border border-border-default bg-bg-surface shadow-sm [scrollbar-width:thin]", className)} {...props} />
   );
 }
 
@@ -16,7 +16,7 @@ export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElemen
 Table.displayName = "Table";
 
 export function TableHead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("bg-brand-50/60", className)} {...props} />;
+  return <thead className={cn("bg-[#1a1330]/80 border-b border-border-default", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
@@ -26,7 +26,7 @@ export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSecti
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("border-b border-border-default last:border-0 hover:bg-brand-50/45", className)}
+      className={cn("border-b border-border-default last:border-0 hover:bg-[#1a1330]/50 transition-colors", className)}
       {...props}
     />
   );

@@ -65,6 +65,22 @@ async function syncObsoleteIndexes(): Promise<void> {
       logger.info("Dropping obsolete index chitCycleId_1 on payouts");
       await payoutColl.dropIndex("chitCycleId_1").catch(() => {});
     }
+
+    // 3. Drop old non-tenant-scoped receiptNumber_1 index on collections
+    const collectionColl = db.collection("collections");
+    const collectionIndexes = await collectionColl.indexes();
+    if (collectionIndexes.some((i) => i.name === "receiptNumber_1")) {
+      logger.info("Dropping obsolete index receiptNumber_1 on collections");
+      await collectionColl.dropIndex("receiptNumber_1").catch(() => {});
+    }
+
+    // 4. Drop old non-tenant-scoped receiptNumber_1 index on payoutdisbursements
+    const disbursementColl = db.collection("payoutdisbursements");
+    const disbursementIndexes = await disbursementColl.indexes();
+    if (disbursementIndexes.some((i) => i.name === "receiptNumber_1")) {
+      logger.info("Dropping obsolete index receiptNumber_1 on payoutdisbursements");
+      await disbursementColl.dropIndex("receiptNumber_1").catch(() => {});
+    }
   } catch (err) {
     logger.warn({ err }, "Index synchronization non-fatal error");
   }

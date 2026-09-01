@@ -66,8 +66,14 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
   const canAssign = hasPermission("chit_group.enroll_member") && isNotStarted;
   const canRemove = hasPermission("chit_group.enroll_member") && isNotStarted;
   const items = roster?.items ?? [];
-  const enrolled = roster?.total ?? items.length;
-  const seatsRemaining = Math.max(0, chitGroup.totalMembers - enrolled);
+  const totalEnrolledShares = items.reduce(
+    (sum, m) => sum + (m.share ?? (m.shareType === "HALF" ? 0.5 : 1)),
+    0,
+  );
+  const seatsRemaining = Math.max(0, chitGroup.totalMembers - totalEnrolledShares);
+  const hasSharedSlots = items.some(
+    (m) => m.shareType === "HALF" || (m.share !== undefined && m.share < 1),
+  );
 
   // Build the set of enrolled member ids for the assign dialog
   const enrolledMemberIds = new Set(
@@ -97,17 +103,24 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
       {/* Header: seat info + assign button */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-text-primary">
-            Group Members
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-text-primary">
+              Group Slots &amp; Members
+            </p>
+            {hasSharedSlots ? (
+              <Badge variant="neutral" className="text-[10px] font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
+                50/50 Shared Slots Enabled
+              </Badge>
+            ) : null}
+          </div>
           <p className="text-xs text-text-secondary mt-0.5">
-            {enrolled} of {chitGroup.totalMembers} seats filled
-            {seatsRemaining > 0 ? ` · ${seatsRemaining} remaining` : " · roster complete"}
+            {totalEnrolledShares} of {chitGroup.totalMembers} slots filled ({items.length} {items.length === 1 ? "member" : "members"})
+            {seatsRemaining > 0 ? ` · ${seatsRemaining} slot${seatsRemaining === 1 ? "" : "s"} capacity remaining` : " · all slots filled"}
           </p>
         </div>
         {canAssign ? (
           <Button size="sm" onClick={() => setAssignOpen(true)}>
-            <UserPlus size={15} /> {seatsRemaining > 0 ? "Assign members" : "Manage Roster"}
+            <UserPlus size={15} /> {seatsRemaining > 0 ? "Assign members / slots" : "Manage Roster"}
           </Button>
         ) : (
           <Badge variant="neutral" className="gap-1.5 px-2.5 py-1 text-xs text-text-secondary border-border-default">
@@ -128,7 +141,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
         </div>
       ) : isMemberRole ? (
         <div className="rounded-md border border-border-default bg-bg-surface px-4 py-8 text-center">
-          <p className="text-sm text-text-secondary">{enrolled} of {chitGroup.totalMembers} seats filled in this group.</p>
+          <p className="text-sm text-text-secondary">{totalEnrolledShares} of {chitGroup.totalMembers} slots filled in this group ({items.length} members).</p>
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-md border border-dashed border-border-default py-12 text-center flex flex-col items-center gap-2">

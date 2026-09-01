@@ -351,7 +351,7 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                           </span>
                           {isHalf ? (
                             <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
-                              ½ Half
+                              50% Share
                             </Badge>
                           ) : null}
                           <span className="font-semibold text-text-primary text-base">
@@ -471,7 +471,7 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                             <span>{ticketLabel}</span>
                             {isHalf ? (
                               <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
-                                ½ Half
+                                50% Share
                               </Badge>
                             ) : null}
                           </div>

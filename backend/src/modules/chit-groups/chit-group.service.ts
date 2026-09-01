@@ -1,7 +1,6 @@
 import mongoose, { Types } from "mongoose";
 
 import { insertChitCycles, listChitCycles as repoListChitCycles } from "../chit-cycles/chit-cycle.repository.js";
-import type { ChitCycleDocument } from "../chit-cycles/chit-cycle.model.js";
 import { findMemberById, listMembersByIds } from "../members/member.repository.js";
 import { findTenantById } from "../tenants/tenant.repository.js";
 import { AppError } from "../../utils/app-error.js";
@@ -15,7 +14,7 @@ import {
   listChitGroups as repoListChitGroups,
   saveChitGroup,
 } from "./chit-group.repository.js";
-import type { ChitMembershipDocument } from "./chit-membership.model.js";
+import { ChitMembership, type ChitMembershipDocument } from "./chit-membership.model.js";
 import {
   countChitMemberships,
   createChitMembership,
@@ -486,9 +485,89 @@ export async function listCycles(
   tenantId: string,
   chitGroupId: string,
   query: PaginationQuery,
-): Promise<PaginatedResult<ChitCycleDocument>> {
+): Promise<PaginatedResult<any>> {
   await getChitGroupById(tenantId, chitGroupId);
-  return repoListChitCycles({ tenantId, chitGroupId }, query);
+  const result = await repoListChitCycles({ tenantId, chitGroupId }, query);
+
+  const winnerMembershipIds = result.items
+    .map((c) => c.winnerMembershipId?.toString())
+    .filter((id): id is string => Boolean(id));
+
+  if (winnerMembershipIds.length === 0) {
+    return result;
+  }
+
+  const memberships = await ChitMembership.find({
+    tenantId,
+    _id: { $in: winnerMembershipIds },
+  })
+    .populate("memberId", "name memberCode phone")
+    .lean();
+
+  const memMap = new Map(memberships.map((m: any) => [m._id.toString(), m]));
+
+  const halfTickets = memberships.filter((m: any) => m.shareType === "HALF" || (m.share && m.share < 1));
+  const coMembersMap = new Map<string, any>();
+  if (halfTickets.length > 0) {
+    const coMembers = await ChitMembership.find({
+      tenantId,
+      chitGroupId,
+      ticketNumber: { $in: halfTickets.map((m: any) => m.ticketNumber) },
+      _id: { $nin: halfTickets.map((m: any) => m._id) },
+    })
+      .populate("memberId", "name memberCode phone")
+      .lean();
+
+    for (const cm of coMembers as any[]) {
+      coMembersMap.set(`${cm.ticketNumber}`, cm);
+    }
+  }
+
+  const items = result.items.map((cycle) => {
+    const cycleObj: any = cycle.toObject ? cycle.toObject() : { ...cycle };
+    if (cycle.winnerMembershipId) {
+      const wm: any = memMap.get(cycle.winnerMembershipId.toString());
+      if (wm) {
+        const memRef = wm.memberId || {};
+        const isHalf = wm.shareType === "HALF" || (wm.share !== undefined && wm.share < 1);
+        const payoutAmount = isHalf ? Math.round((cycle.prizeAmount || 0) / 2) : (cycle.prizeAmount || 0);
+
+        cycleObj.winner = {
+          membershipId: wm._id.toString(),
+          name: memRef.name || "Member",
+          memberCode: memRef.memberCode || "",
+          ticketNumber: wm.ticketNumber,
+          subTicket: wm.subTicket,
+          shareType: wm.shareType || "FULL",
+          share: wm.share ?? (isHalf ? 0.5 : 1),
+          payoutAmount,
+        };
+
+        if (isHalf) {
+          const coWm = coMembersMap.get(`${wm.ticketNumber}`);
+          if (coWm) {
+            const coMemRef = coWm.memberId || {};
+            cycleObj.coWinner = {
+              membershipId: coWm._id.toString(),
+              name: coMemRef.name || "Co-member",
+              memberCode: coMemRef.memberCode || "",
+              ticketNumber: coWm.ticketNumber,
+              subTicket: coWm.subTicket,
+              shareType: coWm.shareType || "HALF",
+              share: coWm.share ?? 0.5,
+              payoutAmount,
+            };
+          }
+        }
+      }
+    }
+    return cycleObj;
+  });
+
+  return {
+    ...result,
+    items,
+  };
 }
 
 export interface ScheduleEntry {

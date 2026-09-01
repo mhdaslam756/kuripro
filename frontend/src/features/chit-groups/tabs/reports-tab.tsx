@@ -38,7 +38,11 @@ export function ReportsTab({ chitGroupId }: { chitGroupId: string }) {
       <section>
         <h3 className="mb-3 font-display text-lg font-semibold text-text-primary">Roster &amp; progress</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Seats filled" value={`${roster.enrolled} / ${chitGroup.totalMembers}`} sub={`${roster.seatsRemaining} remaining`} />
+          <Stat
+            label="Slots filled"
+            value={`${roster.enrolledShares ?? roster.enrolled} / ${chitGroup.totalMembers}`}
+            sub={`${roster.seatsRemaining} slot${roster.seatsRemaining === 1 ? "" : "s"} remaining (${roster.enrolled} member${roster.enrolled === 1 ? "" : "s"})`}
+          />
           <Stat label="Cycles generated" value={`${cycles.scheduled} / ${cycles.total}`} />
           <Stat label="Cycles settled" value={String(cycles.settled)} />
           <Stat label="Current cycle" value={cycles.currentCycleNumber ? `#${cycles.currentCycleNumber}` : "—"} />

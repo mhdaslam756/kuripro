@@ -29,6 +29,9 @@ export interface PopulatedInstallmentMember {
 export interface PopulatedInstallmentMembership {
   _id: Types.ObjectId;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: PopulatedInstallmentMember;
 }
 
@@ -117,7 +120,7 @@ export async function listInstallments(
       .populate<{ chitMembershipId: PopulatedInstallmentMembership }>({
         path: "chitMembershipId",
         match: { tenantId: { $exists: true } },
-        select: "ticketNumber memberId",
+        select: "ticketNumber subTicket shareType share memberId",
         populate: { path: "memberId", match: { tenantId: { $exists: true } }, select: "name memberCode phone" },
       }),
     Payment.countDocuments(mongoFilter),

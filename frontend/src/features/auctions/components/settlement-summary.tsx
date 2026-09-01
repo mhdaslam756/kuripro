@@ -54,13 +54,35 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="rounded-md border border-good-border bg-good-bg px-4 py-3">
-          <p className="text-xs uppercase tracking-wide text-good-fg">Winner</p>
-          <p className="mt-0.5 text-lg font-semibold text-text-primary">
-            #{settlement.winner.ticketNumber}
-            {settlement.winner.subTicket || ""}
-            {settlement.winner.shareType === "HALF" ? " (½ Half)" : ""} · {settlement.winner.name}
-            <span className="ml-2 font-mono text-xs text-text-secondary">{settlement.winner.memberCode}</span>
+          <p className="text-xs uppercase tracking-wide text-good-fg">
+            {settlement.coWinner || settlement.winner.shareType === "HALF" ? "Prized Subscribers (50/50 Shared Slot)" : "Prized Subscriber (Winner)"}
           </p>
+          <div className="mt-1 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-base font-semibold text-text-primary">
+                #{settlement.winner.ticketNumber}{settlement.winner.subTicket || ""} · {settlement.winner.name}
+                <span className="ml-2 font-mono text-xs text-text-secondary">{settlement.winner.memberCode}</span>
+              </p>
+              {settlement.winner.payoutAmount ? (
+                <Badge variant="neutral" className="font-mono text-xs font-bold text-good-fg bg-good-bg border-good-border">
+                  50% Share: {formatPaise(settlement.winner.payoutAmount)}
+                </Badge>
+              ) : null}
+            </div>
+            {settlement.coWinner ? (
+              <div className="flex items-center justify-between flex-wrap gap-2 border-t border-good-border/40 pt-1.5 mt-0.5">
+                <p className="text-base font-semibold text-text-primary">
+                  #{settlement.coWinner.ticketNumber}{settlement.coWinner.subTicket || ""} · {settlement.coWinner.name}
+                  <span className="ml-2 font-mono text-xs text-text-secondary">{settlement.coWinner.memberCode}</span>
+                </p>
+                {settlement.coWinner.payoutAmount ? (
+                  <Badge variant="neutral" className="font-mono text-xs font-bold text-good-fg bg-good-bg border-good-border">
+                    50% Share: {formatPaise(settlement.coWinner.payoutAmount)}
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">

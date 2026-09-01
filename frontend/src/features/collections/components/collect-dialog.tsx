@@ -90,7 +90,7 @@ export function CollectDialog({ open, onOpenChange, installment, chitGroupName, 
           <DialogDescription>
             {member.name} · {member.memberCode} · Ticket #{installment.chitMembershipId.ticketNumber}
             {installment.chitMembershipId.subTicket || ""}
-            {installment.chitMembershipId.shareType === "HALF" ? " (½ Half)" : ""}
+            {installment.chitMembershipId.shareType === "HALF" ? " (50% Shared Slot)" : ""}
           </DialogDescription>
         </DialogHeader>
 

@@ -1,112 +1,94 @@
 @import "tailwindcss";
 
-/* ---------- Primitives (Phase 3 design system) ---------- */
+/* ---------- User Specified Dark Purple Theme ---------- */
 :root {
-  --n0: #ffffff;
-  --n50: #f7f8f6;
-  --n100: #eef3f1;
-  --n200: #dce3e0;
-  --n300: #b8c4c0;
-  --n400: #8ea09b;
-  --n500: #687477;
-  --n600: #495457;
-  --n700: #313b3e;
-  --n800: #1d2629;
-  --n900: #172126;
-  --n950: #102d30;
+  /* Requested Color Palette */
+  --bg-app: #090614;
+  --bg-surface: #120d22;
+  --bg-raised: #1a1330;
+  --bg-elevated: #221a3e;
 
-  --b50: #f8f4ea;
-  --b100: #efe4cd;
-  --b200: #dfca9b;
-  --b300: #cfb06a;
-  --b400: #b08a3e;
-  --b500: #967431;
-  --b600: #7d5f26;
-  --b700: #61491b;
-  --b800: #453312;
-  --b900: #2a1e0a;
+  --border-default: #2a2340;
+  --border-strong: #3d335c;
 
-  --good-100: #e6f3ec;
-  --good-300: #a4d4bc;
-  --good-500: #2e7d5b;
-  --good-700: #1d563e;
-  --warn-100: #faf4e8;
-  --warn-300: #e8d5b0;
-  --warn-500: #b08a3e;
-  --warn-700: #7d5f26;
-  --bad-100: #f9ecec;
-  --bad-300: #e4b4b3;
-  --bad-500: #b94a48;
-  --bad-700: #832e2c;
-  --info-100: #eef3f1;
-  --info-300: #b6c8c3;
-  --info-500: #173b3f;
-  --info-700: #102d30;
-
-  /* ---------- Semantic tokens: light (default) ---------- */
-  --bg-app: #f7f8f6;
-  --bg-surface: #ffffff;
-  --bg-raised: #eef3f1;
-  --border-default: #dce3e0;
-  --border-strong: #8ea09b;
-  --text-primary: #172126;
-  --text-secondary: #687477;
-  --text-disabled: #8ea09b;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-disabled: #71717a;
   --text-on-brand: #ffffff;
-  --icon-default: #687477;
-  --accent-primary: #173b3f;
-  --accent-link: #b08a3e;
+  --icon-default: #a1a1aa;
 
-  --good-bg: var(--good-100);
-  --good-fg: var(--good-500);
-  --good-border: var(--good-300);
-  --warn-bg: var(--warn-100);
-  --warn-fg: var(--warn-700);
-  --warn-border: var(--warn-300);
-  --bad-bg: var(--bad-100);
-  --bad-fg: var(--bad-500);
-  --bad-border: var(--bad-300);
-  --info-bg: var(--info-100);
-  --info-fg: var(--info-500);
-  --info-border: var(--info-300);
+  --primary-purple: #6d28d9;
+  --bright-purple: #8b5cf6;
+  --accent-primary: #8b5cf6;
+  --accent-link: #a855f7;
+
+  /* Status Colors */
+  --good-fg: #22c55e;
+  --good-bg: rgba(34, 197, 94, 0.12);
+  --good-border: rgba(34, 197, 94, 0.28);
+
+  --warn-fg: #f59e0b;
+  --warn-bg: rgba(245, 158, 11, 0.12);
+  --warn-border: rgba(245, 158, 11, 0.28);
+
+  --bad-fg: #ef4444;
+  --bad-bg: rgba(239, 68, 68, 0.12);
+  --bad-border: rgba(239, 68, 68, 0.28);
+
+  --info-fg: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.12);
+  --info-border: rgba(59, 130, 246, 0.28);
+
+  /* Purple Scale */
+  --b50: #f5f3ff;
+  --b100: #ede9fe;
+  --b200: #ddd6fe;
+  --b300: #c4b5fd;
+  --b400: #a78bfa;
+  --b500: #8b5cf6;
+  --b600: #7c3aed;
+  --b700: #6d28d9;
+  --b800: #5b21b6;
+  --b900: #4c1d95;
+  --b950: #2e1065;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-app: #102d30;
-    --bg-surface: #173b3f;
-    --bg-raised: #1d464b;
-    --border-default: rgba(220, 227, 224, 0.18);
-    --border-strong: rgba(220, 227, 224, 0.32);
-    --text-primary: #f7f8f6;
-    --text-secondary: #b8c4c0;
-    --text-disabled: #687477;
-    --text-on-brand: #102d30;
-    --icon-default: #b8c4c0;
-    --accent-primary: #b08a3e;
-    --accent-link: #cfb06a;
+    --bg-app: #090614;
+    --bg-surface: #120d22;
+    --bg-raised: #1a1330;
+    --border-default: #2a2340;
+    --border-strong: #3d335c;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --text-disabled: #71717a;
+    --text-on-brand: #ffffff;
+    --icon-default: #a1a1aa;
+    --accent-primary: #8b5cf6;
+    --accent-link: #a855f7;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg-app: #102d30;
-  --bg-surface: #173b3f;
-  --bg-raised: #1d464b;
-  --border-default: rgba(220, 227, 224, 0.18);
-  --border-strong: rgba(220, 227, 224, 0.32);
-  --text-primary: #f7f8f6;
-  --text-secondary: #b8c4c0;
-  --text-disabled: #687477;
-  --text-on-brand: #102d30;
-  --icon-default: #b8c4c0;
-  --accent-primary: #b08a3e;
-  --accent-link: #cfb06a;
+  --bg-app: #090614;
+  --bg-surface: #120d22;
+  --bg-raised: #1a1330;
+  --border-default: #2a2340;
+  --border-strong: #3d335c;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-disabled: #71717a;
+  --text-on-brand: #ffffff;
+  --icon-default: #a1a1aa;
+  --accent-primary: #8b5cf6;
+  --accent-link: #a855f7;
 }
 
 /* ---------- Tailwind theme mapping ---------- */
 @theme {
-  --font-display: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --color-bg-app: var(--bg-app);
@@ -177,7 +159,7 @@
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
-    background-image: radial-gradient(circle at 8% 0%, rgb(176 138 62 / 0.15), transparent 28rem);
+    background-image: radial-gradient(circle at 50% 0%, rgba(109, 40, 217, 0.08), transparent 36rem);
   }
   button,
   a,
@@ -188,8 +170,16 @@
   }
 
   ::selection {
-    background: #dfca9b;
-    color: #172126;
+    background: #6d28d9;
+    color: #ffffff;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background: #6d28d9;
+    color: #ffffff;
   }
   button,
   a {
@@ -229,23 +219,26 @@
     opacity: 0.92;
   }
   .mobile-card {
-    @apply rounded-2xl border border-border-default/80 bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.98] active:bg-bg-raised;
+    @apply rounded-2xl border border-border-default bg-bg-surface p-4 shadow-sm transition-all active:scale-[0.98] active:bg-bg-raised;
   }
   /* ── Mobile Banking: Hero balance card ── */
   .mobile-hero-card {
-    background: linear-gradient(135deg, #102d30 0%, #173b3f 50%, #0d2224 100%);
+    background: linear-gradient(135deg, #120d22 0%, #1a1330 60%, #090614 100%);
+    border: 1px solid #2a2340;
     color: #ffffff;
   }
   :root[data-theme="light"] .mobile-hero-card {
-    background: linear-gradient(135deg, #102d30 0%, #173b3f 50%, #0d2224 100%);
+    background: linear-gradient(135deg, #120d22 0%, #1a1330 60%, #090614 100%);
+    border: 1px solid #2a2340;
     color: #ffffff;
   }
-  /* Member dashboard hero card — richer amber-teal gradient */
+  /* Member dashboard hero card — rich purple gradient */
   .mobile-balance-card {
-    background: linear-gradient(145deg, #102d30 0%, #1d464b 40%, #7d5f26 100%);
+    background: linear-gradient(145deg, #120d22 0%, #1a1330 50%, #261642 100%);
     color: #ffffff;
     border-radius: 24px;
-    box-shadow: 0 20px 60px -12px rgba(16, 45, 48, 0.55), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    box-shadow: 0 20px 60px -12px rgba(9, 6, 20, 0.6), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    border: 1px solid #2a2340;
     position: relative;
     overflow: hidden;
   }
@@ -257,7 +250,7 @@
     width: 280px;
     height: 280px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(176,138,62,0.18) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(109, 40, 217, 0.15) 0%, transparent 70%);
     pointer-events: none;
   }
   /* ── Quick action circular icon button ── */
@@ -281,15 +274,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.08);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.18);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
     transition: background 0.15s;
   }
   .mobile-quick-action-icon:active {
-    background: rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.15);
   }
   .mobile-quick-action-label {
     font-size: 10px;
@@ -303,7 +296,7 @@
   .mobile-quick-action-light .mobile-quick-action-icon {
     background: var(--bg-raised);
     border: 1px solid var(--border-default);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     color: var(--accent-primary);
   }
   .mobile-quick-action-light .mobile-quick-action-label {
@@ -353,8 +346,9 @@
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #173b3f 0%, #1d464b 60%, #7d5f26 100%);
-    box-shadow: 0 10px 30px -8px rgba(16,45,48,0.5), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    background: linear-gradient(135deg, #120d22 0%, #1a1330 60%, #261642 100%);
+    box-shadow: 0 10px 30px -8px rgba(9,6,20,0.6), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    border: 1px solid #2a2340;
     color: #fff;
     padding: 16px;
     display: flex;
@@ -373,7 +367,7 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(176,138,62,0.25) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(109,40,217,0.2) 0%, transparent 70%);
     pointer-events: none;
   }
   /* ── Bottom nav active pip ── */

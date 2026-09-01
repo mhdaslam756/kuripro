@@ -204,13 +204,14 @@ interface MobileChitCardsProps {
     registrationNumber: string;
     ticketNumber: number | string;
     subTicket?: string;
-    shareType?: "FULL" | "HALF";
+    shareType?: "FULL" | "HALF" | string;
     share?: number;
     chitValueRupees: number;
     installmentAmount: number;
     completedCyclesCount: number;
     totalMembers: number;
     hasWon: boolean;
+    latestWinner?: any;
   }>;
 }
 
@@ -218,16 +219,16 @@ function MobileChitCards({ groups }: MobileChitCardsProps) {
   if (groups.length === 0) return null;
 
   const gradients = [
-    "linear-gradient(135deg, #173b3f 0%, #1d464b 60%, #7d5f26 100%)",
-    "linear-gradient(145deg, #102d30 0%, #7d5f26 70%, #173b3f 100%)",
-    "linear-gradient(125deg, #1d464b 0%, #102d30 50%, #61491b 100%)",
+    "linear-gradient(135deg, #120d22 0%, #1a1330 60%, #261642 100%)",
+    "linear-gradient(145deg, #120d22 0%, #1f1538 50%, #2a174e 100%)",
+    "linear-gradient(125deg, #1a1330 0%, #120d22 60%, #2e1065 100%)",
   ];
 
   return (
     <div className="sm:hidden flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <p className="native-section-label">My Chit Groups</p>
-        <Link to="/chit-groups" className="text-[11px] font-bold text-accent-link">View all →</Link>
+        <Link to="/chit-groups" className="text-[11px] font-bold text-[#8B5CF6]">View all →</Link>
       </div>
       <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
         <div className="flex gap-3 pb-2">
@@ -247,13 +248,14 @@ function MobileChitCards({ groups }: MobileChitCardsProps) {
                     <p className="font-display text-sm font-bold text-white truncate leading-tight">{group.name}</p>
                     <p className="mt-0.5 font-mono text-[10px] text-white/60 truncate">{group.registrationNumber}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-amber-200 border border-white/15">
+                  <span className="shrink-0 rounded-full bg-[#6D28D9]/30 px-2 py-0.5 text-[10px] font-bold text-[#A855F7] border border-[#8B5CF6]/30">
                     {ticketLabel}
                   </span>
                 </div>
+
                 <div>
-                  <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-white/15">
-                    <div className="h-full rounded-full bg-amber-400/80 transition-all duration-700" style={{ width: `${progress}%` }} />
+                  <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-[#8B5CF6] transition-all duration-700" style={{ width: `${progress}%` }} />
                   </div>
                   <div className="flex items-end justify-between">
                     <div>
@@ -262,14 +264,80 @@ function MobileChitCards({ groups }: MobileChitCardsProps) {
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60">Progress</p>
-                      <p className="text-xs font-bold text-amber-300">{group.completedCyclesCount}/{group.totalMembers}</p>
+                      <p className="text-xs font-bold text-[#A855F7]">{group.completedCyclesCount}/{group.totalMembers}</p>
                     </div>
                   </div>
+                  {group.latestWinner && (
+                    <div className="mt-2 rounded-lg bg-black/30 px-2 py-1 text-[10px] text-white/90 border border-white/10 truncate">
+                      👑 <span className="font-bold text-[#22C55E]">C#{group.latestWinner.cycleNumber}:</span> {group.latestWinner.winnerName}{group.latestWinner.coWinner ? ` & ${group.latestWinner.coWinner.name}` : ""} ({formatPaise(group.latestWinner.prizeAmount)})
+                    </div>
+                  )}
                 </div>
               </Link>
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mobile Winner Announcements
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface MobileWinnersSectionProps {
+  winners: import("../types").CycleWinnerDetail[];
+}
+
+function MobileWinnersSection({ winners }: MobileWinnersSectionProps) {
+  if (!winners || winners.length === 0) return null;
+
+  return (
+    <div className="sm:hidden flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <p className="native-section-label">👑 Latest Cycle Winners</p>
+        <span className="text-[10px] font-semibold text-text-secondary">Official Results</span>
+      </div>
+      <div className="native-section">
+        {winners.map((w) => (
+          <div key={`${w.chitGroupId}-${w.cycleNumber}`} className="native-row">
+            <div
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm",
+                w.isCurrentUserWinner ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#6D28D9]/20 text-[#A855F7]",
+              )}
+            >
+              <Trophy size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-semibold text-text-primary leading-tight truncate max-w-[140px]">
+                  {w.winnerName}
+                  {w.coWinner ? ` & ${w.coWinner.name}` : ""}
+                </span>
+                {w.isCurrentUserWinner && (
+                  <span className="rounded-md bg-[#22C55E]/20 border border-[#22C55E]/40 px-1.5 py-0.2 text-[9px] font-extrabold text-[#22C55E]">
+                    You Won!
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[11px] text-text-secondary truncate">
+                {w.chitGroupName} · Cycle #{w.cycleNumber} · Ticket #{w.ticketNumber}{w.subTicket || ""}{w.coWinner ? ` & #${w.coWinner.ticketNumber}${w.coWinner.subTicket || ""}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end">
+              <span className="text-sm font-bold text-[#22C55E] tabular-nums">
+                {formatPaise(w.prizeAmount)}
+              </span>
+              {w.dividendPerMember ? (
+                <span className="text-[10px] text-text-secondary tabular-nums">
+                  +{formatPaise(w.dividendPerMember)} div
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -387,7 +455,7 @@ export function MemberDashboardView() {
     );
   }
 
-  const { member, summary, groups, recentPayments } = data;
+  const { member, summary, groups, recentWinners, recentPayments } = data;
 
   return (
     <div className="flex flex-col gap-5">
@@ -414,6 +482,11 @@ export function MemberDashboardView() {
       {/* Swipeable chit group cards */}
       <MobileChitCards groups={groups} />
 
+      {/* Cycle Winners Announcement — native section */}
+      {recentWinners && recentWinners.length > 0 && (
+        <MobileWinnersSection winners={recentWinners} />
+      )}
+
       {/* Payment history — native section */}
       {recentPayments.length > 0 && (
         <MobilePaymentList
@@ -425,18 +498,18 @@ export function MemberDashboardView() {
       {/* ══ DESKTOP (unchanged) ═══════════════════════════════════════════════ */}
 
       {/* Welcome Header */}
-      <div className="hidden sm:block relative overflow-hidden rounded-2xl border border-brand-300 bg-gradient-to-r from-brand-100 via-brand-50 to-bg-surface p-6 shadow-sm sm:p-8">
+      <div className="hidden sm:block relative overflow-hidden rounded-2xl border border-border-default bg-gradient-to-r from-[#1A1330] via-[#120D22] to-[#120D22] p-6 shadow-sm sm:p-8">
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
               <Badge variant="success" className="gap-1.5 px-2.5 py-0.5 font-medium">
                 <BadgeCheck size={14} /> Active Member
               </Badge>
-              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[#A855F7]">
                 {member.memberCode}
               </span>
             </div>
-            <h1 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
+            <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
               Welcome back, {member.name}!
             </h1>
             <p className="mt-1 text-xs text-text-secondary sm:text-sm">
@@ -445,7 +518,7 @@ export function MemberDashboardView() {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Link to="/auctions">
-              <Button size="md" className="active-bounce gap-2 font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs">
+              <Button size="md" className="active-bounce gap-2 font-semibold">
                 <Gavel size={16} /> Live Bidding
               </Button>
             </Link>
@@ -456,18 +529,18 @@ export function MemberDashboardView() {
       {/* Desktop KPI grid */}
       <div className="hidden sm:grid grid-cols-2 gap-4 lg:grid-cols-5">
         {[
-          { icon: <Wallet size={16} />, bg: "bg-brand-50", fg: "text-accent-primary", label: "Included Groups", value: String(summary.totalGroups), sub: "Active chit enrollments" },
-          { icon: <CheckCircle2 size={16} />, bg: "bg-good-bg", fg: "text-good-fg", label: "Completed Cycles", value: String(summary.completedCycles), sub: "Finished auction cycles" },
-          { icon: <Zap size={16} />, bg: "bg-brand-100", fg: "text-accent-primary", label: "Total Paid", value: formatPaise(summary.totalPaid), sub: "Cumulative contributions", valFg: "text-good-fg" },
-          { icon: <Calendar size={16} />, bg: "bg-warn-bg", fg: "text-warn-fg", label: "Balance Dues", value: formatPaise(summary.totalOutstanding), sub: "Outstanding balance" },
-          { icon: <Trophy size={16} />, bg: "bg-info-bg", fg: "text-info-fg", label: "Prizes Won", value: String(summary.prizesWon), sub: "Auction payouts won", valFg: "text-accent-primary" },
+          { icon: <Wallet size={16} />, bg: "bg-[#6D28D9]/15", fg: "text-[#8B5CF6]", label: "Included Groups", value: String(summary.totalGroups), sub: "Active chit enrollments" },
+          { icon: <CheckCircle2 size={16} />, bg: "bg-[#22C55E]/15", fg: "text-[#22C55E]", label: "Completed Cycles", value: String(summary.completedCycles), sub: "Finished auction cycles" },
+          { icon: <Zap size={16} />, bg: "bg-[#6D28D9]/15", fg: "text-[#8B5CF6]", label: "Total Paid", value: formatPaise(summary.totalPaid), sub: "Cumulative contributions", valFg: "text-[#22C55E]" },
+          { icon: <Calendar size={16} />, bg: "bg-[#F59E0B]/15", fg: "text-[#F59E0B]", label: "Balance Dues", value: formatPaise(summary.totalOutstanding), sub: "Outstanding balance" },
+          { icon: <Trophy size={16} />, bg: "bg-[#3B82F6]/15", fg: "text-[#3B82F6]", label: "Prizes Won", value: String(summary.prizesWon), sub: "Auction payouts won", valFg: "text-[#8B5CF6]" },
         ].map(({ icon, bg, fg, label, value, sub, valFg }) => (
-          <div key={label} className={cn("rounded-xl border border-border-default bg-bg-surface p-4 shadow-xs", label === "Balance Dues" ? "col-span-2 lg:col-span-1" : "")}>
+          <div key={label} className={cn("rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm", label === "Balance Dues" ? "col-span-2 lg:col-span-1" : "")}>
             <div className="mb-2 flex items-center gap-2 text-text-secondary">
-              <span className={cn("flex size-7 items-center justify-center rounded-md", bg, fg)}>{icon}</span>
+              <span className={cn("flex size-7 items-center justify-center rounded-lg", bg, fg)}>{icon}</span>
               <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
             </div>
-            <p className={cn("font-display text-2xl font-bold tabular-nums", valFg ?? "text-text-primary")}>{value}</p>
+            <p className={cn("font-display text-2xl font-bold tabular-nums", valFg ?? "text-white")}>{value}</p>
             <p className="mt-0.5 text-xs text-text-secondary">{sub}</p>
           </div>
         ))}
@@ -524,6 +597,19 @@ export function MemberDashboardView() {
                         <span className="text-text-secondary">Cycle #{group.currentCycleNumber || 1} Payment:</span>
                         <span className="font-semibold text-text-primary tabular-nums">{group.currentCyclePaidCount || 0} / {group.totalMembers} Paid</span>
                       </div>
+                      {group.latestWinner && (
+                        <div className="mt-2.5 flex items-center justify-between rounded-lg bg-[#6D28D9]/15 border border-[#8B5CF6]/25 px-3 py-2 text-xs">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Trophy size={13} className="text-[#8B5CF6] shrink-0" />
+                            <span className="text-[11px] text-text-secondary truncate">
+                              Cycle #{group.latestWinner.cycleNumber} Winner: <strong className="text-white font-semibold">{group.latestWinner.winnerName}{group.latestWinner.coWinner ? ` & ${group.latestWinner.coWinner.name}` : ''}</strong>
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-[#22C55E] tabular-nums shrink-0 ml-2">
+                            {formatPaise(group.latestWinner.prizeAmount)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="mt-5 flex items-center justify-between border-t border-border-default pt-3">
                       {group.hasWon ? (
@@ -540,6 +626,78 @@ export function MemberDashboardView() {
           )}
         </CardContent>
       </Card>
+
+      {/* Desktop Cycle Winners Table */}
+      {recentWinners && recentWinners.length > 0 && (
+        <Card className="hidden sm:block">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="size-5 text-[#8B5CF6]" />
+                <CardTitle className="text-white">Cycle Winners in My Schemes</CardTitle>
+              </div>
+              <span className="text-xs font-medium text-text-secondary">Official settled cycle results</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Scheme Name</TableHeaderCell>
+                    <TableHeaderCell>Cycle</TableHeaderCell>
+                    <TableHeaderCell>Winner Member</TableHeaderCell>
+                    <TableHeaderCell>Ticket Number</TableHeaderCell>
+                    <TableHeaderCell>Prize Won</TableHeaderCell>
+                    <TableHeaderCell>Dividend / Member</TableHeaderCell>
+                    <TableHeaderCell>Settled Date</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {recentWinners.map((w) => (
+                    <TableRow key={`${w.chitGroupId}-${w.cycleNumber}`}>
+                      <TableCell className="font-semibold text-white">{w.chitGroupName}</TableCell>
+                      <TableCell>
+                        <span className="rounded-md bg-[#6D28D9]/20 border border-[#8B5CF6]/30 px-2 py-0.5 text-xs font-mono font-bold text-[#A855F7]">
+                          #{w.cycleNumber}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-white">
+                            {w.winnerName}
+                            {w.coWinner ? ` & ${w.coWinner.name}` : ""}
+                          </span>
+                          {w.isCurrentUserWinner && (
+                            <span className="rounded-md bg-[#22C55E]/20 border border-[#22C55E]/40 px-1.5 py-0.2 text-[9px] font-extrabold text-[#22C55E]">
+                              You Won!
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-text-secondary font-mono">
+                          {w.winnerCode}{w.coWinner ? ` & ${w.coWinner.memberCode}` : ""}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs font-bold text-[#A855F7]">
+                        #{w.ticketNumber}{w.subTicket || ""}{w.coWinner ? ` & #${w.coWinner.ticketNumber}${w.coWinner.subTicket || ""}` : ""}
+                      </TableCell>
+                      <TableCell className="font-bold text-[#22C55E] tabular-nums">
+                        {formatPaise(w.prizeAmount)}
+                      </TableCell>
+                      <TableCell className="text-white tabular-nums">
+                        {w.dividendPerMember ? formatPaise(w.dividendPerMember) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-text-secondary">
+                        {w.settledAt ? formatDateTime(w.settledAt) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Desktop payment table */}
       <Card className="hidden sm:block">

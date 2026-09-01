@@ -36,12 +36,12 @@ function monthLabel(month: string): string {
 
 function KpiTile({ icon, label, value, sub }: { icon: ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border-default bg-bg-surface p-4 shadow-[0_2px_10px_rgb(30_33_42/0.035)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgb(30_33_42/0.07)]">
+    <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-border-strong">
       <div className="mb-3 flex items-center gap-2 text-text-secondary">
-        <span className="flex size-7 items-center justify-center rounded-md bg-brand-50 text-accent-primary">{icon}</span>
-        <span className="text-xs uppercase tracking-wide">{label}</span>
+        <span className="flex size-7 items-center justify-center rounded-lg bg-[#6D28D9]/15 text-[#8B5CF6]">{icon}</span>
+        <span className="text-xs uppercase tracking-wide font-medium">{label}</span>
       </div>
-      <p className="font-display text-2xl font-semibold tabular-nums text-text-primary">{value}</p>
+      <p className="font-display text-2xl font-bold tabular-nums text-white">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-text-secondary">{sub}</p> : null}
     </div>
   );
@@ -52,7 +52,7 @@ function ChartCard({ title, action, children }: { title: string; action?: ReactN
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-white">{title}</CardTitle>
           {action}
         </div>
       </CardHeader>
@@ -71,14 +71,14 @@ function MobileHeroCard() {
 
   if (isLoading || !data) {
     return (
-      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-white/10">
+      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-[#2A2340]">
         <div className="flex items-center justify-between mb-2">
           <div className="skeleton-balance h-3 w-32 rounded" />
           <div className="skeleton-balance h-6 w-6 rounded-full" />
         </div>
         <div className="skeleton-balance mt-3 h-10 w-48 rounded-lg" />
         <div className="skeleton-balance mt-2 h-3 w-24 rounded" />
-        <div className="mt-5 border-t border-white/15 pt-4 flex gap-3">
+        <div className="mt-5 border-t border-white/10 pt-4 flex gap-3">
           <div className="skeleton-balance h-3 w-20 rounded flex-1" />
           <div className="skeleton-balance h-3 w-20 rounded flex-1" />
         </div>
@@ -94,15 +94,15 @@ function MobileHeroCard() {
   const next = data.upcomingAuctions[0];
 
   return (
-    <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-white/15">
+    <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-[#2A2340]">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-200/90">
-          <Shield size={12} className="text-emerald-400/90" />
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#A1A1AA]">
+          <Shield size={12} className="text-[#22C55E]" />
           <span>Today's Collection</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[10px] text-amber-200 font-bold border border-amber-400/30">
+          <span className="rounded-full bg-[#6D28D9]/20 px-2.5 py-0.5 text-[10px] text-[#A855F7] font-bold border border-[#8B5CF6]/30">
             Real-time
           </span>
           <button
@@ -120,27 +120,27 @@ function MobileHeroCard() {
       <p className="mt-3 font-display text-4xl font-bold tabular-nums tracking-tight text-white leading-none">
         {hidden ? "₹ ••••••" : formatPaise(data.today.total)}
       </p>
-      <p className="mt-1.5 text-xs text-emerald-100/90">
+      <p className="mt-1.5 text-xs text-[#A1A1AA]">
         {data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today
       </p>
 
       {/* Sub-row */}
-      <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3.5">
+      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-amber-200/80 font-semibold">Pending Dues</p>
+          <p className="text-[10px] uppercase tracking-wider text-[#F59E0B] font-semibold">Pending Dues</p>
           <p className="font-display text-sm font-bold text-white">
             {hidden ? "₹ •••" : formatPaise(data.pending.pendingAmount)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-wider text-red-200/90 font-semibold">Overdue</p>
-          <p className="font-display text-sm font-bold text-red-200">
+          <p className="text-[10px] uppercase tracking-wider text-[#EF4444] font-semibold">Overdue</p>
+          <p className="font-display text-sm font-bold text-[#EF4444]">
             {hidden ? "₹ •••" : formatPaise(data.pending.overdueAmount)}
           </p>
         </div>
         {next && (
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-amber-200/80 font-semibold">Next Auction</p>
+            <p className="text-[10px] uppercase tracking-wider text-[#A855F7] font-semibold">Next Auction</p>
             <p className="font-display text-xs font-bold text-white truncate max-w-[80px]">{next.chitGroupName}</p>
           </div>
         )}
@@ -150,17 +150,17 @@ function MobileHeroCard() {
       <div className="mt-4 flex items-center gap-3">
         <Link
           to="/collections"
-          className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white text-[#173B3F] py-2.5 text-xs font-bold shadow-md"
+          className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white py-2.5 text-xs font-bold shadow-md shadow-[#6D28D9]/25 border border-[#8B5CF6]/30"
         >
           <Banknote size={15} /> Collect Dues
         </Link>
-        <Link to="/members" className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 border border-white/20" aria-label="Members">
+        <Link to="/members" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Members">
           <Users size={16} />
         </Link>
-        <Link to="/auctions" className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 border border-white/20" aria-label="Auction">
+        <Link to="/auctions" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Auction">
           <Gavel size={16} />
         </Link>
-        <Link to="/reports" className="active-bounce flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white p-2.5 border border-white/20" aria-label="Reports">
+        <Link to="/reports" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Reports">
           <BarChart3 size={16} />
         </Link>
       </div>
@@ -186,38 +186,38 @@ function HighlightCards() {
   const next = data.upcomingAuctions[0];
   return (
     <div className="hidden sm:grid sm:grid-cols-3 gap-4">
-      <div className="rounded-xl border border-brand-300 bg-brand-50 p-4 shadow-[0_4px_16px_rgb(114_83_32/0.08)] sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-brand-strong">
+      <div className="rounded-xl border border-[#8B5CF6]/30 bg-[#6D28D9]/10 p-4 shadow-sm sm:p-5">
+        <div className="mb-1 flex items-center gap-2 text-[#A855F7]">
           <Banknote className="size-4" />
           <span className="text-sm font-medium">Today's collection</span>
         </div>
-        <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.today.total)}</p>
+        <p className="font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.today.total)}</p>
         <p className="mt-1 text-sm text-text-secondary">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
       </div>
 
-      <div className="rounded-xl border border-warn-border bg-warn-bg p-4 shadow-[0_4px_16px_rgb(140_90_43/0.07)] sm:p-5">
+      <div className="rounded-xl border border-warn-border bg-warn-bg p-4 shadow-sm sm:p-5">
         <div className="mb-1 flex items-center gap-2 text-warn-fg">
           <Wallet className="size-4" />
           <span className="text-sm font-medium">Pending collection</span>
         </div>
-        <p className="font-display text-3xl font-semibold tabular-nums text-text-primary">{formatPaise(data.pending.pendingAmount)}</p>
+        <p className="font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.pending.pendingAmount)}</p>
         <p className="mt-1 text-sm text-text-secondary">
           {data.pending.pendingCount} due · <span className="text-bad-fg">{data.pending.overdueCount} overdue</span> ({formatPaise(data.pending.overdueAmount)})
         </p>
       </div>
 
-      <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-[0_4px_16px_rgb(30_33_42/0.04)] sm:p-5">
+      <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm sm:p-5">
         <div className="mb-1 flex items-center gap-2 text-text-secondary">
           <CalendarClock className="size-4" />
           <span className="text-sm font-medium">Upcoming auction</span>
         </div>
         {next ? (
           <>
-            <p className="font-display text-lg font-semibold text-text-primary">{next.chitGroupName}</p>
+            <p className="font-display text-lg font-bold text-white">{next.chitGroupName}</p>
             <p className="mt-0.5 text-sm text-text-secondary">
               Cycle #{next.cycleNumber} · {new Date(next.scheduledDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · pot {formatPaise(next.potAmount)}
             </p>
-            <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-accent-link hover:underline">
+            <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-[#8B5CF6] hover:text-[#A855F7] hover:underline">
               Go to auctions →
             </Link>
           </>

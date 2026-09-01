@@ -1,6 +1,8 @@
 import { listTenantActivity } from "../activity-logs/activity-log.service.js";
+import { ChitCycle } from "../chit-cycles/chit-cycle.model.js";
 import { countSettledCycles, findChitCycleByNumber } from "../chit-cycles/chit-cycle.repository.js";
 import { findChitGroupById } from "../chit-groups/chit-group.repository.js";
+import { ChitMembership } from "../chit-groups/chit-membership.model.js";
 import { listChitMembershipsByMemberId } from "../chit-groups/chit-membership.repository.js";
 import { resolveMemberForUser } from "../members/member.service.js";
 import { Payment } from "../payments/payment.model.js";
@@ -185,6 +187,35 @@ export async function getActivity(tenantId: string, limit: number): Promise<Acti
 
 // --- Member Dashboard ---
 
+export interface CycleWinnerDetail {
+  cycleId: string;
+  cycleNumber: number;
+  chitGroupId: string;
+  chitGroupName: string;
+  winnerName: string;
+  winnerCode: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: string;
+  share?: number;
+  prizeAmount: number;
+  dividendPerMember?: number;
+  discountAmount?: number;
+  settledAt?: string;
+  isCurrentUserWinner: boolean;
+  payoutAmount: number;
+  coWinner?: {
+    membershipId: string;
+    name: string;
+    memberCode: string;
+    ticketNumber: number;
+    subTicket?: string;
+    shareType: string;
+    share: number;
+    payoutAmount: number;
+  };
+}
+
 export interface MemberDashboardData {
   isMember: boolean;
   member: {
@@ -208,13 +239,21 @@ export interface MemberDashboardData {
     registrationNumber: string;
     chitValueRupees: number;
     ticketNumber: number;
+    shareType?: string;
+    share?: number;
+    subTicket?: string;
     frequency: string;
     totalMembers: number;
     completedCyclesCount: number;
+    currentCycleNumber?: number;
+    currentCyclePaidCount?: number;
     installmentAmount: number;
+    baseInstallmentAmount?: number;
     status: string;
     hasWon: boolean;
+    latestWinner?: CycleWinnerDetail | null;
   }[];
+  recentWinners: CycleWinnerDetail[];
   recentPayments: {
     id: string;
     amountPaid: number;
@@ -234,6 +273,7 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
       member: null,
       summary: { totalGroups: 0, completedCycles: 0, totalPaid: 0, totalOutstanding: 0, prizesWon: 0 },
       groups: [],
+      recentWinners: [],
       recentPayments: [],
     };
   }
@@ -255,12 +295,20 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
       },
       summary: { totalGroups: 0, completedCycles: 0, totalPaid: 0, totalOutstanding: 0, prizesWon: 0 },
       groups: [],
+      recentWinners: [],
       recentPayments: [],
     };
   }
 
-  // Parallel Batch: Fetch all payments and group details concurrently
-  const [allPayments, groupDetails] = await Promise.all([
+  // Parallel Batch: Fetch all payments, group details, and settled cycles concurrently
+  const validGroupIds = memberships
+    .map((m) => {
+      const groupRef = m.chitGroupId as any;
+      return groupRef?._id ? groupRef._id.toString() : groupRef?.toString();
+    })
+    .filter(Boolean);
+
+  const [allPayments, groupDetails, settledCycles] = await Promise.all([
     Payment.find({ tenantId, chitMembershipId: { $in: membershipIds } }).sort({ paidAt: -1, updatedAt: -1 }),
     Promise.all(
       memberships.map(async (m) => {
@@ -284,7 +332,100 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
         return { m, chitGroup, settledCyclesCount, cycleNumber, currentCyclePaidCount };
       }),
     ),
+    ChitCycle.find({
+      tenantId,
+      chitGroupId: { $in: validGroupIds },
+      status: "SETTLED",
+    })
+      .sort({ settledAt: -1, cycleNumber: -1 })
+      .populate({
+        path: "winnerMembershipId",
+        populate: { path: "memberId", select: "name memberCode phone" },
+      })
+      .lean(),
   ]);
+
+  // Find co-winners for any half-share winning tickets
+  const halfShareWinners: { chitGroupId: string; ticketNumber: number; membershipId: string }[] = [];
+  for (const sc of settledCycles) {
+    const wm: any = sc.winnerMembershipId;
+    if (wm && (wm.shareType === "HALF" || (wm.share !== undefined && wm.share < 1))) {
+      halfShareWinners.push({
+        chitGroupId: sc.chitGroupId.toString(),
+        ticketNumber: wm.ticketNumber,
+        membershipId: wm._id.toString(),
+      });
+    }
+  }
+
+  const coWinnersMap = new Map<string, any>();
+  if (halfShareWinners.length > 0) {
+    const coMembers = await ChitMembership.find({
+      tenantId,
+      $or: halfShareWinners.map((w) => ({
+        chitGroupId: w.chitGroupId,
+        ticketNumber: w.ticketNumber,
+        _id: { $ne: w.membershipId },
+      })),
+    })
+      .populate("memberId", "name memberCode phone")
+      .lean();
+
+    for (const cm of coMembers as any[]) {
+      coWinnersMap.set(`${cm.chitGroupId.toString()}_${cm.ticketNumber}`, cm);
+    }
+  }
+
+  // Helper to format winner info
+  function formatWinnerInfo(c: any): CycleWinnerDetail | null {
+    const wm: any = c.winnerMembershipId;
+    if (!wm) return null;
+    const memRef: any = wm.memberId || {};
+    const isHalf = wm.shareType === "HALF" || (wm.share !== undefined && wm.share < 1);
+    const payoutAmount = isHalf ? Math.round((c.prizeAmount || 0) / 2) : (c.prizeAmount || 0);
+
+    let coWinner: CycleWinnerDetail["coWinner"] = undefined;
+    if (isHalf) {
+      const coWm = coWinnersMap.get(`${c.chitGroupId.toString()}_${wm.ticketNumber}`);
+      if (coWm) {
+        const coMemRef = coWm.memberId || {};
+        coWinner = {
+          membershipId: coWm._id.toString(),
+          name: coMemRef.name || "Co-member",
+          memberCode: coMemRef.memberCode || "",
+          ticketNumber: coWm.ticketNumber,
+          subTicket: coWm.subTicket,
+          shareType: coWm.shareType || "HALF",
+          share: coWm.share ?? 0.5,
+          payoutAmount,
+        };
+      }
+    }
+
+    const isCurrentUserWinner =
+      (member && memRef._id?.toString() === member._id.toString()) ||
+      Boolean(coWinner && coWinner.membershipId && memberships.some((m) => m._id.toString() === coWinner.membershipId));
+
+    return {
+      cycleId: c._id.toString(),
+      cycleNumber: c.cycleNumber,
+      chitGroupId: c.chitGroupId.toString(),
+      chitGroupName: "",
+      winnerName: memRef.name || "Member",
+      winnerCode: memRef.memberCode || "",
+      ticketNumber: wm.ticketNumber,
+      subTicket: wm.subTicket,
+      shareType: wm.shareType || "FULL",
+      share: wm.share ?? (isHalf ? 0.5 : 1),
+      prizeAmount: c.prizeAmount || 0,
+      dividendPerMember: c.dividendPerMember || 0,
+      discountAmount: c.discountAmount || 0,
+      settledAt: c.settledAt ? new Date(c.settledAt).toISOString() : undefined,
+      isCurrentUserWinner: Boolean(isCurrentUserWinner),
+      payoutAmount,
+      coWinner,
+    };
+  }
 
   // Fast O(1) Map lookup for payments per membership
   const paymentsByMembership = new Map<string, typeof allPayments>();
@@ -301,10 +442,13 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
   let prizesWon = 0;
 
   const groupsList = [];
+  const groupNameMap = new Map<string, string>();
 
   for (const item of groupDetails) {
     if (!item) continue;
     const { m, chitGroup, settledCyclesCount, cycleNumber, currentCyclePaidCount } = item;
+    const gId = chitGroup._id.toString();
+    groupNameMap.set(gId, chitGroup.name);
 
     completedCycles += settledCyclesCount;
     if (m.hasWon) prizesWon += 1;
@@ -320,8 +464,15 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
     const memberShare = m.share ?? (m.shareType === "HALF" ? 0.5 : 1);
     const memberInstallmentAmount = Math.round(chitGroup.installmentAmount * memberShare);
 
+    // Latest settled cycle for this group
+    const latestSettled = settledCycles.find((sc) => sc.chitGroupId.toString() === gId);
+    const latestWinner = latestSettled ? formatWinnerInfo(latestSettled) : null;
+    if (latestWinner) {
+      latestWinner.chitGroupName = chitGroup.name;
+    }
+
     groupsList.push({
-      id: chitGroup._id.toString(),
+      id: gId,
       name: chitGroup.name,
       registrationNumber: chitGroup.registrationNumber,
       chitValueRupees: Math.round(chitGroup.chitValue / 100),
@@ -338,7 +489,19 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
       baseInstallmentAmount: chitGroup.installmentAmount,
       status: chitGroup.status,
       hasWon: Boolean(m.hasWon),
+      latestWinner,
     });
+  }
+
+  // Recent winners across all groups
+  const recentWinners: CycleWinnerDetail[] = [];
+  for (const sc of settledCycles) {
+    const formatted = formatWinnerInfo(sc);
+    if (formatted) {
+      formatted.chitGroupName = groupNameMap.get(sc.chitGroupId.toString()) || "";
+      recentWinners.push(formatted);
+      if (recentWinners.length >= 10) break;
+    }
   }
 
   const recentPayments = allPayments.slice(0, 10).map((p) => ({
@@ -369,6 +532,7 @@ export async function getMemberDashboard(tenantId: string, userId: string): Prom
       prizesWon,
     },
     groups: groupsList,
+    recentWinners,
     recentPayments,
   };
 }

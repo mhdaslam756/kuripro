@@ -11,7 +11,7 @@ interface Props {
 }
 
 /** Theme-aware area/line trend chart with an emphasized endpoint and a faint fill. */
-export function AreaChart({ data, height = 180, color = "var(--color-brand-600)", formatValue }: Props) {
+export function AreaChart({ data, height = 180, color = "#8B5CF6", formatValue }: Props) {
   if (data.length === 0) {
     return <p className="py-8 text-center text-sm text-text-secondary">No data to chart.</p>;
   }

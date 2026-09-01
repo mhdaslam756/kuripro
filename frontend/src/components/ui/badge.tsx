@@ -9,11 +9,11 @@ const badgeVariants = cva(
     variants: {
       variant: {
         neutral: "bg-bg-raised text-text-secondary border-border-default",
-        success: "bg-good-bg text-good-fg border-good-border",
-        warning: "bg-warn-bg text-warn-fg border-warn-border",
-        danger: "bg-bad-bg text-bad-fg border-bad-border",
-        info: "bg-info-bg text-info-fg border-info-border",
-        brand: "bg-brand-100 text-brand-700 border-brand-300",
+        success: "bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30",
+        warning: "bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30",
+        danger: "bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30",
+        info: "bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30",
+        brand: "bg-[#6D28D9]/20 text-[#A855F7] border-[#8B5CF6]/30",
       },
     },
     defaultVariants: { variant: "neutral" },

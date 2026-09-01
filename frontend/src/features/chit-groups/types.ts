@@ -94,6 +94,17 @@ export interface PaginatedMemberships {
   totalPages: number;
 }
 
+export interface CycleWinner {
+  membershipId: string;
+  name: string;
+  memberCode: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
+  payoutAmount?: number;
+}
+
 export interface ChitCycle {
   id: string;
   cycleNumber: number;
@@ -102,8 +113,11 @@ export interface ChitCycle {
   totalPotAmount: number;
   prizeAmount?: number;
   commissionAmount?: number;
+  discountAmount?: number;
   dividendPerMember?: number;
   settledAt?: string;
+  winner?: CycleWinner;
+  coWinner?: CycleWinner;
 }
 
 export interface PaginatedCycles {

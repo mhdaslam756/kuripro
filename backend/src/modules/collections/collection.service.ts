@@ -37,8 +37,43 @@ import {
   saveCollection,
   type PopulatedCollection,
 } from "./collection.repository.js";
-import type { CollectionDocument } from "./collection.model.js";
+import { Counter } from "../counters/counter.model.js";
+import { Collection, type CollectionDocument } from "./collection.model.js";
 import { generateReceiptQrDataUrl, generateReceiptToken } from "./receipt.util.js";
+
+async function generateUniqueReceiptNumber(tenantId: string, session?: mongoose.ClientSession): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const sequence = await getNextSequence(tenantId, "receiptNumber", session);
+    const candidate = `RCP-${String(sequence).padStart(6, "0")}`;
+    const exists = await Collection.exists({ tenantId, receiptNumber: candidate }).session(session ?? null);
+    if (!exists) {
+      return candidate;
+    }
+  }
+
+  const collections = await Collection.find({ tenantId }).select("receiptNumber").lean();
+  let maxSeq = 0;
+  for (const c of collections) {
+    if (c.receiptNumber) {
+      const match = c.receiptNumber.match(/RCP-(\d+)/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSeq) {
+          maxSeq = val;
+        }
+      }
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  await Counter.findOneAndUpdate(
+    { tenantId, name: "receiptNumber" },
+    { $set: { value: nextSeq } },
+    { upsert: true, session },
+  );
+
+  return `RCP-${String(nextSeq).padStart(6, "0")}`;
+}
 import type {
   BulkCollectionInput,
   ListCollectionsQuery,
@@ -187,16 +222,17 @@ async function ensureInstallmentForTarget(
     input.chitMembershipId,
   );
   if (!installment) {
-    // Raise the installment on the fly — this is the advance-payment path for a not-yet-due cycle.
     const chitGroup = await findChitGroupById(membership.chitGroupId.toString(), tenantId);
     if (!chitGroup) throw AppError.notFound("Chit group not found");
+    const share = membership.share ?? (membership.shareType === "HALF" ? 0.5 : 1);
+    const amountDue = Math.round(chitGroup.installmentAmount * share);
     const [created] = await insertInstallments([
       {
         tenantId,
         chitGroupId: membership.chitGroupId.toString(),
         chitCycleId: cycle._id.toString(),
         chitMembershipId: membership._id.toString(),
-        amountDue: chitGroup.installmentAmount,
+        amountDue,
         dueDate: cycle.scheduledDate,
       },
     ]);
@@ -238,8 +274,7 @@ export async function recordCollection(
   const isAdvance = installment.dueDate.getTime() > collectedAt.getTime();
   const needsClearance = CLEARANCE_METHODS.has(input.method);
 
-  const sequence = await getNextSequence(tenantId, "receiptNumber");
-  const receiptNumber = `RCP-${String(sequence).padStart(6, "0")}`;
+  const receiptNumber = await generateUniqueReceiptNumber(tenantId);
   const receiptToken = generateReceiptToken();
 
   let collectionDoc!: CollectionDocument;

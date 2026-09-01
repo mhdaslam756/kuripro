@@ -9,8 +9,43 @@ import {
   countDefaultedMemberships,
   listChitMembershipsByMemberId,
 } from "../chit-groups/chit-membership.repository.js";
+import { Counter } from "../counters/counter.model.js";
 import { getNextSequence } from "../counters/counter.repository.js";
 import { listWonCyclesByMembershipIds } from "../chit-cycles/chit-cycle.repository.js";
+
+async function generateUniqueMemberCode(tenantId: string, session?: mongoose.ClientSession): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const sequence = await getNextSequence(tenantId, "memberCode", session);
+    const candidate = `MBR-${String(sequence).padStart(6, "0")}`;
+    const exists = await Member.exists({ tenantId, memberCode: candidate }).session(session ?? null);
+    if (!exists) {
+      return candidate;
+    }
+  }
+
+  const members = await Member.find({ tenantId }).select("memberCode").lean();
+  let maxSeq = 0;
+  for (const m of members) {
+    if (m.memberCode) {
+      const match = m.memberCode.match(/MBR-(\d+)/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxSeq) {
+          maxSeq = val;
+        }
+      }
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  await Counter.findOneAndUpdate(
+    { tenantId, name: "memberCode" },
+    { $set: { value: nextSeq } },
+    { upsert: true, session },
+  );
+
+  return `MBR-${String(nextSeq).padStart(6, "0")}`;
+}
 import { getPaymentPunctualityStats, listPaymentsByMembershipIds } from "../payments/payment.repository.js";
 import { listPayoutsByCycleIds } from "../payouts/payout.repository.js";
 import { getOrganizationRoleBySlug } from "../roles/role.service.js";
@@ -105,8 +140,7 @@ export async function registerMember(
 ): Promise<MemberDocument> {
   await assertBranchInTenant(tenantId, input.branchId);
 
-  const sequence = await getNextSequence(tenantId, "memberCode");
-  const memberCode = `MBR-${String(sequence).padStart(6, "0")}`;
+  const memberCode = await generateUniqueMemberCode(tenantId);
 
   const member = await createMember({
     tenantId,

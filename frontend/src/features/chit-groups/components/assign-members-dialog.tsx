@@ -287,35 +287,43 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
             </TabsList>
 
             {activeTab === "assign" ? (
-              <div className="mt-3 flex items-center justify-between gap-2 p-2 bg-bg-raised/60 rounded-lg border border-border-default text-xs">
-                <div className="flex items-center gap-1.5 font-medium text-text-secondary">
-                  <PieChart size={14} className="text-accent-primary" />
-                  <span>Default Mode:</span>
+              <div className="flex flex-col gap-2 mt-3">
+                <div className="flex items-center justify-between gap-2 p-2 bg-bg-raised/60 rounded-lg border border-border-default text-xs">
+                  <div className="flex items-center gap-1.5 font-medium text-text-secondary">
+                    <PieChart size={14} className="text-accent-primary" />
+                    <span>Default Mode:</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-bg-surface p-0.5 rounded-md border border-border-default">
+                    <button
+                      type="button"
+                      onClick={() => setDefaultShareType("FULL")}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                        defaultShareType === "FULL"
+                          ? "bg-accent-primary text-white shadow-sm"
+                          : "text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      Full Chit (100% · 1 Slot)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDefaultShareType("HALF")}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                        defaultShareType === "HALF"
+                          ? "bg-accent-primary text-white shadow-sm"
+                          : "text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      ½ Half Chit (50/50 Shared Slot)
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 bg-bg-surface p-0.5 rounded-md border border-border-default">
-                  <button
-                    type="button"
-                    onClick={() => setDefaultShareType("FULL")}
-                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
-                      defaultShareType === "FULL"
-                        ? "bg-accent-primary text-white shadow-sm"
-                        : "text-text-secondary hover:text-text-primary"
-                    }`}
-                  >
-                    Full Chit (1.0)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDefaultShareType("HALF")}
-                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all ${
-                      defaultShareType === "HALF"
-                        ? "bg-accent-primary text-white shadow-sm"
-                        : "text-text-secondary hover:text-text-primary"
-                    }`}
-                  >
-                    ½ Half Chit (0.5)
-                  </button>
-                </div>
+
+                {defaultShareType === "HALF" ? (
+                  <p className="text-[11px] text-text-secondary bg-accent-primary/5 border border-accent-primary/15 rounded-md px-3 py-1.5">
+                    💡 <strong>50/50 Shared Slot:</strong> Two members share 1 chit slot (50% installment each, 50% prize split). They together count as 1 slot.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -383,7 +391,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                                   {enrolledEntries!.length > 1
                                     ? `${enrolledEntries!.length} tickets (${enrolledEntries!.map((e) => `#${e.ticketNumber}${e.subTicket || ""}`).join(", ")})`
                                     : `Ticket #${enrolledEntries![0]!.ticketNumber}${enrolledEntries![0]!.subTicket || ""}${
-                                        enrolledEntries![0]!.shareType === "HALF" ? " (½)" : ""
+                                        enrolledEntries![0]!.shareType === "HALF" ? " (50% Shared)" : ""
                                       }`}
                                 </Badge>
                               ) : null}
@@ -418,7 +426,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                                     : "text-text-secondary hover:text-text-primary"
                                 }`}
                               >
-                                ½ Half
+                                ½ 50%
                               </button>
                             </div>
 
@@ -487,7 +495,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
                             <p className="text-sm font-medium text-text-primary">{memName}</p>
                             {isHalf ? (
                               <Badge variant="neutral" className="text-[10px] py-0 font-medium bg-accent-primary/10 text-accent-primary border-accent-primary/20">
-                                ½ Half Chit
+                                50/50 Shared Slot
                               </Badge>
                             ) : null}
                             {item.hasWon ? (

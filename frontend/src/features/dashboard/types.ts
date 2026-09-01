@@ -39,20 +39,54 @@ export interface ActivityItem {
   createdAt: string;
 }
 
+export interface CycleWinnerDetail {
+  cycleId: string;
+  cycleNumber: number;
+  chitGroupId: string;
+  chitGroupName: string;
+  winnerName: string;
+  winnerCode: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: string;
+  share?: number;
+  prizeAmount: number;
+  dividendPerMember?: number;
+  discountAmount?: number;
+  settledAt?: string;
+  isCurrentUserWinner: boolean;
+  payoutAmount: number;
+  coWinner?: {
+    membershipId: string;
+    name: string;
+    memberCode: string;
+    ticketNumber: number;
+    subTicket?: string;
+    shareType: string;
+    share: number;
+    payoutAmount: number;
+  };
+}
+
 export interface MemberDashboardGroup {
   id: string;
   name: string;
   registrationNumber: string;
   chitValueRupees: number;
   ticketNumber: number;
+  shareType?: string;
+  share?: number;
+  subTicket?: string;
   frequency: string;
   totalMembers: number;
   completedCyclesCount: number;
   currentCycleNumber?: number;
   currentCyclePaidCount?: number;
   installmentAmount: number;
+  baseInstallmentAmount?: number;
   status: string;
   hasWon: boolean;
+  latestWinner?: CycleWinnerDetail | null;
 }
 
 export interface MemberDashboardPayment {
@@ -83,5 +117,6 @@ export interface MemberDashboardData {
     prizesWon: number;
   };
   groups: MemberDashboardGroup[];
+  recentWinners: CycleWinnerDetail[];
   recentPayments: MemberDashboardPayment[];
 }

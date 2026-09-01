@@ -2,6 +2,17 @@ import PDFDocument from "pdfkit";
 
 import { formatPaiseAsINR } from "../../utils/money.js";
 
+export interface WinnerDetail {
+  name: string;
+  memberCode: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: string;
+  share?: number;
+  phone?: string;
+  payoutAmount?: number;
+}
+
 export interface MinutesData {
   organizationName: string;
   chitGroupName: string;
@@ -15,8 +26,9 @@ export interface MinutesData {
   commissionAmount: number;
   dividendPerMember: number;
   prizeAmount: number;
-  winner: { name: string; memberCode: string; ticketNumber: number };
-  bids: { ticketNumber: number; memberName: string; discountAmount: number }[];
+  winner: WinnerDetail;
+  coWinner?: WinnerDetail;
+  bids: { ticketNumber: number; subTicket?: string; memberName: string; discountAmount: number }[];
 }
 
 export interface WinnerVoucherData {
@@ -26,7 +38,8 @@ export interface WinnerVoucherData {
   cycleNumber: number;
   auctionDate: Date;
   prizeAmount: number;
-  winner: { name: string; memberCode: string; ticketNumber: number; phone: string };
+  winner: WinnerDetail & { phone: string };
+  coWinner?: WinnerDetail & { phone: string };
 }
 
 const BRASS = "#8a6d3b";
@@ -85,10 +98,25 @@ export function generateMinutesPdf(data: MinutesData): Promise<Buffer> {
     labelValue(doc, "Prize to winner:", formatPaiseAsINR(data.prizeAmount));
     doc.moveDown(0.6);
 
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(BRASS).text("Prized subscriber (winner)");
+    const isShared = Boolean(data.coWinner) || data.winner.shareType === "HALF";
+    const winnerTicket = `#${data.winner.ticketNumber}${data.winner.subTicket ? data.winner.subTicket : ""}${data.winner.shareType === "HALF" ? " (50% Shared)" : ""}`;
+
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(BRASS).text(isShared ? "Prized subscribers (50/50 Shared Slot)" : "Prized subscriber (winner)");
     doc.moveDown(0.3);
-    labelValue(doc, "Name:", `${data.winner.name}  (${data.winner.memberCode})`);
-    labelValue(doc, "Ticket:", `#${data.winner.ticketNumber}`);
+    labelValue(doc, isShared ? "Primary subscriber:" : "Name:", `${data.winner.name}  (${data.winner.memberCode})`);
+    labelValue(doc, "Ticket:", winnerTicket);
+    if (data.winner.payoutAmount) {
+      labelValue(doc, "Prize share (50%):", formatPaiseAsINR(data.winner.payoutAmount));
+    }
+    if (data.coWinner) {
+      doc.moveDown(0.2);
+      const coTicket = `#${data.coWinner.ticketNumber}${data.coWinner.subTicket ? data.coWinner.subTicket : ""}${data.coWinner.shareType === "HALF" ? " (50% Shared)" : ""}`;
+      labelValue(doc, "Co-subscriber:", `${data.coWinner.name}  (${data.coWinner.memberCode})`);
+      labelValue(doc, "Co-ticket:", coTicket);
+      if (data.coWinner.payoutAmount) {
+        labelValue(doc, "Prize share (50%):", formatPaiseAsINR(data.coWinner.payoutAmount));
+      }
+    }
     doc.moveDown(0.6);
 
     if (data.bids.length > 0) {
@@ -96,7 +124,8 @@ export function generateMinutesPdf(data: MinutesData): Promise<Buffer> {
       doc.moveDown(0.3);
       doc.font("Helvetica").fontSize(10).fillColor(INK);
       for (const bid of data.bids) {
-        doc.text(`Ticket #${bid.ticketNumber}  ·  ${bid.memberName}  ·  discount ${formatPaiseAsINR(bid.discountAmount)}`);
+        const bidTicket = `#${bid.ticketNumber}${bid.subTicket ? bid.subTicket : ""}`;
+        doc.text(`Ticket ${bidTicket}  ·  ${bid.memberName}  ·  discount ${formatPaiseAsINR(bid.discountAmount)}`);
         doc.moveDown(0.15);
       }
       doc.moveDown(0.6);
@@ -126,11 +155,26 @@ export function generateWinnerVoucherPdf(data: WinnerVoucherData): Promise<Buffe
     doc.font("Helvetica-Bold").fontSize(30).fillColor(BRASS).text(formatPaiseAsINR(data.prizeAmount), { align: "center" });
     doc.moveDown(1);
 
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(BRASS).text("Payable to");
+    const isShared = Boolean(data.coWinner) || data.winner.shareType === "HALF";
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(BRASS).text(isShared ? "Payable to (50/50 Shared Slot)" : "Payable to");
     doc.moveDown(0.3);
-    labelValue(doc, "Name:", `${data.winner.name}  (${data.winner.memberCode})`);
-    labelValue(doc, "Ticket:", `#${data.winner.ticketNumber}`);
+    const winnerTicket = `#${data.winner.ticketNumber}${data.winner.subTicket ? data.winner.subTicket : ""}${data.winner.shareType === "HALF" ? " (50% Shared)" : ""}`;
+    labelValue(doc, isShared ? "Primary subscriber:" : "Name:", `${data.winner.name}  (${data.winner.memberCode})`);
+    labelValue(doc, "Ticket:", winnerTicket);
     labelValue(doc, "Phone:", data.winner.phone);
+    if (data.winner.payoutAmount) {
+      labelValue(doc, "Disbursed share (50%):", formatPaiseAsINR(data.winner.payoutAmount));
+    }
+    if (data.coWinner) {
+      doc.moveDown(0.2);
+      const coTicket = `#${data.coWinner.ticketNumber}${data.coWinner.subTicket ? data.coWinner.subTicket : ""}${data.coWinner.shareType === "HALF" ? " (50% Shared)" : ""}`;
+      labelValue(doc, "Co-subscriber:", `${data.coWinner.name}  (${data.coWinner.memberCode})`);
+      labelValue(doc, "Co-ticket:", coTicket);
+      labelValue(doc, "Phone:", data.coWinner.phone);
+      if (data.coWinner.payoutAmount) {
+        labelValue(doc, "Disbursed share (50%):", formatPaiseAsINR(data.coWinner.payoutAmount));
+      }
+    }
     doc.moveDown(2);
 
     doc.font("Helvetica").fontSize(10).fillColor(INK).text("Received the above prize money in full.");

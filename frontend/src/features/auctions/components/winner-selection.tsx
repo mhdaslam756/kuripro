@@ -117,6 +117,18 @@ export function WinnerSelection({ state, bids }: Props) {
                 No bid from this member — prize will be the pot minus foreman commission (no dividend).
               </p>
             ) : null}
+            {(() => {
+              const selectedMember = state.eligibleMembers.find((m) => m.membershipId === manualMembershipId);
+              const isHalf = selectedMember?.shareType === "HALF" || (selectedMember?.share !== undefined && selectedMember.share < 1);
+              if (isHalf) {
+                return (
+                  <p className="text-xs text-accent-primary bg-accent-primary/5 border border-accent-primary/15 rounded px-2.5 py-1 mt-0.5">
+                    💡 <strong>50/50 Shared Slot:</strong> When this slot is settled, the prize will be divided 50/50 between both co-members.
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </div>
         ) : null}
 

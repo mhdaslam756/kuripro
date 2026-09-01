@@ -44,15 +44,20 @@ export interface EligibleMember {
   isEligibleForAuction?: boolean;
 }
 
+export interface AuctionWinnerSummary {
+  membershipId: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: string;
+  share?: number;
+  name: string;
+  memberCode: string;
+  payoutAmount?: number;
+}
+
 export interface AuctionSettlement {
-  winner: {
-    membershipId: string;
-    ticketNumber: number;
-    subTicket?: string;
-    shareType?: string;
-    name: string;
-    memberCode: string;
-  };
+  winner: AuctionWinnerSummary;
+  coWinner?: AuctionWinnerSummary;
   discountAmount: number;
   commissionAmount: number;
   dividendPerMember: number;

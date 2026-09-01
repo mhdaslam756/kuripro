@@ -1,15 +1,12 @@
-/**
- * Categorical chart palette built from the design-system tokens, so charts stay theme-aware
- * (the CSS variables re-resolve in light/dark) and consistent with the rest of the product.
- */
 export const CHART_COLORS = [
-  "var(--color-brand-600)",
-  "var(--color-info-fg)",
-  "var(--color-good-fg)",
-  "var(--color-warn-fg)",
-  "var(--color-bad-fg)",
-  "var(--color-brand-300)",
-  "var(--color-brand-800)",
+  "#8B5CF6", // Bright Purple
+  "#A855F7", // Accent Purple
+  "#6D28D9", // Primary Purple
+  "#22C55E", // Success / Paid Green
+  "#F59E0B", // Pending Amber
+  "#EF4444", // Error / Unpaid Red
+  "#3B82F6", // Info Blue
+  "#C4B5FD", // Light Purple
 ];
 
 export function colorAt(index: number): string {

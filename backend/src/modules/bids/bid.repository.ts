@@ -17,6 +17,9 @@ export type CreateBidInput = Omit<
 export interface PopulatedBidMembership {
   _id: Types.ObjectId;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: { _id: Types.ObjectId; name: string; memberCode: string };
 }
 
@@ -41,7 +44,7 @@ export async function listBidsByCycle(tenantId: string, chitCycleId: string): Pr
     .populate<{ chitMembershipId: PopulatedBidMembership }>({
       path: "chitMembershipId",
       match: { tenantId: { $exists: true } },
-      select: "ticketNumber memberId",
+      select: "ticketNumber subTicket shareType share memberId",
       populate: { path: "memberId", match: { tenantId: { $exists: true } }, select: "name memberCode" },
     });
 }

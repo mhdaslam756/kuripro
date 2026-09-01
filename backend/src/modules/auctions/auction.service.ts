@@ -544,12 +544,26 @@ export async function listCycleBids(tenantId: string, cycleId: string) {
 export interface EligibleMember {
   membershipId: string;
   ticketNumber: number;
+  subTicket?: string;
+  shareType?: "FULL" | "HALF";
+  share?: number;
   memberId: string;
   name: string;
   memberCode: string;
   hasActiveBid: boolean;
   hasPaidCurrentCycle: boolean;
   isEligibleForAuction: boolean;
+}
+
+export interface WinnerSummaryDetail {
+  membershipId: string;
+  ticketNumber: number;
+  subTicket?: string;
+  shareType?: string;
+  share?: number;
+  name: string;
+  memberCode: string;
+  payoutAmount?: number;
 }
 
 export interface AuctionState {
@@ -572,7 +586,8 @@ export interface AuctionState {
     totalMembers: number;
   };
   settlement?: {
-    winner: { membershipId: string; ticketNumber: number; name: string; memberCode: string };
+    winner: WinnerSummaryDetail;
+    coWinner?: WinnerSummaryDetail;
     discountAmount: number;
     commissionAmount: number;
     dividendPerMember: number;
@@ -611,6 +626,9 @@ export async function getAuctionState(tenantId: string, cycleId: string): Promis
       return {
         membershipId: m._id.toString(),
         ticketNumber: m.ticketNumber,
+        subTicket: m.subTicket,
+        shareType: m.shareType,
+        share: m.share,
         memberId: m.memberId.toString(),
         name: member?.name ?? "Unknown",
         memberCode: member?.memberCode ?? "",
@@ -628,13 +646,52 @@ export async function getAuctionState(tenantId: string, cycleId: string): Promis
     const payout = await findPayoutByCycle(tenantId, cycleId);
     const laterSettled = await hasSettledCycleAfter(tenantId, chitGroup._id.toString(), cycle.cycleNumber);
     canRepick = !(payout && payout.amountPaid > 0) && !laterSettled;
+
+    let coWinner: WinnerSummaryDetail | undefined;
+    const isHalf = winnerMembership?.shareType === "HALF" || (winnerMembership?.share !== undefined && winnerMembership.share < 1);
+    if (isHalf && winnerMembership) {
+      const coHolders = (
+        await findChitMembershipsByTicket(
+          { tenantId, chitGroupId: chitGroup._id.toString() },
+          winnerMembership.ticketNumber,
+        )
+      ).filter((m) => m._id.toString() !== winnerMembership._id.toString());
+      if (coHolders.length > 0) {
+        const partner = coHolders[0]!;
+        const partnerMember = await findMemberById(partner.memberId.toString(), tenantId);
+        if (partnerMember) {
+          const prizeAmt = cycle.prizeAmount ?? 0;
+          const winnerPayout = Math.round(prizeAmt * (winnerMembership.share ?? 0.5));
+          const partnerPayout = prizeAmt - winnerPayout;
+          coWinner = {
+            membershipId: partner._id.toString(),
+            ticketNumber: partner.ticketNumber,
+            subTicket: partner.subTicket,
+            shareType: partner.shareType,
+            share: partner.share,
+            name: partnerMember.name,
+            memberCode: partnerMember.memberCode,
+            payoutAmount: partnerPayout,
+          };
+        }
+      }
+    }
+
+    const prizeAmt = cycle.prizeAmount ?? 0;
+    const winnerPayoutAmount = isHalf ? Math.round(prizeAmt * (winnerMembership?.share ?? 0.5)) : prizeAmt;
+
     settlement = {
       winner: {
         membershipId: winnerMembership?._id.toString() ?? "",
         ticketNumber: winnerMembership?.ticketNumber ?? 0,
+        subTicket: winnerMembership?.subTicket,
+        shareType: winnerMembership?.shareType,
+        share: winnerMembership?.share,
         name: winnerMember?.name ?? "Unknown",
         memberCode: winnerMember?.memberCode ?? "",
+        payoutAmount: winnerPayoutAmount,
       },
+      coWinner,
       discountAmount: cycle.discountAmount ?? 0,
       commissionAmount: cycle.commissionAmount ?? 0,
       dividendPerMember: cycle.dividendPerMember ?? 0,
@@ -682,6 +739,36 @@ export async function buildMinutesPdf(tenantId: string, cycleId: string, actorUs
   ]);
   const winnerMember = winnerMembership ? await findMemberById(winnerMembership.memberId.toString(), tenantId) : null;
 
+  let coWinner: any = undefined;
+  const isHalf = winnerMembership?.shareType === "HALF" || (winnerMembership?.share !== undefined && winnerMembership.share < 1);
+  if (isHalf && winnerMembership) {
+    const coHolders = (
+      await findChitMembershipsByTicket(
+        { tenantId, chitGroupId: chitGroup._id.toString() },
+        winnerMembership.ticketNumber,
+      )
+    ).filter((m) => m._id.toString() !== winnerMembership._id.toString());
+    if (coHolders.length > 0) {
+      const partner = coHolders[0]!;
+      const partnerMember = await findMemberById(partner.memberId.toString(), tenantId);
+      if (partnerMember) {
+        const prizeAmt = cycle.prizeAmount ?? 0;
+        const winnerPayout = Math.round(prizeAmt * (winnerMembership.share ?? 0.5));
+        coWinner = {
+          name: partnerMember.name,
+          memberCode: partnerMember.memberCode,
+          ticketNumber: partner.ticketNumber,
+          subTicket: partner.subTicket,
+          shareType: partner.shareType,
+          payoutAmount: prizeAmt - winnerPayout,
+        };
+      }
+    }
+  }
+
+  const prizeAmt = cycle.prizeAmount ?? 0;
+  const winnerPayoutAmount = isHalf ? Math.round(prizeAmt * (winnerMembership?.share ?? 0.5)) : prizeAmt;
+
   const pdf = await generateMinutesPdf({
     organizationName: tenant?.name ?? "Organization",
     chitGroupName: chitGroup.name,
@@ -694,14 +781,19 @@ export async function buildMinutesPdf(tenantId: string, cycleId: string, actorUs
     discountAmount: cycle.discountAmount ?? 0,
     commissionAmount: cycle.commissionAmount ?? 0,
     dividendPerMember: cycle.dividendPerMember ?? 0,
-    prizeAmount: cycle.prizeAmount ?? 0,
+    prizeAmount: prizeAmt,
     winner: {
       name: winnerMember?.name ?? "Unknown",
       memberCode: winnerMember?.memberCode ?? "",
       ticketNumber: winnerMembership?.ticketNumber ?? 0,
+      subTicket: winnerMembership?.subTicket,
+      shareType: winnerMembership?.shareType,
+      payoutAmount: winnerPayoutAmount,
     },
+    coWinner,
     bids: bids.map((b) => ({
       ticketNumber: b.chitMembershipId.ticketNumber,
+      subTicket: b.chitMembershipId.subTicket,
       memberName: b.chitMembershipId.memberId.name,
       discountAmount: b.discountAmount,
     })),
@@ -730,18 +822,53 @@ export async function buildWinnerVoucherPdf(tenantId: string, cycleId: string): 
   ]);
   const winnerMember = winnerMembership ? await findMemberById(winnerMembership.memberId.toString(), tenantId) : null;
 
+  let coWinner: any = undefined;
+  const isHalf = winnerMembership?.shareType === "HALF" || (winnerMembership?.share !== undefined && winnerMembership.share < 1);
+  if (isHalf && winnerMembership) {
+    const coHolders = (
+      await findChitMembershipsByTicket(
+        { tenantId, chitGroupId: chitGroup._id.toString() },
+        winnerMembership.ticketNumber,
+      )
+    ).filter((m) => m._id.toString() !== winnerMembership._id.toString());
+    if (coHolders.length > 0) {
+      const partner = coHolders[0]!;
+      const partnerMember = await findMemberById(partner.memberId.toString(), tenantId);
+      if (partnerMember) {
+        const prizeAmt = cycle.prizeAmount ?? 0;
+        const winnerPayout = Math.round(prizeAmt * (winnerMembership.share ?? 0.5));
+        coWinner = {
+          name: partnerMember.name,
+          memberCode: partnerMember.memberCode,
+          ticketNumber: partner.ticketNumber,
+          subTicket: partner.subTicket,
+          shareType: partner.shareType,
+          phone: partnerMember.phone ?? "",
+          payoutAmount: prizeAmt - winnerPayout,
+        };
+      }
+    }
+  }
+
+  const prizeAmt = cycle.prizeAmount ?? 0;
+  const winnerPayoutAmount = isHalf ? Math.round(prizeAmt * (winnerMembership?.share ?? 0.5)) : prizeAmt;
+
   return generateWinnerVoucherPdf({
     organizationName: tenant?.name ?? "Organization",
     chitGroupName: chitGroup.name,
     registrationNumber: chitGroup.registrationNumber,
     cycleNumber: cycle.cycleNumber,
     auctionDate: cycle.settledAt ?? cycle.scheduledDate,
-    prizeAmount: cycle.prizeAmount ?? 0,
+    prizeAmount: prizeAmt,
     winner: {
       name: winnerMember?.name ?? "Unknown",
       memberCode: winnerMember?.memberCode ?? "",
       ticketNumber: winnerMembership?.ticketNumber ?? 0,
+      subTicket: winnerMembership?.subTicket,
+      shareType: winnerMembership?.shareType,
       phone: winnerMember?.phone ?? "",
+      payoutAmount: winnerPayoutAmount,
     },
+    coWinner,
   });
 }

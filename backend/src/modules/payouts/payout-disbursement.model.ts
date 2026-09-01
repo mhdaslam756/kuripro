@@ -68,7 +68,7 @@ const disbursementSchema = new Schema<PayoutDisbursementDoc>(
 
 disbursementSchema.index({ tenantId: 1, payoutId: 1, disbursedAt: 1 });
 disbursementSchema.index({ tenantId: 1, memberId: 1, disbursedAt: -1 });
-disbursementSchema.index({ receiptNumber: 1 }, { unique: true });
+disbursementSchema.index({ tenantId: 1, receiptNumber: 1 }, { unique: true });
 disbursementSchema.index({ receiptToken: 1 }, { unique: true });
 
 disbursementSchema.plugin(tenantScopedPlugin);

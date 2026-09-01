@@ -79,7 +79,7 @@ collectionSchema.index({ tenantId: 1, collectedAt: -1 });
 collectionSchema.index({ tenantId: 1, memberId: 1, collectedAt: -1 });
 collectionSchema.index({ tenantId: 1, chitGroupId: 1, collectedAt: -1 });
 collectionSchema.index({ paymentId: 1 });
-collectionSchema.index({ receiptNumber: 1 }, { unique: true });
+collectionSchema.index({ tenantId: 1, receiptNumber: 1 }, { unique: true });
 collectionSchema.index({ receiptToken: 1 }, { unique: true });
 /** Offline idempotency: at most one collection per (tenant, clientReceiptId). */
 collectionSchema.index(
