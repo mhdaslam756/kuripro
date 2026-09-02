@@ -5,11 +5,9 @@ import {
   approveOrganization,
   changeSuperAdminPassword,
   getPlatformStatistics,
-  getSuperAdminSetupStatus,
   listAllOrganizations,
   rejectOrganization,
   setOrganizationStatus,
-  setupSuperAdmin,
   superAdminLogin,
 } from "./super-admin.service.js";
 
@@ -22,16 +20,6 @@ const refreshCookieOptions: CookieOptions = {
   path: "/api",
   maxAge: env.JWT_REFRESH_TTL_SECONDS * 1000,
 };
-
-export async function getSuperAdminSetupStatusHandler(_req: Request, res: Response): Promise<void> {
-  const status = await getSuperAdminSetupStatus();
-  res.status(200).json(status);
-}
-
-export async function setupSuperAdminHandler(_req: Request, res: Response): Promise<void> {
-  const result = await setupSuperAdmin();
-  res.status(200).json({ message: result.created ? "Super Admin account created successfully from .env" : "Super Admin account already exists", user: result });
-}
 
 export async function changeSuperAdminPasswordHandler(req: Request, res: Response): Promise<void> {
   const userId = req.auth?.userId;

@@ -6,23 +6,15 @@ import {
   approveOrganizationHandler,
   changeSuperAdminPasswordHandler,
   getPlatformStatisticsHandler,
-  getSuperAdminSetupStatusHandler,
   listOrganizationsHandler,
   rejectOrganizationHandler,
   setOrganizationStatusHandler,
-  setupSuperAdminHandler,
   superAdminLoginHandler,
 } from "./super-admin.controller.js";
 
 const router = Router();
 
-// Public Super Admin routes (Setup from .env & Login)
-router.get("/setup-status", getSuperAdminSetupStatusHandler);
-router.get("/setup", setupSuperAdminHandler);
-router.post("/setup", setupSuperAdminHandler);
-router.get("/seed-env", setupSuperAdminHandler);
-router.get("/init-env", setupSuperAdminHandler);
-router.post("/seed-env", setupSuperAdminHandler);
+// Public Super Admin routes (Login only)
 router.post("/login", superAdminLoginHandler);
 
 // Authenticated Super Admin routes

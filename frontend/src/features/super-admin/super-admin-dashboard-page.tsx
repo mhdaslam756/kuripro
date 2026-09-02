@@ -113,7 +113,7 @@ export function SuperAdminDashboardPage() {
                   Super Admin
                 </span>
               </div>
-              <p className="text-[11px] font-medium text-text-secondary">Platform Control Center</p>
+              <p className="text-[11px] font-medium text-text-secondary">Platform Management</p>
             </div>
           </div>
 
@@ -152,7 +152,7 @@ export function SuperAdminDashboardPage() {
             <div className="flex items-center gap-2 text-warn-fg">
               <ShieldAlert size={18} className="shrink-0" />
               <span className="text-xs font-semibold sm:text-sm">
-                First-time login security action required: Please change your default .env password.
+                Security Notice: Please update your password to continue.
               </span>
             </div>
             <Button size="sm" className="bg-warn-fg text-white text-xs" onClick={() => setChangePassOpen(true)}>
@@ -164,7 +164,7 @@ export function SuperAdminDashboardPage() {
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">Platform Overview</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Manage organization onboarding requests, status controls, and SaaS platform analytics.
+            Manage organization requests, account statuses, and system statistics.
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export function SuperAdminDashboardPage() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-display text-xl font-bold text-text-primary">Registered Organizations</h2>
-              <p className="text-xs text-text-secondary">Approve pending applications or suspend/activate existing tenants.</p>
+              <p className="text-xs text-text-secondary">Review pending requests and manage active organizations.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {["__all__", "PENDING_APPROVAL", "ACTIVE", "SUSPENDED", "REJECTED"].map((st) => (
@@ -294,10 +294,10 @@ export function SuperAdminDashboardPage() {
           <SheetHeader className="mb-4">
             <div className="flex items-center gap-2 text-accent-primary">
               <Key size={20} />
-              <SheetTitle>Change Super Admin Password</SheetTitle>
+              <SheetTitle>Change Password</SheetTitle>
             </div>
             <SheetDescription>
-              Update your global SaaS administrator password. Password must be at least 8 characters.
+              Update your administrator password. Password must be at least 8 characters.
             </SheetDescription>
           </SheetHeader>
 

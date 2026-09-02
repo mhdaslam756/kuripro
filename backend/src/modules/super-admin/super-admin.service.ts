@@ -48,51 +48,7 @@ export async function seedSuperAdmin() {
   }
 }
 
-/** Check if any Super Admin exists in the platform. */
-export async function getSuperAdminSetupStatus(): Promise<{ needsSetup: boolean; hasEnvConfig: boolean }> {
-  const count = await User.countDocuments({ tenantId: null });
-  const hasEnvConfig = Boolean(env.SUPER_ADMIN_EMAIL && env.SUPER_ADMIN_PASSWORD);
-  return { needsSetup: count === 0, hasEnvConfig };
-}
 
-/** Creates or retrieves initial Super Admin credentials using configuration strictly from .env. */
-export async function setupSuperAdmin() {
-  const email = env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
-  const password = env.SUPER_ADMIN_PASSWORD;
-  const name = (env.SUPER_ADMIN_NAME || "Super Admin").trim();
-  const phone = (env.SUPER_ADMIN_PHONE || "+919999999999").trim();
-
-  if (!email || !password) {
-    throw AppError.badRequest("SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be configured in .env", "MISSING_ENV_CREDENTIALS");
-  }
-
-  const role = await ensureSuperAdminRole();
-  let superAdmin = await User.findOne({ tenantId: null, email });
-  let created = false;
-
-  if (!superAdmin) {
-    const passwordHash = await hashPassword(password);
-    superAdmin = await User.create({
-      tenantId: null,
-      roleId: role._id,
-      name,
-      email,
-      phone,
-      passwordHash,
-      status: "ACTIVE",
-      mustChangePassword: true,
-    });
-    created = true;
-  }
-
-  return {
-    id: superAdmin._id.toString(),
-    name: superAdmin.name,
-    email: superAdmin.email,
-    mustChangePassword: superAdmin.mustChangePassword,
-    created,
-  };
-}
 
 export async function changeSuperAdminPassword(
   userId: string,

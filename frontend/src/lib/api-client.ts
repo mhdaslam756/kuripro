@@ -68,9 +68,6 @@ function isPublicAuthEndpoint(path: string): boolean {
   return (
     path.startsWith("/auth/") ||
     path.startsWith("/super-admin/login") ||
-    path.startsWith("/super-admin/setup") ||
-    path.startsWith("/super-admin/seed-env") ||
-    path.startsWith("/super-admin/init-env") ||
     path.startsWith("/public/")
   );
 }
