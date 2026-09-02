@@ -67,6 +67,8 @@ memberRouter.post(
 
 // --- Single member ---
 
+memberRouter.get("/me", memberController.getMe);
+
 memberRouter.get(
   "/:id",
   requirePermission("members.view"),

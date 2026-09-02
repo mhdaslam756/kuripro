@@ -41,7 +41,7 @@ function KpiTile({ icon, label, value, sub }: { icon: ReactNode; label: string; 
         <span className="flex size-7 items-center justify-center rounded-lg bg-[#6D28D9]/15 text-[#8B5CF6]">{icon}</span>
         <span className="text-xs uppercase tracking-wide font-medium">{label}</span>
       </div>
-      <p className="font-display text-2xl font-bold tabular-nums text-white">{value}</p>
+      <p className="font-display text-2xl font-bold tabular-nums text-text-primary">{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-text-secondary">{sub}</p> : null}
     </div>
   );
@@ -52,7 +52,7 @@ function ChartCard({ title, action, children }: { title: string; action?: ReactN
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-white">{title}</CardTitle>
+          <CardTitle>{title}</CardTitle>
           {action}
         </div>
       </CardHeader>
@@ -191,7 +191,7 @@ function HighlightCards() {
           <Banknote className="size-4" />
           <span className="text-sm font-medium">Today's collection</span>
         </div>
-        <p className="font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.today.total)}</p>
+        <p className="font-display text-3xl font-bold tabular-nums text-text-primary">{formatPaise(data.today.total)}</p>
         <p className="mt-1 text-sm text-text-secondary">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
       </div>
 
@@ -200,7 +200,7 @@ function HighlightCards() {
           <Wallet className="size-4" />
           <span className="text-sm font-medium">Pending collection</span>
         </div>
-        <p className="font-display text-3xl font-bold tabular-nums text-white">{formatPaise(data.pending.pendingAmount)}</p>
+        <p className="font-display text-3xl font-bold tabular-nums text-text-primary">{formatPaise(data.pending.pendingAmount)}</p>
         <p className="mt-1 text-sm text-text-secondary">
           {data.pending.pendingCount} due · <span className="text-bad-fg">{data.pending.overdueCount} overdue</span> ({formatPaise(data.pending.overdueAmount)})
         </p>
@@ -213,11 +213,11 @@ function HighlightCards() {
         </div>
         {next ? (
           <>
-            <p className="font-display text-lg font-bold text-white">{next.chitGroupName}</p>
+            <p className="font-display text-lg font-bold text-text-primary">{next.chitGroupName}</p>
             <p className="mt-0.5 text-sm text-text-secondary">
               Cycle #{next.cycleNumber} · {new Date(next.scheduledDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · pot {formatPaise(next.potAmount)}
             </p>
-            <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-[#8B5CF6] hover:text-[#A855F7] hover:underline">
+            <Link to="/auctions" className="mt-2 inline-block text-sm font-medium text-accent-primary hover:underline">
               Go to auctions →
             </Link>
           </>

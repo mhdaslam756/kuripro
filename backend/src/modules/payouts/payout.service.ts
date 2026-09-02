@@ -14,44 +14,14 @@ import {
   findDisbursementByReceiptToken,
   listDisbursementsByPayout,
 } from "./payout-disbursement.repository.js";
-import { Counter } from "../counters/counter.model.js";
-import { PayoutDisbursement, type PayoutDisbursementDocument } from "./payout-disbursement.model.js";
+import type { PayoutDisbursementDocument } from "./payout-disbursement.model.js";
 import { findPayoutById, listPayouts as repoListPayouts, savePayout } from "./payout.repository.js";
 import type { PayoutDocument } from "./payout.model.js";
 import type { ListPayoutsQuery, RecordDisbursementInput } from "./payout.validators.js";
 
 async function generateUniquePayoutReceiptNumber(tenantId: string, session?: mongoose.ClientSession): Promise<string> {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const sequence = await getNextSequence(tenantId, "payoutReceiptNumber", session);
-    const candidate = `PV-${String(sequence).padStart(6, "0")}`;
-    const exists = await PayoutDisbursement.exists({ tenantId, receiptNumber: candidate }).session(session ?? null);
-    if (!exists) {
-      return candidate;
-    }
-  }
-
-  const disbursements = await PayoutDisbursement.find({ tenantId }).select("receiptNumber").lean();
-  let maxSeq = 0;
-  for (const d of disbursements) {
-    if (d.receiptNumber) {
-      const match = d.receiptNumber.match(/PV-(\d+)/);
-      if (match && match[1]) {
-        const val = parseInt(match[1], 10);
-        if (!isNaN(val) && val > maxSeq) {
-          maxSeq = val;
-        }
-      }
-    }
-  }
-
-  const nextSeq = maxSeq + 1;
-  await Counter.findOneAndUpdate(
-    { tenantId, name: "payoutReceiptNumber" },
-    { $set: { value: nextSeq } },
-    { upsert: true, session },
-  );
-
-  return `PV-${String(nextSeq).padStart(6, "0")}`;
+  const sequence = await getNextSequence(tenantId, "payoutReceiptNumber", session);
+  return `PV-${String(sequence).padStart(6, "0")}`;
 }
 
 // --- History ---

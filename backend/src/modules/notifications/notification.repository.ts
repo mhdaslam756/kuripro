@@ -36,6 +36,7 @@ export interface ListNotificationsFilter {
   status?: NotificationStatus;
   from?: Date;
   to?: Date;
+  memberId?: string;
 }
 
 export async function listNotifications(
@@ -46,6 +47,7 @@ export async function listNotifications(
   if (filter.channel) mongoFilter["channel"] = filter.channel;
   if (filter.type) mongoFilter["type"] = filter.type;
   if (filter.status) mongoFilter["status"] = filter.status;
+  if (filter.memberId) mongoFilter["memberId"] = new Types.ObjectId(filter.memberId);
   if (filter.from || filter.to) {
     mongoFilter["createdAt"] = { ...(filter.from ? { $gte: filter.from } : {}), ...(filter.to ? { $lte: filter.to } : {}) };
   }

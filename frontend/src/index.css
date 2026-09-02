@@ -1,8 +1,96 @@
 @import "tailwindcss";
 
-/* ---------- User Specified Dark Purple Theme ---------- */
+/* ---------- Base Light Theme (Default & data-theme="light") ---------- */
 :root {
-  /* Requested Color Palette */
+  --bg-app: #f8f9fc;
+  --bg-surface: #ffffff;
+  --bg-raised: #f1f4f9;
+  --bg-elevated: #ede9fe;
+
+  --border-default: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-disabled: #94a3b8;
+  --text-on-brand: #ffffff;
+  --icon-default: #64748b;
+
+  --primary-purple: #6d28d9;
+  --bright-purple: #7c3aed;
+  --accent-primary: #7c3aed;
+  --accent-link: #6d28d9;
+
+  /* Status Colors */
+  --good-fg: #16a34a;
+  --good-bg: rgba(22, 163, 74, 0.12);
+  --good-border: rgba(22, 163, 74, 0.28);
+
+  --warn-fg: #d97706;
+  --warn-bg: rgba(217, 119, 6, 0.12);
+  --warn-border: rgba(217, 119, 6, 0.28);
+
+  --bad-fg: #dc2626;
+  --bad-bg: rgba(220, 38, 38, 0.12);
+  --bad-border: rgba(220, 38, 38, 0.28);
+
+  --info-fg: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.12);
+  --info-border: rgba(37, 99, 235, 0.28);
+
+  /* Purple Scale */
+  --b50: #f5f3ff;
+  --b100: #ede9fe;
+  --b200: #ddd6fe;
+  --b300: #c4b5fd;
+  --b400: #a78bfa;
+  --b500: #8b5cf6;
+  --b600: #7c3aed;
+  --b700: #6d28d9;
+  --b800: #5b21b6;
+  --b900: #4c1d95;
+  --b950: #2e1065;
+}
+
+:root[data-theme="light"] {
+  --bg-app: #f8f9fc;
+  --bg-surface: #ffffff;
+  --bg-raised: #f1f4f9;
+  --bg-elevated: #ede9fe;
+
+  --border-default: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-disabled: #94a3b8;
+  --text-on-brand: #ffffff;
+  --icon-default: #64748b;
+
+  --primary-purple: #6d28d9;
+  --bright-purple: #7c3aed;
+  --accent-primary: #7c3aed;
+  --accent-link: #6d28d9;
+
+  --good-fg: #16a34a;
+  --good-bg: rgba(22, 163, 74, 0.12);
+  --good-border: rgba(22, 163, 74, 0.28);
+
+  --warn-fg: #d97706;
+  --warn-bg: rgba(217, 119, 6, 0.12);
+  --warn-border: rgba(217, 119, 6, 0.28);
+
+  --bad-fg: #dc2626;
+  --bad-bg: rgba(220, 38, 38, 0.12);
+  --bad-border: rgba(220, 38, 38, 0.28);
+
+  --info-fg: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.12);
+  --info-border: rgba(37, 99, 235, 0.28);
+}
+
+/* ---------- User Specified Dark Purple Theme ---------- */
+:root[data-theme="dark"] {
   --bg-app: #090614;
   --bg-surface: #120d22;
   --bg-raised: #1a1330;
@@ -38,19 +126,6 @@
   --info-fg: #3b82f6;
   --info-bg: rgba(59, 130, 246, 0.12);
   --info-border: rgba(59, 130, 246, 0.28);
-
-  /* Purple Scale */
-  --b50: #f5f3ff;
-  --b100: #ede9fe;
-  --b200: #ddd6fe;
-  --b300: #c4b5fd;
-  --b400: #a78bfa;
-  --b500: #8b5cf6;
-  --b600: #7c3aed;
-  --b700: #6d28d9;
-  --b800: #5b21b6;
-  --b900: #4c1d95;
-  --b950: #2e1065;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -58,31 +133,38 @@
     --bg-app: #090614;
     --bg-surface: #120d22;
     --bg-raised: #1a1330;
+    --bg-elevated: #221a3e;
+
     --border-default: #2a2340;
     --border-strong: #3d335c;
+
     --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
     --text-disabled: #71717a;
     --text-on-brand: #ffffff;
     --icon-default: #a1a1aa;
+
+    --primary-purple: #6d28d9;
+    --bright-purple: #8b5cf6;
     --accent-primary: #8b5cf6;
     --accent-link: #a855f7;
-  }
-}
 
-:root[data-theme="dark"] {
-  --bg-app: #090614;
-  --bg-surface: #120d22;
-  --bg-raised: #1a1330;
-  --border-default: #2a2340;
-  --border-strong: #3d335c;
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-disabled: #71717a;
-  --text-on-brand: #ffffff;
-  --icon-default: #a1a1aa;
-  --accent-primary: #8b5cf6;
-  --accent-link: #a855f7;
+    --good-fg: #22c55e;
+    --good-bg: rgba(34, 197, 94, 0.12);
+    --good-border: rgba(34, 197, 94, 0.28);
+
+    --warn-fg: #f59e0b;
+    --warn-bg: rgba(245, 158, 11, 0.12);
+    --warn-border: rgba(245, 158, 11, 0.28);
+
+    --bad-fg: #ef4444;
+    --bad-bg: rgba(239, 68, 68, 0.12);
+    --bad-border: rgba(239, 68, 68, 0.28);
+
+    --info-fg: #3b82f6;
+    --info-bg: rgba(59, 130, 246, 0.12);
+    --info-border: rgba(59, 130, 246, 0.28);
+  }
 }
 
 /* ---------- Tailwind theme mapping ---------- */
@@ -227,10 +309,12 @@
     border: 1px solid #2a2340;
     color: #ffffff;
   }
-  :root[data-theme="light"] .mobile-hero-card {
-    background: linear-gradient(135deg, #120d22 0%, #1a1330 60%, #090614 100%);
-    border: 1px solid #2a2340;
+  :root[data-theme="light"] .mobile-hero-card,
+  :root:not([data-theme="dark"]) .mobile-hero-card {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 60%, #4c1d95 100%);
+    border: 1px solid rgba(124, 58, 237, 0.3);
     color: #ffffff;
+    box-shadow: 0 12px 30px -8px rgba(109, 40, 217, 0.35);
   }
   /* Member dashboard hero card — rich purple gradient */
   .mobile-balance-card {
@@ -241,6 +325,14 @@
     border: 1px solid #2a2340;
     position: relative;
     overflow: hidden;
+  }
+  :root[data-theme="light"] .mobile-balance-card,
+  :root:not([data-theme="dark"]) .mobile-balance-card {
+    background: linear-gradient(145deg, #6d28d9 0%, #7c3aed 50%, #4c1d95 100%);
+    color: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 16px 40px -10px rgba(109, 40, 217, 0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    border: 1px solid rgba(124, 58, 237, 0.4);
   }
   .mobile-balance-card::before {
     content: '';

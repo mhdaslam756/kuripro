@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { requireTenantContext } from "../../middleware/rbac.js";
 import type { MongoIdParam } from "../../utils/common-validators.js";
+import { resolveMemberForUser } from "../members/member.service.js";
 import * as service from "./notification.service.js";
 import type {
   CreateTemplateBody,
@@ -60,9 +61,27 @@ export async function sendBulk(req: Request, res: Response): Promise<void> {
 export async function history(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const query = req.query as unknown as ListHistoryQuery;
+
+  let memberIdFilter: string | undefined;
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (!member) {
+      res.status(200).json({ items: [], total: 0, page: query.page || 1, limit: query.limit || 20, totalPages: 0 });
+      return;
+    }
+    memberIdFilter = member._id.toString();
+  }
+
   const result = await service.listHistory(
     tenantId,
-    { channel: query.channel, type: query.type, status: query.status, from: query.from, to: query.to },
+    {
+      channel: query.channel,
+      type: query.type,
+      status: query.status,
+      from: query.from,
+      to: query.to,
+      memberId: memberIdFilter,
+    },
     query,
   );
   res.status(200).json(result);

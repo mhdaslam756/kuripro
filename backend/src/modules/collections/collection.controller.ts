@@ -88,9 +88,11 @@ export async function list(req: Request, res: Response): Promise<void> {
 
   if (req.auth?.roleSlug === "MEMBER") {
     const member = await resolveMemberForUser(req.auth.userId, tenantId);
-    if (member) {
-      query = { ...query, memberId: member._id.toString() };
+    if (!member) {
+      res.status(200).json({ items: [], total: 0, page: query.page || 1, limit: query.limit || 20, totalPages: 0 });
+      return;
     }
+    query = { ...query, memberId: member._id.toString() };
   }
 
   const result = await collectionService.listCollections(tenantId, query);
@@ -119,6 +121,14 @@ export async function receipt(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
   const dto = await collectionService.getReceipt(tenantId, id);
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (!member || dto.member.id !== member._id.toString()) {
+      throw AppError.forbidden("Access denied: You may only view receipts for your own collections");
+    }
+  }
+
   res.status(200).json({ receipt: dto });
 }
 
@@ -126,6 +136,14 @@ export async function receiptByPaymentId(req: Request, res: Response): Promise<v
   const tenantId = requireTenantContext(req);
   const { paymentId } = req.params as unknown as PaymentIdParam;
   const dto = await collectionService.getReceiptByPaymentId(tenantId, paymentId);
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (!member || dto.member.id !== member._id.toString()) {
+      throw AppError.forbidden("Access denied: You may only view receipts for your own payments");
+    }
+  }
+
   res.status(200).json({ receipt: dto });
 }
 

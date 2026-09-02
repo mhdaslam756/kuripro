@@ -1,6 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/lib/auth-context";
 import { ChannelAvailabilityBanner } from "./components/channel-availability";
+import { MemberNotificationsView } from "./components/member-notifications-view";
 import { BulkTab } from "./tabs/bulk-tab";
 import { HistoryTab } from "./tabs/history-tab";
 import { SendTab } from "./tabs/send-tab";
@@ -15,7 +17,7 @@ const STAT_CARDS: { key: keyof Omit<NotificationStats, "byChannel">; label: stri
   { key: "failed", label: "Failed", tone: "text-bad-fg" },
 ];
 
-export function NotificationsPage() {
+function OrganizerNotificationsView() {
   const { data: templates } = useTemplates();
   const { data: meta } = useNotificationMeta();
   const activeTemplates = (templates ?? []).filter((t) => t.isActive);
@@ -69,4 +71,14 @@ export function NotificationsPage() {
       </Tabs>
     </div>
   );
+}
+
+export function NotificationsPage() {
+  const { user } = useAuth();
+
+  if (user?.role?.slug === "MEMBER") {
+    return <MemberNotificationsView />;
+  }
+
+  return <OrganizerNotificationsView />;
 }

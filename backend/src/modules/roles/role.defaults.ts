@@ -73,7 +73,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<SystemRoleSlug, string[]> = {
     "notification.send",
     "dashboard.view",
   ],
-  MEMBER: ["upload.create", "dashboard.view", "chit_group.view", "auction.view", "collection.view"],
+  MEMBER: ["upload.create", "dashboard.view", "chit_group.view", "auction.view", "collection.view", "notification.view"],
 };
 
 export const DEFAULT_ROLE_LABELS: Record<SystemRoleSlug, string> = {

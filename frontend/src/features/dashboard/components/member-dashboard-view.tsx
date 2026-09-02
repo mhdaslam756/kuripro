@@ -498,18 +498,18 @@ export function MemberDashboardView() {
       {/* ══ DESKTOP (unchanged) ═══════════════════════════════════════════════ */}
 
       {/* Welcome Header */}
-      <div className="hidden sm:block relative overflow-hidden rounded-2xl border border-border-default bg-gradient-to-r from-[#1A1330] via-[#120D22] to-[#120D22] p-6 shadow-sm sm:p-8">
+      <div className="hidden sm:block relative overflow-hidden rounded-2xl border border-border-default bg-gradient-to-r from-bg-raised via-bg-surface to-bg-surface p-6 shadow-sm sm:p-8">
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
               <Badge variant="success" className="gap-1.5 px-2.5 py-0.5 font-medium">
                 <BadgeCheck size={14} /> Active Member
               </Badge>
-              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[#A855F7]">
+              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-accent-primary">
                 {member.memberCode}
               </span>
             </div>
-            <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
               Welcome back, {member.name}!
             </h1>
             <p className="mt-1 text-xs text-text-secondary sm:text-sm">
@@ -540,7 +540,7 @@ export function MemberDashboardView() {
               <span className={cn("flex size-7 items-center justify-center rounded-lg", bg, fg)}>{icon}</span>
               <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
             </div>
-            <p className={cn("font-display text-2xl font-bold tabular-nums", valFg ?? "text-white")}>{value}</p>
+            <p className={cn("font-display text-2xl font-bold tabular-nums", valFg ?? "text-text-primary")}>{value}</p>
             <p className="mt-0.5 text-xs text-text-secondary">{sub}</p>
           </div>
         ))}
@@ -602,7 +602,7 @@ export function MemberDashboardView() {
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Trophy size={13} className="text-[#8B5CF6] shrink-0" />
                             <span className="text-[11px] text-text-secondary truncate">
-                              Cycle #{group.latestWinner.cycleNumber} Winner: <strong className="text-white font-semibold">{group.latestWinner.winnerName}{group.latestWinner.coWinner ? ` & ${group.latestWinner.coWinner.name}` : ''}</strong>
+                              Cycle #{group.latestWinner.cycleNumber} Winner: <strong className="text-text-primary font-semibold">{group.latestWinner.winnerName}{group.latestWinner.coWinner ? ` & ${group.latestWinner.coWinner.name}` : ''}</strong>
                             </span>
                           </div>
                           <span className="text-xs font-bold text-[#22C55E] tabular-nums shrink-0 ml-2">
@@ -634,7 +634,7 @@ export function MemberDashboardView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Trophy className="size-5 text-[#8B5CF6]" />
-                <CardTitle className="text-white">Cycle Winners in My Schemes</CardTitle>
+                <CardTitle>Cycle Winners in My Schemes</CardTitle>
               </div>
               <span className="text-xs font-medium text-text-secondary">Official settled cycle results</span>
             </div>
@@ -656,7 +656,7 @@ export function MemberDashboardView() {
                 <TableBody>
                   {recentWinners.map((w) => (
                     <TableRow key={`${w.chitGroupId}-${w.cycleNumber}`}>
-                      <TableCell className="font-semibold text-white">{w.chitGroupName}</TableCell>
+                      <TableCell className="font-semibold text-text-primary ">{w.chitGroupName}</TableCell>
                       <TableCell>
                         <span className="rounded-md bg-[#6D28D9]/20 border border-[#8B5CF6]/30 px-2 py-0.5 text-xs font-mono font-bold text-[#A855F7]">
                           #{w.cycleNumber}
@@ -664,7 +664,7 @@ export function MemberDashboardView() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-white">
+                          <span className="font-medium text-text-secondary ">
                             {w.winnerName}
                             {w.coWinner ? ` & ${w.coWinner.name}` : ""}
                           </span>

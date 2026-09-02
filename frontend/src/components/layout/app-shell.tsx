@@ -183,7 +183,8 @@ function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
       aria-label="Member Mobile Navigation"
     >
       <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
-      <MobileTabItem to="/device" label="Security" icon={ShieldCheck} />
+      <MobileTabItem to="/chit-groups" label="My Chits" icon={Landmark} />
+      <MobileTabItem to="/auctions" label="Auctions" icon={Gavel} />
       <MobileMoreButton onClick={onMoreOpen} active={moreOpen} />
     </nav>
   );
@@ -213,7 +214,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   let visibleItems = NAV_ITEMS.filter((item) => {
     if (user?.role?.slug === "MEMBER") {
-      return ["/dashboard", "/device"].includes(item.to);
+      return ["/dashboard", "/chit-groups", "/auctions", "/notifications", "/device"].includes(item.to);
     }
     return !item.permission || hasPermission(item.permission);
   });
@@ -243,7 +244,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mb-8 flex items-center gap-3 px-2">
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-lg font-bold text-white shadow-md shadow-[#6D28D9]/25">K</div>
           <div>
-            <p className="font-display text-xl font-bold leading-none text-white">KuriPro</p>
+            <p className="font-display text-xl font-bold leading-none text-text-primary">KuriPro</p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">Chit Management</p>
           </div>
         </div>
@@ -255,8 +256,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={({ isActive }: { isActive: boolean }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-secondary transition-all",
-                  "hover:bg-[#1A1330] hover:text-text-primary",
-                  isActive && "bg-[#6D28D9]/20 text-white font-semibold shadow-xs border border-[#8B5CF6]/30",
+                  "hover:bg-bg-raised hover:text-text-primary",
+                  isActive && "bg-[#6D28D9]/15 text-accent-primary font-semibold shadow-xs border border-[#8B5CF6]/30",
                 )
               }
             >
@@ -279,7 +280,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="font-display text-sm font-bold leading-none text-white">
+                <p className="font-display text-sm font-bold leading-none text-text-primary">
                   {firstName}
                 </p>
                 <span className="rounded-md bg-[#6D28D9]/20 border border-[#8B5CF6]/30 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-[#A855F7]">
@@ -298,21 +299,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {/* Header Right Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
-            {/* Mobile: Notification bell */}
+            {/* Notification bell */}
             <NavLink
               to="/notifications"
-              className="relative flex size-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-all hover:text-text-primary lg:hidden active-bounce"
+              className="relative flex size-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-all hover:text-text-primary active-bounce"
               aria-label="Notifications"
             >
               <Bell size={18} />
-              {/* Unread dot — always visible as a trust signal / placeholder */}
+              {/* Unread dot */}
               <span
                 className="absolute right-1.5 top-1.5 size-2 rounded-full bg-bad-fg ring-2 ring-bg-surface"
                 aria-hidden="true"
               />
             </NavLink>
 
-            <div className="hidden lg:block"><ThemeToggle /></div>
+            <ThemeToggle />
 
             {/* Desktop User Account Menu */}
             <div className="hidden lg:block">

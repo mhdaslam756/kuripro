@@ -41,9 +41,26 @@ export async function list(req: Request, res: Response): Promise<void> {
   res.status(200).json(result);
 }
 
+export async function getMe(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const member = await memberService.resolveMemberForUser(req.auth!.userId, tenantId);
+  if (!member) {
+    throw AppError.notFound("No member profile linked to current user");
+  }
+  res.status(200).json({ member });
+}
+
 export async function getById(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
+
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await memberService.resolveMemberForUser(req.auth.userId, tenantId);
+    if (!member || member._id.toString() !== id) {
+      throw AppError.forbidden("Access denied: You may only view your own member profile");
+    }
+  }
+
   const member = await memberService.getMemberById(tenantId, id);
   res.status(200).json({ member });
 }

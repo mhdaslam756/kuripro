@@ -598,7 +598,7 @@ export interface AuctionState {
   canRepick: boolean;
 }
 
-export async function getAuctionState(tenantId: string, cycleId: string): Promise<AuctionState> {
+export async function getAuctionState(tenantId: string, cycleId: string, requestingMemberId?: string): Promise<AuctionState> {
   const { cycle, chitGroup } = await loadCycleContext(tenantId, cycleId);
 
   const memberships = await listActiveMembershipsByGroup(tenantId, chitGroup._id.toString());
@@ -623,15 +623,16 @@ export async function getAuctionState(tenantId: string, cycleId: string): Promis
     .map((m) => {
       const member = memberById.get(m.memberId.toString());
       const hasPaidCurrentCycle = paidMembershipIds.has(m._id.toString());
+      const isSelf = !requestingMemberId || m.memberId.toString() === requestingMemberId;
       return {
         membershipId: m._id.toString(),
         ticketNumber: m.ticketNumber,
         subTicket: m.subTicket,
         shareType: m.shareType,
         share: m.share,
-        memberId: m.memberId.toString(),
-        name: member?.name ?? "Unknown",
-        memberCode: member?.memberCode ?? "",
+        memberId: isSelf ? m.memberId.toString() : "",
+        name: isSelf ? (member?.name ?? "Unknown") : `Slot #${m.ticketNumber}${m.subTicket || ""}`,
+        memberCode: isSelf ? (member?.memberCode ?? "") : "—",
         hasActiveBid: membershipsWithActiveBid.has(m._id.toString()),
         hasPaidCurrentCycle,
         isEligibleForAuction: hasPaidCurrentCycle,

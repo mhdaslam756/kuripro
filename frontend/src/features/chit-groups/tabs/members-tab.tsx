@@ -207,42 +207,44 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     )}
                   </div>
 
-                  <div className="mt-3.5 flex items-center justify-end gap-2 border-t border-border-default/60 pt-3">
-                    {phone ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        aria-label="WhatsApp member"
-                        className="h-9 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 rounded-xl gap-1"
-                        onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
-                      >
-                        <MessageSquare size={14} /> WhatsApp
-                      </Button>
-                    ) : null}
-                    {memberIdStr ? (
-                      <Link to={`/members/${memberIdStr}?tab=payments`} className="flex-1">
-                        <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs font-semibold h-9 rounded-xl">
-                          <Zap size={14} /> Mark Collection
+                  {!isMemberRole ? (
+                    <div className="mt-3.5 flex items-center justify-end gap-2 border-t border-border-default/60 pt-3">
+                      {phone ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          aria-label="WhatsApp member"
+                          className="h-9 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 rounded-xl gap-1"
+                          onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
+                        >
+                          <MessageSquare size={14} /> WhatsApp
                         </Button>
-                      </Link>
-                    ) : null}
-                    {canRemove ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        aria-label="Remove member"
-                        className="h-9 px-3 text-xs font-medium text-bad-fg hover:bg-bad-bg/15 rounded-xl"
-                        onClick={() => {
-                          setRemoveError(null);
-                          setMemberToRemove({ id: membershipId, name });
-                        }}
-                      >
-                        <Trash2 size={15} /> Remove
-                      </Button>
-                    ) : null}
-                  </div>
+                      ) : null}
+                      {memberIdStr ? (
+                        <Link to={`/members/${memberIdStr}?tab=payments`} className="flex-1">
+                          <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs font-semibold h-9 rounded-xl">
+                            <Zap size={14} /> Mark Collection
+                          </Button>
+                        </Link>
+                      ) : null}
+                      {canRemove ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Remove member"
+                          className="h-9 px-3 text-xs font-medium text-bad-fg hover:bg-bad-bg/15 rounded-xl"
+                          onClick={() => {
+                            setRemoveError(null);
+                            setMemberToRemove({ id: membershipId, name });
+                          }}
+                        >
+                          <Trash2 size={15} /> Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
@@ -257,9 +259,9 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     <TableHeaderCell>Ticket</TableHeaderCell>
                     <TableHeaderCell>Member</TableHeaderCell>
                     <TableHeaderCell>Share / Installment</TableHeaderCell>
-                    <TableHeaderCell>Phone</TableHeaderCell>
+                    {!isMemberRole ? <TableHeaderCell>Phone</TableHeaderCell> : null}
                     <TableHeaderCell>Status</TableHeaderCell>
-                    <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+                    {!isMemberRole ? <TableHeaderCell className="text-right">Actions</TableHeaderCell> : null}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -283,14 +285,14 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {memberIdStr ? (
+                          {memberIdStr && !isMemberRole ? (
                             <Link to={`/members/${memberIdStr}`} className="hover:text-accent-primary">
                               {name}
                             </Link>
                           ) : (
                             <span>{name}</span>
                           )}
-                          {memberCode ? (
+                          {memberCode && memberCode !== "—" ? (
                             <span className="ml-2 font-mono text-xs text-text-secondary">{memberCode}</span>
                           ) : null}
                         </TableCell>
@@ -300,7 +302,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           </span>
                           <span className="text-text-secondary">/mo {isHalf ? "(50% share)" : "(Full)"}</span>
                         </TableCell>
-                        <TableCell className="text-text-secondary">{phone || "—"}</TableCell>
+                        {!isMemberRole ? <TableCell className="text-text-secondary">{phone || "—"}</TableCell> : null}
                         <TableCell>
                           {membership.hasWon ? (
                             <Badge variant="info">
@@ -310,44 +312,46 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                             <Badge variant={membership.status === "ACTIVE" ? "success" : "danger"}>{membership.status}</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {phone ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs h-8 px-2.5"
-                                onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
-                                title="WhatsApp Member"
-                              >
-                                <MessageSquare size={13} /> WhatsApp
-                              </Button>
-                            ) : null}
-                            {memberIdStr ? (
-                              <Link to={`/members/${memberIdStr}?tab=payments`}>
-                                <Button size="sm" variant="outline" className="gap-1 text-xs h-8">
-                                  <Zap size={13} /> Mark Collection
+                        {!isMemberRole ? (
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {phone ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs h-8 px-2.5"
+                                  onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
+                                  title="WhatsApp Member"
+                                >
+                                  <MessageSquare size={13} /> WhatsApp
                                 </Button>
-                              </Link>
-                            ) : null}
-                            {canRemove ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                aria-label="Remove member"
-                                className="h-8 px-2 text-text-secondary hover:text-bad-fg hover:bg-bad-bg/10 gap-1"
-                                onClick={() => {
-                                  setRemoveError(null);
-                                  setMemberToRemove({ id: membershipId, name });
-                                }}
-                              >
-                                <Trash2 size={15} /> Remove
-                              </Button>
-                            ) : null}
-                          </div>
-                        </TableCell>
+                              ) : null}
+                              {memberIdStr ? (
+                                <Link to={`/members/${memberIdStr}?tab=payments`}>
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs h-8">
+                                    <Zap size={13} /> Mark Collection
+                                  </Button>
+                                </Link>
+                              ) : null}
+                              {canRemove ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  aria-label="Remove member"
+                                  className="h-8 px-2 text-text-secondary hover:text-bad-fg hover:bg-bad-bg/10 gap-1"
+                                  onClick={() => {
+                                    setRemoveError(null);
+                                    setMemberToRemove({ id: membershipId, name });
+                                  }}
+                                >
+                                  <Trash2 size={15} /> Remove
+                                </Button>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     );
                   })}

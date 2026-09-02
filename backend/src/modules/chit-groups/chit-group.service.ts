@@ -23,7 +23,6 @@ import {
   listChitMemberships as repoListChitMemberships,
   listTicketSlotInfos,
   sumChitMembershipShares,
-  type PopulatedMemberRef,
   type TicketSlotInfo,
 } from "./chit-membership.repository.js";
 import { computeEndDate, computeScheduleDates, FREQUENCY_LABELS } from "./chit-schedule.js";
@@ -476,9 +475,42 @@ export async function listMembers(
   tenantId: string,
   chitGroupId: string,
   query: PaginationQuery,
-): Promise<PaginatedResult<Omit<ChitMembershipDocument, "memberId"> & { memberId: PopulatedMemberRef }>> {
+  requestingMemberId?: string,
+): Promise<PaginatedResult<any>> {
   await getChitGroupById(tenantId, chitGroupId);
-  return repoListChitMemberships({ tenantId, chitGroupId }, query);
+  const result = await repoListChitMemberships({ tenantId, chitGroupId }, query);
+
+  if (!requestingMemberId) {
+    return result;
+  }
+
+  // Mask other members' personal information for privacy
+  const items = result.items.map((membership) => {
+    const raw: any = membership.toObject ? membership.toObject() : { ...membership };
+    const memberObj: any = raw.memberId || {};
+    const memberIdStr = memberObj._id ? memberObj._id.toString() : (memberObj.id || memberObj.toString?.() || "");
+
+    if (memberIdStr === requestingMemberId) {
+      // Current member's own slot — keep unmasked
+      return raw;
+    }
+
+    // Other member's slot — mask personal info
+    return {
+      ...raw,
+      memberId: {
+        _id: memberIdStr,
+        name: `Member (Slot #${raw.ticketNumber}${raw.subTicket || ""})`,
+        memberCode: "—",
+        phone: "",
+      },
+    };
+  });
+
+  return {
+    ...result,
+    items,
+  };
 }
 
 export async function listCycles(

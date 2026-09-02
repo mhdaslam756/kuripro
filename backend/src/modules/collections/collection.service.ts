@@ -37,42 +37,12 @@ import {
   saveCollection,
   type PopulatedCollection,
 } from "./collection.repository.js";
-import { Counter } from "../counters/counter.model.js";
-import { Collection, type CollectionDocument } from "./collection.model.js";
+import type { CollectionDocument } from "./collection.model.js";
 import { generateReceiptQrDataUrl, generateReceiptToken } from "./receipt.util.js";
 
 async function generateUniqueReceiptNumber(tenantId: string, session?: mongoose.ClientSession): Promise<string> {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const sequence = await getNextSequence(tenantId, "receiptNumber", session);
-    const candidate = `RCP-${String(sequence).padStart(6, "0")}`;
-    const exists = await Collection.exists({ tenantId, receiptNumber: candidate }).session(session ?? null);
-    if (!exists) {
-      return candidate;
-    }
-  }
-
-  const collections = await Collection.find({ tenantId }).select("receiptNumber").lean();
-  let maxSeq = 0;
-  for (const c of collections) {
-    if (c.receiptNumber) {
-      const match = c.receiptNumber.match(/RCP-(\d+)/);
-      if (match && match[1]) {
-        const val = parseInt(match[1], 10);
-        if (!isNaN(val) && val > maxSeq) {
-          maxSeq = val;
-        }
-      }
-    }
-  }
-
-  const nextSeq = maxSeq + 1;
-  await Counter.findOneAndUpdate(
-    { tenantId, name: "receiptNumber" },
-    { $set: { value: nextSeq } },
-    { upsert: true, session },
-  );
-
-  return `RCP-${String(nextSeq).padStart(6, "0")}`;
+  const sequence = await getNextSequence(tenantId, "receiptNumber", session);
+  return `RCP-${String(sequence).padStart(6, "0")}`;
 }
 import type {
   BulkCollectionInput,

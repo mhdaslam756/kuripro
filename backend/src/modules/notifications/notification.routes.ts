@@ -68,7 +68,6 @@ notificationRouter.post(
 
 notificationRouter.get(
   "/history",
-  requirePermission("notification.view"),
   validate({ query: listHistoryQuerySchema }),
   notificationController.history,
 );

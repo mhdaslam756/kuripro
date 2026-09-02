@@ -2,13 +2,21 @@ import type { Request, Response } from "express";
 
 import { requireTenantContext } from "../../middleware/rbac.js";
 import type { MongoIdParam, NestedMongoIdParam } from "../../utils/common-validators.js";
+import { resolveMemberForUser } from "../members/member.service.js";
 import * as auctionService from "./auction.service.js";
 import type { RecordBidInput, RepickInput, SettleInput } from "./auction.validators.js";
 
 export async function getState(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
-  const state = await auctionService.getAuctionState(tenantId, id);
+
+  let requestingMemberId: string | undefined;
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    requestingMemberId = member ? member._id.toString() : "none";
+  }
+
+  const state = await auctionService.getAuctionState(tenantId, id, requestingMemberId);
   res.status(200).json({ auction: state });
 }
 

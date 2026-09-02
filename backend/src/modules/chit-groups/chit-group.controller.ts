@@ -88,7 +88,19 @@ export async function activate(req: Request, res: Response): Promise<void> {
 export async function listMembers(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
-  const result = await chitGroupService.listMembers(tenantId, id, req.query as unknown as PaginationQuery);
+
+  let requestingMemberId: string | undefined;
+  if (req.auth?.roleSlug === "MEMBER") {
+    const member = await resolveMemberForUser(req.auth.userId, tenantId);
+    requestingMemberId = member ? member._id.toString() : "none";
+  }
+
+  const result = await chitGroupService.listMembers(
+    tenantId,
+    id,
+    req.query as unknown as PaginationQuery,
+    requestingMemberId,
+  );
   res.status(200).json(result);
 }
 
