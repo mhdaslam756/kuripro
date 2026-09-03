@@ -43,14 +43,6 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
 
-  // SMTP email provider (Gmail, Brevo, AWS SES, custom SMTP, etc.)
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().int().positive().optional(),
-  SMTP_SECURE: z.coerce.boolean().optional(),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  SMTP_SERVICE: z.string().optional(),
-
   // WebAuthn (passkey / biometric login). RP_ID must be the site's registrable domain (no scheme/port);
   // ORIGIN is the full origin the browser sends. Dev defaults work for localhost out of the box.
   WEBAUTHN_RP_ID: z.string().default("localhost"),

@@ -85,7 +85,7 @@ export function formatOtpEmail(purpose: OtpPurpose, code: string): { subject: st
 }
 
 /**
- * Sends an OTP code to `target` (email). If SMTP or Resend is configured,
+ * Sends an OTP code to `target` (email). If Resend is configured,
  * it delivers the email; in development/testing it also logs the code for easy local verification.
  */
 export async function deliverOtp(target: string, purpose: OtpPurpose, code: string): Promise<void> {
@@ -105,11 +105,11 @@ export async function deliverOtp(target: string, purpose: OtpPurpose, code: stri
   } else {
     logger.warn(
       { target, purpose },
-      "Email delivery channel is NOT configured in .env (provide SMTP or Resend credentials)",
+      "Email delivery channel is NOT configured in .env (provide RESEND_API_KEY and EMAIL_FROM)",
     );
     if (env.NODE_ENV === "production") {
       throw AppError.internal(
-        "OTP delivery is not configured — please configure SMTP or Resend credentials in .env",
+        "OTP delivery is not configured — please configure RESEND_API_KEY and EMAIL_FROM in .env",
         "OTP_DELIVERY_NOT_CONFIGURED",
       );
     }
