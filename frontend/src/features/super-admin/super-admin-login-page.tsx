@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api-client";
 import { useAuth, type AuthUser } from "@/lib/auth-context";
+import { ForgotPasswordDialog } from "@/features/auth/components/forgot-password-dialog";
 
 export function SuperAdminLoginPage() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export function SuperAdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
@@ -65,7 +67,7 @@ export function SuperAdminLoginPage() {
         <form onSubmit={(e) => void handleLogin(e)} className="flex flex-col gap-4">
           <Field label="Admin Email" htmlFor="super-email">
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary z-10" size={16} />
               <Input
                 id="super-email"
                 type="email"
@@ -80,7 +82,7 @@ export function SuperAdminLoginPage() {
 
           <Field label="Password" htmlFor="super-password">
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+              <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary z-10" size={16} />
               <Input
                 id="super-password"
                 type="password"
@@ -92,6 +94,16 @@ export function SuperAdminLoginPage() {
               />
             </div>
           </Field>
+
+          <div className="flex justify-end text-xs">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="font-semibold text-accent-link hover:underline cursor-pointer"
+            >
+              Forgot password?
+            </button>
+          </div>
 
           <Button type="submit" disabled={loading} className="mt-2 w-full active-bounce font-semibold">
             {loading ? "Signing in…" : "Sign In to Admin Portal"}
@@ -107,6 +119,12 @@ export function SuperAdminLoginPage() {
           </p>
         </div>
       </div>
+
+      <ForgotPasswordDialog
+        open={showForgotPassword}
+        initialIdentifier={email}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 }

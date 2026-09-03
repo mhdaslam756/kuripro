@@ -29,7 +29,7 @@ export async function registerMember(req: Request, res: Response): Promise<void>
 
   const result = await publicService.registerPublicMember(slug, input, deviceContext);
 
-  if (result.auth.refreshToken) {
+  if (!result.requireEmailVerification && result.auth.refreshToken) {
     res.cookie("refreshToken", result.auth.refreshToken, {
       httpOnly: true,
       secure: process.env["NODE_ENV"] === "production",
@@ -39,9 +39,8 @@ export async function registerMember(req: Request, res: Response): Promise<void>
   }
 
   res.status(201).json({
-    message: "Registration successful",
-    auth: result.auth,
-    member: result.member,
+    message: result.requireEmailVerification ? result.message : "Registration successful",
+    ...result,
   });
 }
 

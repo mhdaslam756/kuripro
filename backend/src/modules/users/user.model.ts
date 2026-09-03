@@ -23,6 +23,8 @@ export interface UserDoc extends Timestamps {
   /** True after an organizer/staff-issued temporary password, until the user sets their own. */
   mustChangePassword: boolean;
   status: UserStatus;
+  isEmailVerified: boolean;
+  emailVerifiedAt?: Date;
   lastLoginAt?: Date;
 }
 
@@ -38,6 +40,8 @@ const userSchema = new Schema<UserDoc>(
     passwordHash: { type: String, required: true, select: false },
     mustChangePassword: { type: Boolean, required: true, default: false },
     status: { type: String, enum: USER_STATUSES, required: true, default: "ACTIVE" },
+    isEmailVerified: { type: Boolean, required: true, default: false },
+    emailVerifiedAt: { type: Date },
     lastLoginAt: { type: Date },
   },
   baseSchemaOptions,

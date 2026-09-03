@@ -13,7 +13,9 @@ import {
   registerMemberSchema,
   registerOrganizerSchema,
   requestOtpSchema,
+  resendVerificationEmailSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   verifyOtpSchema,
 } from "./auth.validators.js";
 
@@ -48,6 +50,20 @@ authRouter.post(
   authRateLimiter,
   validate({ body: registerMemberSchema }),
   authController.registerMemberSelf,
+);
+
+authRouter.post(
+  "/verify-email",
+  authRateLimiter,
+  validate({ body: verifyEmailSchema }),
+  authController.verifyEmail,
+);
+
+authRouter.post(
+  "/resend-verification-email",
+  otpRateLimiter,
+  validate({ body: resendVerificationEmailSchema }),
+  authController.resendVerificationEmail,
 );
 
 authRouter.post("/login", authRateLimiter, validate({ body: loginSchema }), authController.login);

@@ -311,7 +311,7 @@ export function SuperAdminDashboardPage() {
           <form onSubmit={(e) => void handleChangePassword(e)} className="flex flex-col gap-4">
             <Field label="Current Password *" htmlFor="current-pass">
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary z-10" size={16} />
                 <Input
                   id="current-pass"
                   type="password"
@@ -326,7 +326,7 @@ export function SuperAdminDashboardPage() {
 
             <Field label="New Password *" htmlFor="new-pass">
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary z-10" size={16} />
                 <Input
                   id="new-pass"
                   type="password"
@@ -341,7 +341,7 @@ export function SuperAdminDashboardPage() {
 
             <Field label="Confirm New Password *" htmlFor="confirm-pass">
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary z-10" size={16} />
                 <Input
                   id="confirm-pass"
                   type="password"

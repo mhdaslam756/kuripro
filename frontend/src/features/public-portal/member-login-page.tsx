@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
+import { EmailVerificationDialog } from "@/features/auth/components/email-verification-dialog";
+import { ForgotPasswordDialog } from "@/features/auth/components/forgot-password-dialog";
 import { PublicPortalLayout } from "./public-portal-layout";
 import { usePublicMemberLogin, usePublicOrg } from "./use-public-portal";
 
@@ -19,6 +21,9 @@ export function MemberLoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +38,10 @@ export function MemberLoginPage() {
       await loginMutation.mutateAsync({ identifier, password });
       navigate("/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (err instanceof ApiError && (err.code === "EMAIL_NOT_VERIFIED" || err.message.toLowerCase().includes("verify your email"))) {
+        setUnverifiedEmail(identifier);
+        setShowVerificationModal(true);
+      } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("Invalid phone/email or password.");
@@ -86,10 +94,20 @@ export function MemberLoginPage() {
               />
             </Field>
 
+            <div className="flex justify-end text-xs">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="font-semibold text-accent-primary hover:underline cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <Button
               type="submit"
               size="lg"
-              className="mt-2 w-full h-11 rounded-2xl font-semibold gap-2 shadow-sm text-base"
+              className="mt-1 w-full h-11 rounded-2xl font-semibold gap-2 shadow-sm text-base"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Logging in…" : "Sign In to Member Portal"}
@@ -107,6 +125,26 @@ export function MemberLoginPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ForgotPasswordDialog
+        open={showForgotPassword}
+        initialIdentifier={identifier}
+        onClose={() => setShowForgotPassword(false)}
+      />
+
+      <EmailVerificationDialog
+        open={showVerificationModal}
+        email={unverifiedEmail}
+        onClose={() => setShowVerificationModal(false)}
+        onVerified={(res) => {
+          setShowVerificationModal(false);
+          if (res.accessToken) {
+            navigate("/dashboard", { replace: true });
+          } else {
+            setError("Email verified successfully! You can now log in or wait for organizer approval.");
+          }
+        }}
+      />
     </PublicPortalLayout>
   );
 }

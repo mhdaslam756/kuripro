@@ -2,7 +2,7 @@ import { Schema, model, Types, type HydratedDocument } from "mongoose";
 
 import { baseSchemaOptions, type Timestamps } from "../../utils/mongoose-helpers.js";
 
-export const OTP_PURPOSES = ["LOGIN", "PASSWORD_RESET"] as const;
+export const OTP_PURPOSES = ["LOGIN", "PASSWORD_RESET", "EMAIL_VERIFICATION"] as const;
 export type OtpPurpose = (typeof OTP_PURPOSES)[number];
 
 export interface OtpDoc extends Timestamps {

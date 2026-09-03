@@ -80,7 +80,7 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
               ? "text-accent-primary"
               : "text-text-secondary"
             : isActive
-            ? "text-accent-primary"
+            ? "text-accent-primary font-bold"
             : "text-text-secondary hover:text-text-primary",
         )
       }
@@ -88,35 +88,35 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
       {({ isActive }: { isActive: boolean }) => (
         <>
           {primary ? (
-            /* Primary "collect" pill — elevated gradient button */
+            /* Primary center action pill */
             <div
               className={cn(
-                "flex h-[42px] w-[54px] items-center justify-center rounded-[16px] shadow-lg transition-all",
-                "bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white",
-                isActive && "ring-2 ring-[#8B5CF6] ring-offset-2 ring-offset-bg-surface shadow-[#6D28D9]/40",
+                "flex h-11 w-14 items-center justify-center rounded-2xl shadow-lg transition-all",
+                "bg-gradient-to-r from-accent-primary to-[#8B5CF6] text-white",
+                isActive && "ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-surface shadow-accent-primary/30",
               )}
             >
-              <Icon size={20} strokeWidth={2.5} />
+              <Icon size={20} strokeWidth={2.2} />
             </div>
           ) : (
-            /* Standard tab — pill background when active */
+            /* Standard tab — minimal clean pill when active */
             <div
               className={cn(
-                "relative flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
-                isActive && "bg-[#6D28D9]/20 text-[#A855F7]",
+                "relative flex h-8 w-12 items-center justify-center rounded-xl transition-all duration-200",
+                isActive && "bg-accent-primary/12 text-accent-primary",
               )}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <Icon size={19} strokeWidth={isActive ? 2.4 : 1.8} />
               {/* Active indicator pip */}
               {isActive && (
                 <span
-                  className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#8B5CF6]"
+                  className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-primary"
                   aria-hidden="true"
                 />
               )}
             </div>
           )}
-          <span className={cn(primary && "font-bold text-[#A855F7]")}>
+          <span className={cn(primary && "font-bold text-accent-primary")}>
             {label}
           </span>
         </>
@@ -139,17 +139,17 @@ function MobileMoreButton({ onClick, active }: MobileMoreButtonProps) {
       onClick={onClick}
       className={cn(
         "active-bounce relative flex flex-1 flex-col items-center gap-1 py-1.5 text-[10px] font-semibold transition-all select-none",
-        active ? "text-accent-primary" : "text-text-secondary hover:text-text-primary",
+        active ? "text-accent-primary font-bold" : "text-text-secondary hover:text-text-primary",
       )}
       aria-label="More Menu"
     >
       <div
         className={cn(
-          "flex h-9 w-14 items-center justify-center rounded-full transition-all duration-200",
-          active && "bg-[#6D28D9]/20 text-[#A855F7]",
+          "flex h-8 w-12 items-center justify-center rounded-xl transition-all duration-200",
+          active && "bg-accent-primary/12 text-accent-primary",
         )}
       >
-        <Menu size={20} strokeWidth={active ? 2.5 : 2} />
+        <Menu size={19} strokeWidth={active ? 2.4 : 1.8} />
       </div>
       <span>More</span>
     </button>
@@ -166,7 +166,7 @@ interface BottomNavProps {
 function SuperAdminBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
       aria-label="Super Admin Mobile Navigation"
     >
       <MobileTabItem to="/super-admin/dashboard" label="Dashboard" icon={LayoutDashboard} />
@@ -179,7 +179,7 @@ function SuperAdminBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
 function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
       aria-label="Member Mobile Navigation"
     >
       <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
@@ -193,7 +193,7 @@ function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
 function OrganizerBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t border-border-default/70 bg-bg-surface/95 px-2 pt-1 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-8px_40px_rgb(0_0_0/0.10)] backdrop-blur-2xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
       aria-label="App Navigation"
     >
       <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
@@ -235,8 +235,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate("/login", { replace: true });
   }
 
-  const firstName = user?.name?.trim().split(" ")[0] || "User";
-
   return (
     <div className="min-h-[100dvh] bg-bg-app lg:flex select-none">
       {/* Desktop Sidebar */}
@@ -269,25 +267,22 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Sticky Top Header */}
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/70 bg-bg-surface/92 px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          {/* Mobile Header Left: Avatar + Greeting */}
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="relative flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-sm font-bold text-white shadow-xs">
+        {/* Compact Top Header */}
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/50 bg-bg-surface/85 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
+          {/* Mobile Header Left: Minimal compact profile */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div className="relative flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-primary to-[#8B5CF6] font-display text-sm font-bold text-white shadow-xs">
               {user?.name?.trim().charAt(0).toUpperCase() || "K"}
-              {/* Online presence dot */}
-              <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-bg-surface" />
+              {/* Online indicator */}
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-good-fg ring-2 ring-bg-surface" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <p className="font-display text-sm font-bold leading-none text-text-primary">
-                  {firstName}
-                </p>
-                <span className="rounded-md bg-[#6D28D9]/20 border border-[#8B5CF6]/30 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-[#A855F7]">
-                  {user?.role?.name || "User"}
-                </span>
-              </div>
-              <p className="mt-0.5 text-[10px] text-text-secondary leading-none">Welcome back 👋</p>
+              <p className="font-display text-sm font-bold leading-snug tracking-tight text-text-primary">
+                {user?.name || "User"}
+              </p>
+              <p className="text-[11px] font-medium text-text-secondary leading-none">
+                {user?.role?.name || "Member"}
+              </p>
             </div>
           </div>
 
@@ -302,18 +297,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Notification bell */}
             <NavLink
               to="/notifications"
-              className="relative flex size-9 items-center justify-center rounded-full bg-bg-raised text-text-secondary transition-all hover:text-text-primary active-bounce"
+              className="relative flex size-9 items-center justify-center rounded-xl bg-bg-raised text-text-secondary transition-all hover:text-text-primary active-bounce"
               aria-label="Notifications"
             >
-              <Bell size={18} />
+              <Bell size={17} />
               {/* Unread dot */}
               <span
-                className="absolute right-1.5 top-1.5 size-2 rounded-full bg-bad-fg ring-2 ring-bg-surface"
+                className="absolute right-2 top-2 size-2 rounded-full bg-bad-fg ring-2 ring-bg-surface"
                 aria-hidden="true"
               />
             </NavLink>
 
-            <ThemeToggle />
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
 
             {/* Desktop User Account Menu */}
             <div className="hidden lg:block">

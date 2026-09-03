@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { LoginPage } from "@/features/auth/login-page";
 import { RegisterPage } from "@/features/auth/register-page";
+import { ForgotPasswordPage } from "@/features/auth/forgot-password-page";
 import { SuperAdminLoginPage } from "@/features/super-admin/super-admin-login-page";
 import { SuperAdminDashboardPage } from "@/features/super-admin/super-admin-dashboard-page";
 import { BranchesPage } from "@/features/branches/branches-page";
@@ -31,6 +32,7 @@ export default function App() {
       <AppInstallNotificationToasts />
       <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/portal/:slug/register" element={<MemberRegisterPage />} />
       <Route path="/portal/:slug/login" element={<MemberLoginPage />} />

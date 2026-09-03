@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api-client";
+import { EmailVerificationDialog } from "@/features/auth/components/email-verification-dialog";
 import { PublicPortalLayout } from "./public-portal-layout";
 import { usePublicMemberRegister, usePublicOrg } from "./use-public-portal";
 
@@ -41,6 +42,9 @@ export function MemberRegisterPage() {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [devOtp, setDevOtp] = useState<string | undefined>();
 
   function handleChange(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -56,7 +60,7 @@ export function MemberRegisterPage() {
     }
 
     try {
-      await registerMutation.mutateAsync({
+      const res = await registerMutation.mutateAsync({
         name: form.name,
         phone: form.phone,
         email: form.email || undefined,
@@ -74,14 +78,28 @@ export function MemberRegisterPage() {
         },
       });
 
-      // Successful registration & session created -> Navigate to dashboard
-      navigate("/dashboard");
+      if (res.requireEmailVerification && res.email) {
+        setVerificationEmail(res.email);
+        setDevOtp(res.devOtp);
+        setShowVerification(true);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("Failed to complete registration. Please try again.");
       }
+    }
+  }
+
+  function handleVerified(_result: { isPendingApproval: boolean; accessToken?: string }) {
+    setShowVerification(false);
+    if (_result.accessToken) {
+      navigate("/dashboard", { replace: true });
+    } else {
+      navigate("/dashboard");
     }
   }
 
@@ -262,6 +280,14 @@ export function MemberRegisterPage() {
           </div>
         </CardContent>
       </Card>
+
+      <EmailVerificationDialog
+        open={showVerification}
+        email={verificationEmail}
+        devOtp={devOtp}
+        onClose={() => setShowVerification(false)}
+        onVerified={handleVerified}
+      />
     </PublicPortalLayout>
   );
 }

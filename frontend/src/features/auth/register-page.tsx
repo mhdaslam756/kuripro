@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api-client";
+import { EmailVerificationDialog } from "./components/email-verification-dialog";
 
 const PASSWORD_HINT = "At least 10 characters, with an uppercase letter, a lowercase letter, and a digit";
 
@@ -36,6 +37,9 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isPendingApproval, setIsPendingApproval] = useState(false);
   const [registeredOrgName, setRegisteredOrgName] = useState("");
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [devOtp, setDevOtp] = useState<string | undefined>();
 
   const {
     register,
@@ -46,7 +50,14 @@ export function RegisterPage() {
   async function onSubmit(values: RegisterFormValues) {
     setFormError(null);
     try {
-      await api.post<{ isPendingApproval: boolean; message: string }>("/auth/register-organizer", {
+      const res = await api.post<{
+        isPendingApproval: boolean;
+        requireEmailVerification?: boolean;
+        email?: string;
+        message: string;
+        devOtp?: string;
+        accessToken?: string;
+      }>("/auth/register-organizer", {
         tenantName: values.tenantName,
         registrationNumber: values.registrationNumber,
         contactEmail: values.contactEmail,
@@ -57,10 +68,29 @@ export function RegisterPage() {
         organizerPhone: values.organizerPhone,
         organizerPassword: values.organizerPassword,
       });
+
       setRegisteredOrgName(values.tenantName);
-      setIsPendingApproval(true);
+
+      if (res.requireEmailVerification) {
+        setVerificationEmail(values.organizerEmail);
+        setDevOtp(res.devOtp);
+        setShowVerification(true);
+      } else if (res.accessToken) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        setIsPendingApproval(true);
+      }
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Something went wrong — please try again");
+    }
+  }
+
+  function handleVerified(result: { isPendingApproval: boolean; accessToken?: string }) {
+    setShowVerification(false);
+    if (result.accessToken) {
+      navigate("/dashboard", { replace: true });
+    } else {
+      setIsPendingApproval(true);
     }
   }
 
@@ -171,6 +201,14 @@ export function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      <EmailVerificationDialog
+        open={showVerification}
+        email={verificationEmail}
+        devOtp={devOtp}
+        onClose={() => setShowVerification(false)}
+        onVerified={handleVerified}
+      />
     </div>
   );
 }

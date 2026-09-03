@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileFilterSheet } from "@/components/mobile/mobile-filter-sheet";
-import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MobileEmptyState, MobileErrorState } from "@/components/mobile/mobile-states";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
@@ -84,60 +83,46 @@ export function MembersPage() {
   }
 
   return (
-    <div>
-      {/* Mobile Top App Bar */}
-      <MobileHeader
-        title="Members"
-        subtitle="Manage enrolled chit members & KYC"
-        actions={
-          canCreate ? (
-            <Button size="sm" className="rounded-full gap-1 shadow-xs" onClick={() => setFormOpen(true)}>
-              <Plus size={15} /> Add
-            </Button>
-          ) : null
-        }
-      />
-
-      <div className="p-4 sm:p-0">
-        {/* Page Header (Desktop) */}
-        <div className="mb-6 hidden sm:flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="mb-1 font-display text-2xl font-bold text-text-primary">Members Directory</h1>
-            <p className="text-sm text-text-secondary">Register, search, and manage member profiles in your organization.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {canImportExport ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-                  <Upload size={15} /> Import
-                </Button>
-                <Button variant="outline" size="sm" disabled={exporting} onClick={() => void handleExport()}>
-                  <Download size={15} /> {exporting ? "Exporting…" : "Export"}
-                </Button>
-              </>
-            ) : null}
-            {canCreate ? (
-              <Button size="sm" className="active-bounce" onClick={() => setFormOpen(true)}>
-                <Plus size={16} /> Register Member
-              </Button>
-            ) : null}
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Members Directory</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">Register, search, and manage member profiles in your organization.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canImportExport ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="rounded-xl">
+                <Upload size={15} /> Import
+              </Button>
+              <Button variant="outline" size="sm" disabled={exporting} onClick={() => void handleExport()} className="rounded-xl">
+                <Download size={15} /> {exporting ? "Exporting…" : "Export"}
+              </Button>
+            </>
+          ) : null}
+          {canCreate ? (
+            <Button size="sm" className="rounded-xl font-semibold gap-1.5 active-bounce" onClick={() => setFormOpen(true)}>
+              <Plus size={16} /> Register Member
+            </Button>
+          ) : null}
+        </div>
+      </div>
 
-        {/* Search & Filter Control Bar */}
-        <div className="mb-4 flex items-center gap-2.5">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-            <Input
-              className="pl-10 text-sm h-11 rounded-none border-border-default/80 bg-bg-surface"
-              placeholder="Search by name, phone, code…"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+      {/* Search & Filter Control Bar */}
+      <div className="mb-2 flex items-center gap-2.5">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
+          <Input
+            className="pl-10 text-sm h-11 rounded-2xl border-border-default/80 bg-bg-surface"
+            placeholder="Search by name, phone, code…"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
 
           {/* Desktop inline dropdown filters */}
           <div className="hidden md:flex md:items-center md:gap-2">
@@ -294,7 +279,6 @@ export function MembersPage() {
             </div>
           </>
         )}
-      </div>
 
       <MemberFormDialog
         open={formOpen}

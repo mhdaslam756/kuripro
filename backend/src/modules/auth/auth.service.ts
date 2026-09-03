@@ -81,9 +81,12 @@ function tokenIdOf(rawToken: string | undefined): string | undefined {
 }
 
 /** SUSPENDED and PENDING_APPROVAL accounts are blocked from every login path (password, OTP). */
-function assertUserCanLogin(user: Pick<UserDocument, "status">): void {
+function assertUserCanLogin(user: Pick<UserDocument, "status" | "isEmailVerified">): void {
   if (user.status === "SUSPENDED") {
     throw AppError.forbidden("Your account has been suspended");
+  }
+  if (user.isEmailVerified === false) {
+    throw AppError.forbidden("Please verify your email address before logging in", "EMAIL_NOT_VERIFIED");
   }
   if (user.status === "PENDING_APPROVAL") {
     throw AppError.forbidden("Your account is awaiting approval from your organizer", "PENDING_APPROVAL");
@@ -166,10 +169,21 @@ export async function issueAuthResult(user: IssuableUser, deviceContext: DeviceC
   };
 }
 
+export interface RegisterOrganizerResult {
+  isPendingApproval: boolean;
+  requireEmailVerification: boolean;
+  email: string;
+  message: string;
+  devOtp?: string;
+  accessToken?: string;
+  user?: AuthResult["user"];
+  refreshToken?: string;
+}
+
 export async function registerOrganizer(
   input: RegisterOrganizerInput,
   deviceContext: DeviceContext = {},
-): Promise<{ isPendingApproval: boolean; message: string; accessToken?: string; user?: AuthResult["user"]; refreshToken?: string }> {
+): Promise<RegisterOrganizerResult> {
   const slug = await generateUniqueSlug(input.tenantName);
   const passwordHash = await hashPassword(input.organizerPassword);
 
@@ -210,6 +224,7 @@ export async function registerOrganizer(
           phone: input.organizerPhone,
           passwordHash,
           status: initialStatus,
+          isEmailVerified: isTestEnv,
         },
         session,
       );
@@ -219,6 +234,8 @@ export async function registerOrganizer(
       const authResult = await issueAuthResult(createdUser, deviceContext);
       return {
         isPendingApproval: false,
+        requireEmailVerification: false,
+        email: input.organizerEmail,
         message: "Organization registration active.",
         accessToken: authResult.accessToken,
         refreshToken: authResult.refreshToken,
@@ -226,9 +243,21 @@ export async function registerOrganizer(
       };
     }
 
+    let devOtp: string | undefined;
+    if (createdUser) {
+      const code = await generateOtp(createdUser._id, createdUser.email, "EMAIL_VERIFICATION");
+      await deliverOtp(createdUser.email, "EMAIL_VERIFICATION", code);
+      if (env.NODE_ENV !== "production") {
+        devOtp = code;
+      }
+    }
+
     return {
       isPendingApproval: true,
-      message: "Organization registration submitted successfully. It is currently under Super Admin review and will be activated upon approval.",
+      requireEmailVerification: true,
+      email: input.organizerEmail,
+      message: "Organization registration submitted. Please enter the verification code sent to your email.",
+      devOtp,
     };
   } finally {
     await session.endSession();
@@ -341,11 +370,11 @@ export async function verifyOtpLogin(
   return issueAuthResult(user, deviceContext);
 }
 
-/** Always returns the same shape whether or not the email is registered — no user enumeration. */
-export async function forgotPassword(email: string): Promise<{ devOtp?: string }> {
-  const user = await findUserByEmail(email);
-  if (!user) {
-    return {};
+export async function forgotPassword(identifier: string): Promise<{ devOtp?: string; targetEmail?: string }> {
+  const clean = identifier.trim().toLowerCase();
+  const user = await findUserByPhoneOrEmail(clean);
+  if (!user || !user.email) {
+    throw AppError.notFound("No account found with this email address or phone number", "USER_NOT_FOUND");
   }
 
   const code = await generateOtp(user._id, user.email, "PASSWORD_RESET");
@@ -357,24 +386,35 @@ export async function forgotPassword(email: string): Promise<{ devOtp?: string }
     message: "Requested a password reset",
   });
 
-  return env.NODE_ENV !== "production" ? { devOtp: code } : {};
+  return {
+    ...(env.NODE_ENV !== "production" ? { devOtp: code } : {}),
+    targetEmail: user.email,
+  };
 }
 
-export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
-  const userId = await verifyOtp(email, "PASSWORD_RESET", code);
-  const user = await findUserById(userId.toString());
-  if (!user) {
-    throw AppError.unauthorized();
+export async function resetPassword(identifier: string, code: string, newPassword: string): Promise<void> {
+  const clean = identifier.trim().toLowerCase();
+  const user = await findUserByPhoneOrEmail(clean);
+  if (!user || !user.email) {
+    throw AppError.notFound("No account found with this email address or phone number", "USER_NOT_FOUND");
   }
 
-  user.passwordHash = await hashPassword(newPassword);
-  user.mustChangePassword = false;
-  await saveUser(user);
+  const userId = await verifyOtp(user.email, "PASSWORD_RESET", code);
+  const foundUser = await findUserById(userId.toString());
+  if (!foundUser) {
+    throw AppError.notFound("User not found", "USER_NOT_FOUND");
+  }
 
-  await revokeAllSessionsForUser(user._id.toString(), user.tenantId ? user.tenantId.toString() : null);
+  foundUser.passwordHash = await hashPassword(newPassword);
+  foundUser.mustChangePassword = false;
+  foundUser.isEmailVerified = true;
+  foundUser.emailVerifiedAt = new Date();
+  await saveUser(foundUser);
+
+  await revokeAllSessionsForUser(foundUser._id.toString(), foundUser.tenantId ? foundUser.tenantId.toString() : null);
   await recordActivity({
-    tenantId: user.tenantId,
-    userId: user._id,
+    tenantId: foundUser.tenantId,
+    userId: foundUser._id,
     action: "PASSWORD_RESET_COMPLETED",
     message: "Password reset via one-time code — all sessions revoked",
   });
@@ -526,17 +566,102 @@ export async function revokeOtherSessions(
   });
 }
 
+// --- Email Verification ---
+
+export interface VerifyEmailResult {
+  isPendingApproval: boolean;
+  message: string;
+  accessToken?: string;
+  refreshToken?: string;
+  deviceId?: string;
+  user?: AuthResult["user"];
+}
+
+export async function verifyEmail(
+  email: string,
+  code: string,
+  deviceContext: DeviceContext = {},
+): Promise<VerifyEmailResult> {
+  const userId = await verifyOtp(email, "EMAIL_VERIFICATION", code);
+  const user = await findUserById(userId.toString());
+  if (!user) {
+    throw AppError.unauthorized("User not found");
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerifiedAt = new Date();
+  await saveUser(user);
+
+  await recordActivity({
+    tenantId: user.tenantId,
+    userId: user._id,
+    action: "EMAIL_VERIFIED",
+    message: "Email verified successfully",
+    ipAddress: deviceContext.ipAddress,
+    userAgent: deviceContext.userAgent,
+  });
+
+  // If the account is ACTIVE and tenant is active (e.g. member portal self-registered or active user), issue tokens
+  if (user.status === "ACTIVE") {
+    if (user.tenantId) {
+      const tenant = await Tenant.findById(user.tenantId);
+      if (tenant && tenant.status === "ACTIVE") {
+        const auth = await issueAuthResult(user, deviceContext);
+        return {
+          isPendingApproval: false,
+          message: "Email verified successfully!",
+          accessToken: auth.accessToken,
+          refreshToken: auth.refreshToken,
+          deviceId: auth.deviceId,
+          user: auth.user,
+        };
+      }
+    }
+  }
+
+  return {
+    isPendingApproval: user.status === "PENDING_APPROVAL",
+    message: "Email verified successfully! Your account is awaiting review.",
+  };
+}
+
+export async function resendVerificationEmail(email: string): Promise<{ devOtp?: string }> {
+  const user = await findUserByEmail(email);
+  if (!user) {
+    // Return empty to avoid email enumeration
+    return {};
+  }
+
+  if (user.isEmailVerified) {
+    throw AppError.badRequest("This email is already verified");
+  }
+
+  const code = await generateOtp(user._id, user.email, "EMAIL_VERIFICATION");
+  await deliverOtp(user.email, "EMAIL_VERIFICATION", code);
+  await recordActivity({
+    tenantId: user.tenantId,
+    userId: user._id,
+    action: "EMAIL_VERIFICATION_REQUESTED",
+    message: "Requested a new email verification code",
+  });
+
+  return env.NODE_ENV !== "production" ? { devOtp: code } : {};
+}
+
 // --- Member self-registration ---
 
 export interface RegisterMemberSelfResult {
-  isPendingApproval: true;
+  isPendingApproval: boolean;
+  requireEmailVerification: boolean;
+  email: string;
   message: string;
+  devOtp?: string;
 }
 
 /**
  * Public self-registration for members. Resolves the organisation by its slug (derived from the
  * subdomain the member visited), creates a Member record and a linked User account in PENDING_APPROVAL
- * status. The organiser must approve the account before the member can log in.
+ * status. An email verification OTP is generated and delivered.
  */
 export async function registerMemberSelf(
   input: RegisterMemberInput,
@@ -562,6 +687,7 @@ export async function registerMemberSelf(
   }
 
   const passwordHash = await hashPassword(input.password);
+  let createdUserId: string | undefined;
 
   // 4. Atomic: create Member + User together
   const session = await mongoose.startSession();
@@ -592,6 +718,7 @@ export async function registerMemberSelf(
           phone: input.phone,
           passwordHash,
           status: "PENDING_APPROVAL",
+          isEmailVerified: false,
           mustChangePassword: false,
         },
         session,
@@ -599,14 +726,28 @@ export async function registerMemberSelf(
 
       // Link member ↔ user
       member.userId = user._id;
+      createdUserId = user._id.toString();
       await member.save({ session });
     });
   } finally {
     await session.endSession();
   }
 
+  let devOtp: string | undefined;
+  if (createdUserId) {
+    const code = await generateOtp(createdUserId, input.email, "EMAIL_VERIFICATION");
+    await deliverOtp(input.email, "EMAIL_VERIFICATION", code);
+    if (env.NODE_ENV !== "production") {
+      devOtp = code;
+    }
+  }
+
   return {
     isPendingApproval: true,
-    message: "Your registration has been submitted. You can log in once the organizer approves your account.",
+    requireEmailVerification: true,
+    email: input.email,
+    message: "Your registration has been submitted. Please enter the verification code sent to your email.",
+    devOtp,
   };
 }
+

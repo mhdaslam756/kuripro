@@ -61,15 +61,20 @@ export function usePublicMemberRegister(slug: string) {
     mutationFn: async (input: RegisterMemberInput) => {
       const res = await api.post<{
         message: string;
-        auth: {
+        requireEmailVerification?: boolean;
+        email?: string;
+        devOtp?: string;
+        auth?: {
           accessToken: string;
           user: any;
         };
         member: any;
       }>(`/public/org/${slug}/register-member`, input);
 
-      setAccessToken(res.auth.accessToken);
-      loginWithTokens(res.auth.accessToken, res.auth.user);
+      if (!res.requireEmailVerification && res.auth) {
+        setAccessToken(res.auth.accessToken);
+        loginWithTokens(res.auth.accessToken, res.auth.user);
+      }
 
       return res;
     },

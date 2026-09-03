@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileFilterSheet } from "@/components/mobile/mobile-filter-sheet";
-import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MobileEmptyState, MobileErrorState } from "@/components/mobile/mobile-states";
 import { useChitGroups } from "@/features/chit-groups/use-chit-groups";
 import { formatDate, formatPaise, humanize } from "@/lib/format";
@@ -54,21 +53,14 @@ export function PayoutsPage() {
   }
 
   return (
-    <div>
-      {/* Mobile Top App Bar */}
-      <MobileHeader
-        title="Prize Payouts"
-        subtitle="Disburse prizes to auction winners"
-      />
-
-      <div className="p-4 sm:p-0">
-        {/* Desktop Header */}
-        <div className="mb-6 hidden sm:block">
-          <h1 className="mb-1 font-display text-2xl font-bold text-text-primary">Prize Disbursal</h1>
-          <p className="text-sm text-text-secondary">
-            Disburse won prizes to members — in single lump sum or structured installments — with proof and receipts.
-          </p>
-        </div>
+    <div className="flex flex-col gap-4">
+      {/* Page Header */}
+      <div>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Prize Disbursal</h1>
+        <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
+          Disburse won prizes to members — in single lump sum or structured installments — with proof and receipts.
+        </p>
+      </div>
 
         {/* Mobile Filter Bar */}
         <div className="mb-4 flex items-center justify-between gap-2 sm:hidden">
@@ -269,7 +261,6 @@ export function PayoutsPage() {
       )}
 
       <PayoutDetailDialog open={detailOpen} onOpenChange={setDetailOpen} payoutId={detailId} />
-      </div>
     </div>
   );
 }

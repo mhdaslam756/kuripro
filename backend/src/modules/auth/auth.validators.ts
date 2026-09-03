@@ -78,11 +78,13 @@ export const verifyOtpSchema = z
   .merge(deviceContextSchema);
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 
-export const forgotPasswordSchema = requestOtpSchema;
-export type ForgotPasswordInput = RequestOtpInput;
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "Email or phone number is required").trim(),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1, "Email or phone number is required").trim(),
   code: otpCodeSchema,
   newPassword: passwordSchema,
 });
@@ -109,3 +111,16 @@ export const registerMemberSchema = z
   .merge(deviceContextSchema);
 
 export type RegisterMemberInput = z.infer<typeof registerMemberSchema>;
+
+export const verifyEmailSchema = z
+  .object({
+    email: z.string().email("Enter a valid email address").trim(),
+    code: otpCodeSchema,
+  })
+  .merge(deviceContextSchema);
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+export const resendVerificationEmailSchema = z.object({
+  email: z.string().email("Enter a valid email address").trim(),
+});
+export type ResendVerificationEmailInput = z.infer<typeof resendVerificationEmailSchema>;

@@ -12,12 +12,14 @@ export interface PopulatedRoleRef {
 
 export type CreateUserInput = Omit<
   UserDoc,
-  "createdAt" | "updatedAt" | "mustChangePassword" | "status" | "tenantId" | "roleId"
+  "createdAt" | "updatedAt" | "mustChangePassword" | "status" | "tenantId" | "roleId" | "isEmailVerified" | "emailVerifiedAt"
 > & {
   tenantId: ObjectIdLike | null;
   roleId: ObjectIdLike;
   mustChangePassword?: boolean;
   status?: UserDoc["status"];
+  isEmailVerified?: boolean;
+  emailVerifiedAt?: Date;
 };
 
 export interface FindUserOptions {

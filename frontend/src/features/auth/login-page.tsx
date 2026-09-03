@@ -10,7 +10,9 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { EmailVerificationDialog } from "./components/email-verification-dialog";
 import { FirstLoginModal } from "./components/first-login-modal";
+import { ForgotPasswordDialog } from "./components/forgot-password-dialog";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Enter your phone number or email"),
@@ -25,11 +27,15 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [lastEnteredPassword, setLastEnteredPassword] = useState("");
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -49,7 +55,12 @@ export function LoginPage() {
         navigate("/dashboard", { replace: true });
       }
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong — please try again");
+      if (error instanceof ApiError && (error.code === "EMAIL_NOT_VERIFIED" || error.message.toLowerCase().includes("verify your email"))) {
+        setUnverifiedEmail(values.identifier);
+        setShowVerificationModal(true);
+      } else {
+        setFormError(error instanceof ApiError ? error.message : "Something went wrong — please try again");
+      }
     }
   }
 
@@ -74,10 +85,19 @@ export function LoginPage() {
             <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
           </Field>
 
-          <label className="flex items-center gap-2 text-sm text-text-secondary">
-            <input type="checkbox" className="h-4 w-4 rounded-xs" {...register("rememberDevice")} />
-            Remember this device
-          </label>
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center gap-2 text-text-secondary cursor-pointer">
+              <input type="checkbox" className="h-4 w-4 rounded-xs" {...register("rememberDevice")} />
+              Remember device
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-xs font-semibold text-accent-link hover:underline cursor-pointer"
+            >
+              Forgot password?
+            </button>
+          </div>
 
           {formError ? <p className="rounded-md border border-bad-border bg-bad-bg px-3 py-2.5 text-sm font-medium text-bad-fg">{formError}</p> : null}
 
@@ -94,12 +114,32 @@ export function LoginPage() {
         </p>
       </div>
 
+      <ForgotPasswordDialog
+        open={showForgotPassword}
+        initialIdentifier={watch("identifier") || ""}
+        onClose={() => setShowForgotPassword(false)}
+      />
+
       <FirstLoginModal
         open={showFirstLoginModal}
         initialPassword={lastEnteredPassword}
         onPasswordChanged={() => {
           setShowFirstLoginModal(false);
           navigate("/dashboard", { replace: true });
+        }}
+      />
+
+      <EmailVerificationDialog
+        open={showVerificationModal}
+        email={unverifiedEmail}
+        onClose={() => setShowVerificationModal(false)}
+        onVerified={(res) => {
+          setShowVerificationModal(false);
+          if (res.accessToken) {
+            navigate("/dashboard", { replace: true });
+          } else {
+            setFormError("Email verified successfully! If your account requires admin approval, you will be notified once activated.");
+          }
         }}
       />
     </div>

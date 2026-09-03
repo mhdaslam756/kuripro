@@ -10,8 +10,10 @@ import type {
   LoginInput,
   RegisterMemberInput,
   RegisterOrganizerInput,
+  ResendVerificationEmailInput,
   ResetPasswordInput,
   RequestOtpInput,
+  VerifyEmailInput,
   VerifyOtpInput,
 } from "./auth.validators.js";
 
@@ -67,6 +69,21 @@ export async function registerMemberSelf(req: Request, res: Response): Promise<v
   res.status(201).json(result);
 }
 
+export async function verifyEmail(req: Request, res: Response): Promise<void> {
+  const input = req.body as VerifyEmailInput;
+  const result = await authService.verifyEmail(input.email, input.code, extractDeviceContext(req, input));
+  if (result.refreshToken) {
+    setRefreshCookie(res, result.refreshToken);
+  }
+  res.status(200).json(result);
+}
+
+export async function resendVerificationEmail(req: Request, res: Response): Promise<void> {
+  const input = req.body as ResendVerificationEmailInput;
+  const result = await authService.resendVerificationEmail(input.email);
+  res.status(200).json({ message: "A new verification code has been sent to your email.", ...result });
+}
+
 export async function login(req: Request, res: Response): Promise<void> {
   const input = req.body as LoginInput;
   const result = await authService.login(input, extractDeviceContext(req, input));
@@ -96,7 +113,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   const input = req.body as ResetPasswordInput;
   await authService.resetPassword(input.email, input.code, input.newPassword);
-  res.status(204).send();
+  res.status(200).json({ message: "Password has been successfully reset. Please log in with your new password." });
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {

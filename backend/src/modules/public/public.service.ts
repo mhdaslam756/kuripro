@@ -1,11 +1,14 @@
 import mongoose from "mongoose";
 
+import { env } from "../../config/env.js";
 import { AppError } from "../../utils/app-error.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { issueAuthResult, type AuthResult, type DeviceContext } from "../auth/auth.service.js";
 import { getNextSequence } from "../counters/counter.repository.js";
 import { createMember, findMemberByPhone } from "../members/member.repository.js";
 import type { MemberDocument } from "../members/member.model.js";
+import { deliverOtp } from "../otp/otp.delivery.js";
+import { generateOtp } from "../otp/otp.service.js";
 import { getOrganizationRoleBySlug } from "../roles/role.service.js";
 import { findTenantBySlug } from "../tenants/tenant.repository.js";
 import { createUser, findUserByPhoneOrEmail } from "../users/user.repository.js";
@@ -44,11 +47,15 @@ export async function getPublicOrg(slug: string): Promise<PublicOrgInfo> {
   };
 }
 
+export type PublicMemberRegisterResult =
+  | { requireEmailVerification: false; auth: AuthResult; member: MemberDocument }
+  | { requireEmailVerification: true; email: string; message: string; devOtp?: string; member: MemberDocument };
+
 export async function registerPublicMember(
   slug: string,
   input: PublicMemberRegisterInput,
   deviceContext: DeviceContext = {},
-): Promise<{ auth: AuthResult; member: MemberDocument }> {
+): Promise<PublicMemberRegisterResult> {
   const tenant = await findTenantBySlug(slug.toLowerCase());
   if (!tenant || tenant.status !== "ACTIVE") {
     throw AppError.notFound("Organization not found or inactive");
@@ -94,6 +101,7 @@ export async function registerPublicMember(
         phone: input.phone,
         passwordHash,
         status: "ACTIVE",
+        isEmailVerified: input.email ? false : true,
         mustChangePassword: false,
       },
       session,
@@ -151,8 +159,20 @@ export async function registerPublicMember(
     throw AppError.internal("Failed to register member. Please try again.");
   }
 
+  if (input.email) {
+    const code = await generateOtp(createdUser._id, createdUser.email, "EMAIL_VERIFICATION");
+    await deliverOtp(createdUser.email, "EMAIL_VERIFICATION", code);
+    return {
+      requireEmailVerification: true,
+      email: input.email,
+      message: "Registration submitted. Please enter the verification code sent to your email.",
+      devOtp: env.NODE_ENV !== "production" ? code : undefined,
+      member: createdMember,
+    };
+  }
+
   const auth = await issueAuthResult(createdUser, deviceContext);
-  return { auth, member: createdMember };
+  return { requireEmailVerification: false, auth, member: createdMember };
 }
 
 export async function publicMemberLogin(

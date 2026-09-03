@@ -15,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MobileFilterSheet } from "@/components/mobile/mobile-filter-sheet";
-import { MobileHeader } from "@/components/mobile/mobile-header";
 import { MobileEmptyState, MobileErrorState } from "@/components/mobile/mobile-states";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate, formatPaise, humanize } from "@/lib/format";
@@ -37,28 +36,15 @@ export function ChitGroupsPage() {
   const canCreate = hasPermission("chit_group.create");
 
   return (
-    <div>
-      {/* Mobile Top App Bar */}
-      <MobileHeader
-        title="Chit Groups"
-        subtitle="Manage chit fund schemes & rosters"
-        actions={
-          canCreate ? (
-            <Button size="sm" className="rounded-full gap-1 shadow-xs" onClick={() => setFormOpen(true)}>
-              <Plus size={15} /> New
-            </Button>
-          ) : null
-        }
-      />
-
-      <div className="p-4 sm:p-0">
-        {/* Desktop Header */}
-        <div className="mb-6 hidden sm:flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="mb-1 font-display text-2xl font-bold text-text-primary">Chit Schemes</h1>
-            <p className="text-sm text-text-secondary">Create and manage chit schemes of any cadence or group size.</p>
-          </div>
-          <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Chit Schemes</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">Create and manage chit schemes of any cadence or group size.</p>
+        </div>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="hidden sm:block">
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="Filter by status" />
@@ -72,13 +58,14 @@ export function ChitGroupsPage() {
                 ))}
               </SelectContent>
             </Select>
-            {canCreate ? (
-              <Button onClick={() => setFormOpen(true)}>
-                <Plus size={16} /> New Chit Group
-              </Button>
-            ) : null}
           </div>
+          {canCreate ? (
+            <Button onClick={() => setFormOpen(true)} className="rounded-xl font-semibold gap-1.5 active-bounce">
+              <Plus size={16} /> New Chit Group
+            </Button>
+          ) : null}
         </div>
+      </div>
 
         {/* Mobile Filter Bar */}
         <div className="mb-4 flex items-center justify-between gap-2 sm:hidden">
@@ -205,7 +192,6 @@ export function ChitGroupsPage() {
             </div>
           </>
         )}
-      </div>
 
       <ChitGroupFormDialog 
         open={formOpen} 
