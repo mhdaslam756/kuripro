@@ -44,7 +44,6 @@ export function MemberRegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [devOtp, setDevOtp] = useState<string | undefined>();
 
   function handleChange(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -80,7 +79,6 @@ export function MemberRegisterPage() {
 
       if (res.requireEmailVerification && res.email) {
         setVerificationEmail(res.email);
-        setDevOtp(res.devOtp);
         setShowVerification(true);
       } else {
         navigate("/dashboard");
@@ -284,7 +282,6 @@ export function MemberRegisterPage() {
       <EmailVerificationDialog
         open={showVerification}
         email={verificationEmail}
-        devOtp={devOtp}
         onClose={() => setShowVerification(false)}
         onVerified={handleVerified}
       />

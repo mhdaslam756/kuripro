@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ClipboardEvent, type KeyboardEvent } from "react";
-import { CheckCircle2, Mail, RefreshCw, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Mail, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 export interface EmailVerificationDialogProps {
   open: boolean;
   email: string;
-  devOtp?: string;
   onClose?: () => void;
   onVerified: (result: {
     isPendingApproval: boolean;
@@ -20,12 +19,10 @@ export interface EmailVerificationDialogProps {
 export function EmailVerificationDialog({
   open,
   email,
-  devOtp: initialDevOtp,
   onClose,
   onVerified,
 }: EmailVerificationDialogProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
-  const [activeDevOtp, setActiveDevOtp] = useState<string | undefined>(initialDevOtp);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -33,10 +30,6 @@ export function EmailVerificationDialog({
   const [resendSuccess, setResendSuccess] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    setActiveDevOtp(initialDevOtp);
-  }, [initialDevOtp]);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -141,12 +134,9 @@ export function EmailVerificationDialog({
     setResendSuccess(false);
 
     try {
-      const res = await api.post<{ message: string; devOtp?: string }>("/auth/resend-verification-email", {
+      await api.post<{ message: string }>("/auth/resend-verification-email", {
         email,
       });
-      if (res.devOtp) {
-        setActiveDevOtp(res.devOtp);
-      }
       setResendSuccess(true);
       setCountdown(60);
     } catch (err) {
@@ -158,14 +148,6 @@ export function EmailVerificationDialog({
     } finally {
       setIsResending(false);
     }
-  }
-
-  function handleFillDevOtp() {
-    if (!activeDevOtp || activeDevOtp.length !== 6) return;
-    const newDigits = activeDevOtp.split("");
-    setDigits(newDigits);
-    inputRefs.current[5]?.focus();
-    void handleVerifyCode(activeDevOtp);
   }
 
   return (
@@ -230,20 +212,6 @@ export function EmailVerificationDialog({
             />
           ))}
         </div>
-
-        {/* Dev OTP Helper */}
-        {activeDevOtp ? (
-          <div className="mt-4 flex items-center justify-center">
-            <button
-              type="button"
-              onClick={handleFillDevOtp}
-              className="inline-flex items-center gap-1.5 rounded-full bg-good-bg border border-good-border px-3 py-1 text-xs font-bold text-good-fg active-bounce"
-            >
-              <Sparkles size={12} />
-              <span>Dev Code: {activeDevOtp} (Click to Fill)</span>
-            </button>
-          </div>
-        ) : null}
 
         {/* Error / Resend status feedback */}
         {error ? (

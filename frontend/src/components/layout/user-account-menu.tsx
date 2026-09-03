@@ -1,6 +1,8 @@
 
-import { ChevronDown, LogOut, Smartphone } from "lucide-react";
+import { Bell, ChevronDown, Download, LogOut, Smartphone } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,11 +15,51 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
-
+import { enablePush, hasRegisteredPush, isPushSupported, sendLocalTestNotification } from "@/lib/push";
+import { isStandalone } from "@/lib/pwa";
+import { promptInstall } from "@/lib/pwa-runtime";
+import { usePwa } from "@/lib/use-pwa";
 
 export function UserAccountMenu() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { canInstall } = usePwa();
+  const [registered, setRegistered] = useState(hasRegisteredPush());
+  const pushSupported = isPushSupported();
+  const standalone = isStandalone();
+
+  async function handleTogglePush() {
+    if (registered) {
+      void sendLocalTestNotification(
+        "KuriPro Push Active 🔔",
+        "Your push alerts are working properly!",
+      );
+      toast.success("Push notifications active. Test alert sent!");
+    } else {
+      const res = await enablePush();
+      if (res.ok) {
+        setRegistered(true);
+        toast.success("Push notifications enabled!");
+        void sendLocalTestNotification(
+          "Push Notifications Enabled 🔔",
+          "You will now receive timely reminders for kuri dues, live auctions, and payouts.",
+        );
+      } else {
+        toast.error(res.error || "Could not enable push notifications");
+      }
+    }
+  }
+
+  async function handleInstallApp() {
+    try {
+      const accepted = await promptInstall();
+      if (accepted) {
+        toast.success("KuriPro installed successfully!");
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   async function handleLogout() {
     await logout();
@@ -83,6 +125,31 @@ export function UserAccountMenu() {
           <DropdownMenuSeparator />
 
           <DropdownMenuGroup>
+            {pushSupported ? (
+              <DropdownMenuItem
+                onClick={() => void handleTogglePush()}
+                className="cursor-pointer flex items-center justify-between py-2 text-xs font-semibold rounded-xl"
+              >
+                <div className="flex items-center gap-2">
+                  <Bell size={15} />
+                  <span>Push Alerts</span>
+                </div>
+                <span className={registered ? "text-[10px] text-emerald-500 font-bold" : "text-[10px] text-accent-primary font-bold"}>
+                  {registered ? "✓ Active" : "Enable"}
+                </span>
+              </DropdownMenuItem>
+            ) : null}
+
+            {!standalone && canInstall ? (
+              <DropdownMenuItem
+                onClick={() => void handleInstallApp()}
+                className="cursor-pointer gap-2 py-2 text-xs font-semibold rounded-xl text-accent-primary"
+              >
+                <Download size={15} />
+                <span>Install KuriPro App</span>
+              </DropdownMenuItem>
+            ) : null}
+
             <DropdownMenuItem
               onClick={() => navigate("/device")}
               className="cursor-pointer gap-2 py-2 text-xs font-semibold rounded-xl"

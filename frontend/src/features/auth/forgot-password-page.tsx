@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ClipboardEvent, type KeyboardEvent, type FormEvent } from "react";
-import { CheckCircle2, KeyRound, Lock, RefreshCw, ShieldAlert, Sparkles, ArrowLeft } from "lucide-react";
+import { CheckCircle2, KeyRound, Lock, RefreshCw, ShieldAlert, ArrowLeft } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -23,7 +23,6 @@ export function ForgotPasswordPage() {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [activeDevOtp, setActiveDevOtp] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -69,13 +68,10 @@ export function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const res = await api.post<{ message: string; devOtp?: string; targetEmail?: string }>("/auth/forgot-password", {
+      const res = await api.post<{ message: string; targetEmail?: string }>("/auth/forgot-password", {
         email: clean,
       });
 
-      if (res.devOtp) {
-        setActiveDevOtp(res.devOtp);
-      }
       setConfirmedEmail(res.targetEmail || clean);
       setStep("verify_and_reset");
       setCountdown(60);
@@ -125,13 +121,6 @@ export function ForgotPasswordPage() {
     inputRefs.current[targetIdx]?.focus();
   }
 
-  function handleFillDevOtp() {
-    if (!activeDevOtp || activeDevOtp.length !== 6) return;
-    const newDigits = activeDevOtp.split("");
-    setDigits(newDigits);
-    inputRefs.current[5]?.focus();
-  }
-
   async function handleResendCode() {
     if (countdown > 0 || loading) return;
     setError(null);
@@ -139,12 +128,9 @@ export function ForgotPasswordPage() {
     setResendSuccess(false);
 
     try {
-      const res = await api.post<{ message: string; devOtp?: string }>("/auth/forgot-password", {
+      await api.post<{ message: string }>("/auth/forgot-password", {
         email: identifier.trim(),
       });
-      if (res.devOtp) {
-        setActiveDevOtp(res.devOtp);
-      }
       setResendSuccess(true);
       setCountdown(60);
     } catch (err: unknown) {
@@ -280,22 +266,6 @@ export function ForgotPasswordPage() {
                 Enter the code sent to <strong className="text-text-primary">{confirmedEmail || identifier}</strong>
               </p>
             </div>
-
-            {activeDevOtp ? (
-              <div className="mb-4 flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50 p-2.5 text-xs text-accent-primary">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Sparkles size={14} />
-                  <span>Dev OTP: <strong className="font-mono">{activeDevOtp}</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFillDevOtp}
-                  className="rounded bg-accent-primary px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-accent-primary/90 transition-colors cursor-pointer"
-                >
-                  Auto-fill
-                </button>
-              </div>
-            ) : null}
 
             {resendSuccess ? (
               <div className="mb-3 flex items-center gap-1.5 text-xs text-good-fg font-medium">

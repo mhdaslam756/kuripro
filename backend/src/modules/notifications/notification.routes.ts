@@ -73,3 +73,5 @@ notificationRouter.get(
 );
 
 notificationRouter.get("/meta", requirePermission("notification.view"), notificationController.meta);
+
+notificationRouter.get("/stream", notificationController.notificationStream);

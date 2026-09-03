@@ -63,7 +63,6 @@ export function usePublicMemberRegister(slug: string) {
         message: string;
         requireEmailVerification?: boolean;
         email?: string;
-        devOtp?: string;
         auth?: {
           accessToken: string;
           user: any;

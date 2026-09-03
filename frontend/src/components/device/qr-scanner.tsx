@@ -66,9 +66,11 @@ export function QrScanner({ onResult }: { onResult: (text: string) => void }) {
       }
 
       setEngine("zxing");
+      // @ts-ignore - optional dynamic fallback engine
       const { BrowserQRCodeReader } = await import("@zxing/browser");
       const reader = new BrowserQRCodeReader();
-      controls = await reader.decodeFromVideoElement(video, (result) => {
+      // @ts-ignore
+      controls = await reader.decodeFromVideoElement(video, (result: any) => {
         if (result) finish(result.getText());
       });
     }

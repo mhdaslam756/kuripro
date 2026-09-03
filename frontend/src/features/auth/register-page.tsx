@@ -39,7 +39,6 @@ export function RegisterPage() {
   const [registeredOrgName, setRegisteredOrgName] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [devOtp, setDevOtp] = useState<string | undefined>();
 
   const {
     register,
@@ -55,7 +54,6 @@ export function RegisterPage() {
         requireEmailVerification?: boolean;
         email?: string;
         message: string;
-        devOtp?: string;
         accessToken?: string;
       }>("/auth/register-organizer", {
         tenantName: values.tenantName,
@@ -73,7 +71,6 @@ export function RegisterPage() {
 
       if (res.requireEmailVerification) {
         setVerificationEmail(values.organizerEmail);
-        setDevOtp(res.devOtp);
         setShowVerification(true);
       } else if (res.accessToken) {
         navigate("/dashboard", { replace: true });
@@ -205,7 +202,6 @@ export function RegisterPage() {
       <EmailVerificationDialog
         open={showVerification}
         email={verificationEmail}
-        devOtp={devOtp}
         onClose={() => setShowVerification(false)}
         onVerified={handleVerified}
       />

@@ -86,7 +86,7 @@ export function formatOtpEmail(purpose: OtpPurpose, code: string): { subject: st
 
 /**
  * Sends an OTP code to `target` (email). If Resend is configured,
- * it delivers the email; in development/testing it also logs the code for easy local verification.
+ * it delivers the email; in development/testing it fails gracefully unless in production.
  */
 export async function deliverOtp(target: string, purpose: OtpPurpose, code: string): Promise<void> {
   const { subject, text, html } = formatOtpEmail(purpose, code);
@@ -113,10 +113,6 @@ export async function deliverOtp(target: string, purpose: OtpPurpose, code: stri
         "OTP_DELIVERY_NOT_CONFIGURED",
       );
     }
-  }
-
-  if (env.NODE_ENV !== "production") {
-    logger.info({ target, purpose }, `DEV MODE — OTP code for ${target}: ${code}`);
   }
 }
 

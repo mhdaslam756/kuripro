@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-import { env } from "../../config/env.js";
 import { AppError } from "../../utils/app-error.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { issueAuthResult, type AuthResult, type DeviceContext } from "../auth/auth.service.js";
@@ -49,7 +48,7 @@ export async function getPublicOrg(slug: string): Promise<PublicOrgInfo> {
 
 export type PublicMemberRegisterResult =
   | { requireEmailVerification: false; auth: AuthResult; member: MemberDocument }
-  | { requireEmailVerification: true; email: string; message: string; devOtp?: string; member: MemberDocument };
+  | { requireEmailVerification: true; email: string; message: string; member: MemberDocument };
 
 export async function registerPublicMember(
   slug: string,
@@ -166,7 +165,6 @@ export async function registerPublicMember(
       requireEmailVerification: true,
       email: input.email,
       message: "Registration submitted. Please enter the verification code sent to your email.",
-      devOtp: env.NODE_ENV !== "production" ? code : undefined,
       member: createdMember,
     };
   }

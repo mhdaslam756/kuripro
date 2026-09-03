@@ -1,7 +1,9 @@
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
+import { findMemberById } from "../members/member.repository.js";
 import { getChannel } from "./channels/registry.js";
 import { findNotificationById, saveNotification } from "./notification.repository.js";
+import { emitNotificationToMember, emitNotificationToUser } from "./notification.stream.js";
 
 /**
  * Delivers one queued notification. If the channel's provider isn't configured it degrades to the
@@ -14,6 +16,37 @@ export async function dispatchNotification(tenantId: string, notificationId: str
 
   notification.status = "SENDING";
   await saveNotification(notification);
+
+  // Attempt real-time user delivery
+  try {
+    let targetUserId: string | undefined;
+    if (notification.recipientContact.startsWith("user:")) {
+      targetUserId = notification.recipientContact.replace("user:", "");
+    } else if (notification.memberId) {
+      const member = await findMemberById(notification.memberId.toString(), tenantId);
+      if (member?.userId) {
+        targetUserId = member.userId.toString();
+      }
+    }
+    const livePayload = {
+      id: notification._id.toString(),
+      title: notification.subject ?? "KuriPro 🔔",
+      body: notification.body,
+      type: notification.type,
+      channel: notification.channel,
+      url: "/notifications",
+      createdAt: notification.createdAt ? notification.createdAt.toISOString() : new Date().toISOString(),
+    };
+
+    if (targetUserId) {
+      emitNotificationToUser(targetUserId, livePayload);
+    }
+    if (notification.memberId) {
+      emitNotificationToMember(notification.memberId.toString(), livePayload);
+    }
+  } catch (err) {
+    logger.warn({ err }, "Could not emit live notification to user stream");
+  }
 
   const adapter = getChannel(notification.channel);
   try {

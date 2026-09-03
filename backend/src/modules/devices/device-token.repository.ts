@@ -35,9 +35,9 @@ export async function deleteDeviceToken(userId: string, token: string): Promise<
   await DeviceToken.deleteOne({ tenantId: { $exists: true }, userId, token });
 }
 
-/** All push tokens for a user within a tenant — the delivery targets for a member's PUSH notification. */
-export async function listTokensForUser(tenantId: string, userId: string): Promise<string[]> {
-  const docs = await DeviceToken.find({ tenantId, userId }).select("token").lean();
+/** All push tokens for a user — the delivery targets for a member's PUSH notification. */
+export async function listTokensForUser(_tenantId: string, userId: string): Promise<string[]> {
+  const docs = await DeviceToken.find({ tenantId: { $exists: true }, userId }).select("token").lean();
   return docs.map((d) => d.token);
 }
 

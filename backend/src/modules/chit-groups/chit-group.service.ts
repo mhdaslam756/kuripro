@@ -526,7 +526,14 @@ export async function listCycles(
     .filter((id): id is string => Boolean(id));
 
   if (winnerMembershipIds.length === 0) {
-    return result;
+    return {
+      ...result,
+      items: result.items.map((c) => {
+        const obj: any = c.toObject ? c.toObject() : { ...c };
+        obj.id = (obj._id || c._id).toString();
+        return obj;
+      }),
+    };
   }
 
   const memberships = await ChitMembership.find({
@@ -557,6 +564,7 @@ export async function listCycles(
 
   const items = result.items.map((cycle) => {
     const cycleObj: any = cycle.toObject ? cycle.toObject() : { ...cycle };
+    cycleObj.id = (cycleObj._id || cycle._id).toString();
     if (cycle.winnerMembershipId) {
       const wm: any = memMap.get(cycle.winnerMembershipId.toString());
       if (wm) {

@@ -1,5 +1,5 @@
 import { Lock, Unlock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,12 @@ export function AuctionsPage() {
   const [groupId, setGroupId] = useState("");
   const { data: cycles } = useCycles(groupId || undefined, Boolean(groupId));
   const [cycleId, setCycleId] = useState("");
+
+  useEffect(() => {
+    if (!groupId && groups?.items?.length === 1 && groups.items[0]?.id) {
+      setGroupId(groups.items[0].id);
+    }
+  }, [groups, groupId]);
 
   const { data: state, isLoading } = useAuctionState(cycleId || undefined);
   const { data: bids } = useBids(cycleId || undefined);
@@ -67,14 +73,17 @@ export function AuctionsPage() {
           <p className="mb-1.5 text-sm font-medium text-text-primary">Cycle</p>
           <Select value={cycleId} onValueChange={setCycleId} disabled={!groupId}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a cycle" />
+              <SelectValue placeholder={!groupId ? "Select a group first" : "Select a cycle"} />
             </SelectTrigger>
             <SelectContent>
-              {(cycles?.items ?? []).map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  Cycle #{c.cycleNumber} · {formatDate(c.scheduledDate)}
-                </SelectItem>
-              ))}
+              {(cycles?.items ?? []).map((c) => {
+                const cid = c.id || (c as any)._id;
+                return (
+                  <SelectItem key={cid} value={cid}>
+                    Cycle #{c.cycleNumber} · {formatDate(c.scheduledDate)}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>

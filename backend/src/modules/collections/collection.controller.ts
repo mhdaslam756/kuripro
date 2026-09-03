@@ -6,6 +6,8 @@ import type { MongoIdParam, PaymentIdParam } from "../../utils/common-validators
 import { listChitMembershipsByMemberId } from "../chit-groups/chit-membership.repository.js";
 import { resolveMemberForUser } from "../members/member.service.js";
 import * as collectionService from "./collection.service.js";
+import { sendDueReminders as serviceSendDueReminders } from "./due-reminder.service.js";
+import type { SendDueRemindersInput } from "./due-reminder.validators.js";
 import type {
   BulkCollectionInput,
   FlagOverdueInput,
@@ -153,4 +155,10 @@ export async function verify(req: Request, res: Response): Promise<void> {
   if (!token) throw AppError.badRequest("A 'token' query parameter is required");
   const dto = await collectionService.verifyReceipt(tenantId, token);
   res.status(200).json({ receipt: dto });
+}
+
+export async function sendDueReminders(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const result = await serviceSendDueReminders(tenantId, req.auth!.userId, req.body as SendDueRemindersInput);
+  res.status(200).json(result);
 }

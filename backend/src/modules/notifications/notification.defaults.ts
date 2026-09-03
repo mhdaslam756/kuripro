@@ -20,6 +20,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "Dear {{memberName}}, your installment of {{amount}} for {{chitGroupName}} is due on {{dueDate}}. Kindly pay on time. — {{orgName}}",
   },
   {
+    name: "Payment reminder (Push)",
+    type: "REMINDER",
+    channel: "PUSH",
+    subject: "Payment Reminder: {{chitGroupName}}",
+    body: "Dear {{memberName}}, your installment of {{amount}} for {{chitGroupName}} is due on {{dueDate}}. Tap to pay on time. — {{orgName}}",
+  },
+  {
     name: "Payment reminder (WhatsApp)",
     type: "REMINDER",
     channel: "WHATSAPP",

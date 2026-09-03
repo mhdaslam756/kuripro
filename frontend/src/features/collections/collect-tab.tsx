@@ -1,4 +1,4 @@
-import { CloudUpload, MessageSquare, RefreshCw, Trophy, Zap } from "lucide-react";
+import { Bell, CloudUpload, RefreshCw, Trophy, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,11 @@ import { useChitGroups, useCycles } from "@/features/chit-groups/use-chit-groups
 import { useAuth } from "@/lib/auth-context";
 import { formatDate, formatPaise } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BulkDueRemindersDialog } from "./components/bulk-due-reminders-dialog";
 import { CollectDialog } from "./components/collect-dialog";
 import { DueStatusBadge } from "./components/collection-badges";
 import { ReceiptDialog } from "./components/receipt-dialog";
-import { WhatsAppReminderDialog } from "./components/whatsapp-reminder-dialog";
+import { ReminderDialog } from "./components/reminder-dialog";
 import { clearSyncedFromQueue, countQueue, getQueue } from "./offline-queue";
 import type { Installment } from "./types";
 import {
@@ -59,6 +60,12 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
     }
   }, [initialGroupId, groupId]);
 
+  useEffect(() => {
+    if (groupId === "ALL" && groups?.items?.length === 1 && groups.items[0]?.id) {
+      setGroupId(groups.items[0].id);
+    }
+  }, [groups, groupId]);
+
   const { data: dues, isLoading: duesLoading } = useDues(groupId && groupId !== "ALL" ? groupId : undefined, cycleId && cycleId !== "ALL" ? cycleId : undefined);
   const { data: summary } = useCycleSummary(groupId && groupId !== "ALL" ? groupId : undefined, cycleId && cycleId !== "ALL" ? cycleId : undefined);
 
@@ -75,6 +82,8 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [offlineCount, setOfflineCount] = useState(0);
+  const [bulkReminderOpen, setBulkReminderOpen] = useState(false);
+  const [bulkReminderPaymentIds, setBulkReminderPaymentIds] = useState<string[] | undefined>(undefined);
 
   const refreshOfflineCount = useCallback(() => {
     void countQueue().then(setOfflineCount);
@@ -160,22 +169,37 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
 
           <Select value={cycleId || "ALL"} onValueChange={selectCycle} disabled={!groupId || groupId === "ALL"}>
             <SelectTrigger className="sm:w-64">
-              <SelectValue placeholder="Select a cycle" />
+              <SelectValue placeholder={!groupId || groupId === "ALL" ? "Select a group first" : "Select a cycle"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All Cycles</SelectItem>
-              {(cycles?.items ?? []).map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  Cycle #{c.cycleNumber} · {formatDate(c.scheduledDate)}
-                </SelectItem>
-              ))}
+              {(cycles?.items ?? []).map((c) => {
+                const cid = c.id || (c as any)._id;
+                return (
+                  <SelectItem key={cid} value={cid}>
+                    Cycle #{c.cycleNumber} · {formatDate(c.scheduledDate)}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
         {canManageDues && groupId && groupId !== "ALL" ? (
-          <Button variant="outline" disabled={flagOverdue.isPending} onClick={() => void flagOverdue.mutateAsync(groupId)}>
-            <RefreshCw size={15} /> Flag overdue
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkReminderPaymentIds(undefined);
+                setBulkReminderOpen(true);
+              }}
+              className="gap-1.5 active-bounce border-brand-500/40 text-accent-primary hover:bg-brand-500/10 font-semibold"
+            >
+              <Bell size={15} /> Send Reminders
+            </Button>
+            <Button variant="outline" disabled={flagOverdue.isPending} onClick={() => void flagOverdue.mutateAsync(groupId)}>
+              <RefreshCw size={15} /> Flag overdue
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -304,7 +328,18 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
               </div>
               {selected.size > 0 ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-secondary">Mark collected as:</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setBulkReminderPaymentIds([...selected]);
+                      setBulkReminderOpen(true);
+                    }}
+                    className="gap-1.5 active-bounce border-brand-500/40 text-accent-primary hover:bg-brand-500/10 font-semibold"
+                  >
+                    <Bell size={13} /> Remind ({selected.size})
+                  </Button>
+                  <span className="text-xs text-text-secondary ml-1">Collect as:</span>
                   <Button size="sm" variant="outline" disabled={bulkCollect.isPending} onClick={() => void handleBulk("CASH")}>
                     Cash
                   </Button>
@@ -390,11 +425,11 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                             size="md"
                             type="button"
                             variant="outline"
-                            className="active-bounce gap-1.5 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10"
+                            className="active-bounce gap-1.5 px-3 text-xs font-semibold border-brand-500/40 text-accent-primary hover:bg-brand-500/10"
                             onClick={() => setReminderTarget(due)}
-                            title="Send WhatsApp Reminder"
+                            title="Send Reminder (Push or WhatsApp)"
                           >
-                            <MessageSquare size={14} /> Remind
+                            <Bell size={14} /> Remind
                           </Button>
                           <Button
                             size="md"
@@ -507,11 +542,11 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                                   size="sm"
                                   type="button"
                                   variant="outline"
-                                  className="border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs px-2.5 h-8"
+                                  className="border-brand-500/40 text-accent-primary hover:bg-brand-500/10 font-semibold gap-1 text-xs px-2.5 h-8 active-bounce"
                                   onClick={() => setReminderTarget(due)}
-                                  title="Send WhatsApp Reminder"
+                                  title="Send Reminder (Push or WhatsApp)"
                                 >
-                                  <MessageSquare size={13} /> Remind
+                                  <Bell size={13} /> Remind
                                 </Button>
                                 <Button
                                   size="sm"
@@ -571,13 +606,26 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
       ) : null}
 
       {reminderTarget ? (
-        <WhatsAppReminderDialog
+        <ReminderDialog
           open={Boolean(reminderTarget)}
           onOpenChange={(o) => !o && setReminderTarget(null)}
           installment={reminderTarget}
           chitGroupName={groupName}
         />
       ) : null}
+
+      <BulkDueRemindersDialog
+        open={bulkReminderOpen}
+        onOpenChange={setBulkReminderOpen}
+        chitGroupId={groupId && groupId !== "ALL" ? groupId : undefined}
+        chitGroupName={groupName || "All Groups"}
+        chitCycleId={cycleId && cycleId !== "ALL" ? cycleId : undefined}
+        paymentIds={bulkReminderPaymentIds}
+        totalDuesCount={filteredDues.length}
+        onSuccess={() => {
+          setSelected(new Set());
+        }}
+      />
 
       <ReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} collectionId={receiptId} />
     </div>

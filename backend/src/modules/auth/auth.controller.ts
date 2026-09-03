@@ -80,8 +80,8 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
 
 export async function resendVerificationEmail(req: Request, res: Response): Promise<void> {
   const input = req.body as ResendVerificationEmailInput;
-  const result = await authService.resendVerificationEmail(input.email);
-  res.status(200).json({ message: "A new verification code has been sent to your email.", ...result });
+  await authService.resendVerificationEmail(input.email);
+  res.status(200).json({ message: "A new verification code has been sent to your email." });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -93,8 +93,8 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 export async function requestOtp(req: Request, res: Response): Promise<void> {
   const input = req.body as RequestOtpInput;
-  const result = await authService.requestOtp(input.email);
-  res.status(200).json({ message: "If an account exists for this email, a code has been sent.", ...result });
+  await authService.requestOtp(input.email);
+  res.status(200).json({ message: "If an account exists for this email, a code has been sent." });
 }
 
 export async function verifyOtp(req: Request, res: Response): Promise<void> {

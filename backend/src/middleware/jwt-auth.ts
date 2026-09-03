@@ -7,10 +7,14 @@ import { AppError } from "../utils/app-error.js";
 
 function extractBearerToken(req: Request): string {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    throw AppError.unauthorized("Missing or malformed Authorization header");
+  if (header?.startsWith("Bearer ")) {
+    return header.slice("Bearer ".length);
   }
-  return header.slice("Bearer ".length);
+  const queryToken = req.query?.token;
+  if (typeof queryToken === "string" && queryToken) {
+    return queryToken;
+  }
+  throw AppError.unauthorized("Missing or malformed Authorization header");
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {

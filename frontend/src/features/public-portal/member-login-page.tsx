@@ -37,7 +37,7 @@ export function MemberLoginPage() {
     try {
       await loginMutation.mutateAsync({ identifier, password });
       navigate("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof ApiError && (err.code === "EMAIL_NOT_VERIFIED" || err.message.toLowerCase().includes("verify your email"))) {
         setUnverifiedEmail(identifier);
         setShowVerificationModal(true);

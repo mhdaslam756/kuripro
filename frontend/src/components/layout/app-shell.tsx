@@ -5,6 +5,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
+import { HeaderInstallAppButton, HeaderPushNotificationButton } from "@/components/pwa/install-notification-toasts";
+import { useLiveNotifications } from "@/features/notifications/use-live-notifications";
 import { UserAccountMenu } from "./user-account-menu";
 
 interface NavItem {
@@ -208,6 +210,7 @@ function OrganizerBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
 // ── Main AppShell ─────────────────────────────────────────────────────────────
 
 export function AppShell({ children }: { children: ReactNode }) {
+  useLiveNotifications();
   const { user, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -293,7 +296,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* Header Right Actions */}
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-2 lg:gap-3">
+            {/* Install App & Push Alert Actions */}
+            <HeaderInstallAppButton />
+            <HeaderPushNotificationButton />
+
             {/* Notification bell */}
             <NavLink
               to="/notifications"

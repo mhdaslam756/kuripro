@@ -26,6 +26,7 @@ import { ReceiptDialog } from "@/features/collections/components/receipt-dialog"
 import { DueStatusBadge } from "@/features/collections/components/collection-badges";
 import { formatDateTime, formatPaise } from "@/lib/format";
 import { useMemberDashboard } from "../use-dashboard";
+import { PushNotificationBanner } from "@/features/notifications/components/member-notifications-view";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -470,6 +471,11 @@ export function MemberDashboardView() {
         memberCode={member.memberCode}
       />
 
+      {/* Push Notification Opt-in / Status Banner */}
+      <div className="sm:hidden">
+        <PushNotificationBanner />
+      </div>
+
       {/* KPI native section */}
       <MobileKpiSection
         totalGroups={summary.totalGroups}
@@ -524,6 +530,11 @@ export function MemberDashboardView() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Push Notification Opt-in / Status Banner (Desktop) */}
+      <div className="hidden sm:block">
+        <PushNotificationBanner />
       </div>
 
       {/* Desktop KPI grid */}

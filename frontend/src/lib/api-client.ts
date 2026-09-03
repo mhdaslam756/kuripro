@@ -1,9 +1,13 @@
-const API_BASE_URL: string = (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:4000/api";
+export const API_BASE_URL: string = (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:4000/api";
 
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
 }
 
 const DEVICE_ID_STORAGE_KEY = "kuripro_device_id";

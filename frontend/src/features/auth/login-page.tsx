@@ -45,8 +45,10 @@ export function LoginPage() {
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     setLastEnteredPassword(values.password);
+
     try {
       const loggedUser = await login(values.identifier, values.password, values.rememberDevice);
+
       if (loggedUser?.mustChangePassword) {
         setShowFirstLoginModal(true);
       } else if (loggedUser?.role?.slug === "SUPER_ADMIN") {
@@ -54,7 +56,7 @@ export function LoginPage() {
       } else {
         navigate("/dashboard", { replace: true });
       }
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof ApiError && (error.code === "EMAIL_NOT_VERIFIED" || error.message.toLowerCase().includes("verify your email"))) {
         setUnverifiedEmail(values.identifier);
         setShowVerificationModal(true);

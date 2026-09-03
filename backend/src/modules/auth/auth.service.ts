@@ -174,7 +174,6 @@ export interface RegisterOrganizerResult {
   requireEmailVerification: boolean;
   email: string;
   message: string;
-  devOtp?: string;
   accessToken?: string;
   user?: AuthResult["user"];
   refreshToken?: string;
@@ -243,13 +242,9 @@ export async function registerOrganizer(
       };
     }
 
-    let devOtp: string | undefined;
     if (createdUser) {
       const code = await generateOtp(createdUser._id, createdUser.email, "EMAIL_VERIFICATION");
       await deliverOtp(createdUser.email, "EMAIL_VERIFICATION", code);
-      if (env.NODE_ENV !== "production") {
-        devOtp = code;
-      }
     }
 
     return {
@@ -257,7 +252,6 @@ export async function registerOrganizer(
       requireEmailVerification: true,
       email: input.organizerEmail,
       message: "Organization registration submitted. Please enter the verification code sent to your email.",
-      devOtp,
     };
   } finally {
     await session.endSession();
@@ -321,10 +315,10 @@ export async function login(input: LoginInput, deviceContext: DeviceContext = {}
 }
 
 /** Always returns the same shape whether or not the email is registered — no user enumeration. */
-export async function requestOtp(email: string): Promise<{ devOtp?: string }> {
+export async function requestOtp(email: string): Promise<void> {
   const user = await findUserByEmail(email);
   if (!user) {
-    return {};
+    return;
   }
 
   const code = await generateOtp(user._id, user.email, "LOGIN");
@@ -335,8 +329,6 @@ export async function requestOtp(email: string): Promise<{ devOtp?: string }> {
     action: "OTP_REQUESTED",
     message: "Requested a login code",
   });
-
-  return env.NODE_ENV !== "production" ? { devOtp: code } : {};
 }
 
 export async function verifyOtpLogin(
@@ -370,7 +362,7 @@ export async function verifyOtpLogin(
   return issueAuthResult(user, deviceContext);
 }
 
-export async function forgotPassword(identifier: string): Promise<{ devOtp?: string; targetEmail?: string }> {
+export async function forgotPassword(identifier: string): Promise<{ targetEmail?: string }> {
   const clean = identifier.trim().toLowerCase();
   const user = await findUserByPhoneOrEmail(clean);
   if (!user || !user.email) {
@@ -387,7 +379,6 @@ export async function forgotPassword(identifier: string): Promise<{ devOtp?: str
   });
 
   return {
-    ...(env.NODE_ENV !== "production" ? { devOtp: code } : {}),
     targetEmail: user.email,
   };
 }
@@ -625,11 +616,11 @@ export async function verifyEmail(
   };
 }
 
-export async function resendVerificationEmail(email: string): Promise<{ devOtp?: string }> {
+export async function resendVerificationEmail(email: string): Promise<void> {
   const user = await findUserByEmail(email);
   if (!user) {
     // Return empty to avoid email enumeration
-    return {};
+    return;
   }
 
   if (user.isEmailVerified) {
@@ -644,8 +635,6 @@ export async function resendVerificationEmail(email: string): Promise<{ devOtp?:
     action: "EMAIL_VERIFICATION_REQUESTED",
     message: "Requested a new email verification code",
   });
-
-  return env.NODE_ENV !== "production" ? { devOtp: code } : {};
 }
 
 // --- Member self-registration ---
@@ -655,7 +644,6 @@ export interface RegisterMemberSelfResult {
   requireEmailVerification: boolean;
   email: string;
   message: string;
-  devOtp?: string;
 }
 
 /**
@@ -733,13 +721,9 @@ export async function registerMemberSelf(
     await session.endSession();
   }
 
-  let devOtp: string | undefined;
   if (createdUserId) {
     const code = await generateOtp(createdUserId, input.email, "EMAIL_VERIFICATION");
     await deliverOtp(input.email, "EMAIL_VERIFICATION", code);
-    if (env.NODE_ENV !== "production") {
-      devOtp = code;
-    }
   }
 
   return {
@@ -747,7 +731,6 @@ export async function registerMemberSelf(
     requireEmailVerification: true,
     email: input.email,
     message: "Your registration has been submitted. Please enter the verification code sent to your email.",
-    devOtp,
   };
 }
 

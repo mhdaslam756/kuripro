@@ -14,6 +14,7 @@ import {
   recordCollectionSchema,
   syncOfflineSchema,
 } from "./collection.validators.js";
+import { sendDueRemindersSchema } from "./due-reminder.validators.js";
 
 export const collectionRouter: Router = Router();
 
@@ -33,6 +34,13 @@ collectionRouter.post(
   requirePermission("collection.manage_dues"),
   validate({ body: flagOverdueSchema }),
   collectionController.flagOverdue,
+);
+
+collectionRouter.post(
+  "/dues/remind",
+  requirePermission("collection.manage_dues"),
+  validate({ body: sendDueRemindersSchema }),
+  collectionController.sendDueReminders,
 );
 
 collectionRouter.get(

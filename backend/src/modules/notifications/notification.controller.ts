@@ -4,6 +4,7 @@ import { requireTenantContext } from "../../middleware/rbac.js";
 import type { MongoIdParam } from "../../utils/common-validators.js";
 import { resolveMemberForUser } from "../members/member.service.js";
 import * as service from "./notification.service.js";
+import { addMemberNotificationListener } from "./notification.stream.js";
 import type {
   CreateTemplateBody,
   ListHistoryQuery,
@@ -91,4 +92,50 @@ export async function meta(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const [channels, stats] = await Promise.all([service.getChannelAvailability(), service.getStats(tenantId)]);
   res.status(200).json({ channels, stats });
+}
+
+export async function notificationStream(req: Request, res: Response): Promise<void> {
+  const userId = req.auth?.userId;
+  const tenantId = req.auth?.tenantId;
+  if (!userId) {
+    res.status(401).end();
+    return;
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  if (res.flushHeaders) {
+    res.flushHeaders();
+  }
+
+  res.write("event: connected\ndata: {}\n\n");
+
+  const unsubs: Array<() => void> = [];
+  const onPayload = (payload: any) => {
+    res.write(`event: notification\ndata: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  unsubs.push(service.subscribeToUserNotifications(userId, onPayload));
+
+  if (tenantId) {
+    try {
+      const member = await resolveMemberForUser(userId, tenantId);
+      if (member) {
+        unsubs.push(addMemberNotificationListener(member._id.toString(), onPayload));
+      }
+    } catch {
+      // Ignore member resolution error
+    }
+  }
+
+  const heartbeat = setInterval(() => {
+    res.write(": heartbeat\n\n");
+  }, 25000);
+
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    for (const u of unsubs) u();
+  });
 }

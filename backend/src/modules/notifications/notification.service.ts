@@ -6,6 +6,7 @@ import { findMemberById, listMembersByIds, listMembersForExport, listMembersWith
 import type { MemberDocument } from "../members/member.model.js";
 import { distinctOverdueMembershipIds } from "../payments/payment.repository.js";
 import { findTenantById } from "../tenants/tenant.repository.js";
+import { findUserByPhoneOrEmail } from "../users/user.repository.js";
 import { AppError } from "../../utils/app-error.js";
 import type { PaginatedResult, PaginationQuery } from "../../utils/pagination.js";
 import { channelAvailability } from "./channels/registry.js";
@@ -109,10 +110,28 @@ function contactFor(member: MemberDocument, channel: NotificationChannel): strin
  * phone/email (or none); for PUSH it fans out to every registered device token of the member's linked
  * user — so a member with two devices gets two notifications, and one with none is skipped cleanly.
  */
+import { addNotificationListener } from "./notification.stream.js";
+
 async function memberTargets(tenantId: string, member: MemberDocument, channel: NotificationChannel): Promise<string[]> {
   if (channel === "PUSH") {
-    if (!member.userId) return [];
-    return pushTokensForUser(tenantId, member.userId.toString());
+    let userId = member.userId?.toString();
+    if (!userId) {
+      let user = member.phone ? await findUserByPhoneOrEmail(member.phone) : null;
+      if (!user && member.email) {
+        user = await findUserByPhoneOrEmail(member.email);
+      }
+      if (user) {
+        userId = user._id.toString();
+        member.userId = user._id;
+        void member.save().catch(() => null);
+      }
+    }
+    if (userId) {
+      const tokens = await pushTokensForUser(tenantId, userId);
+      if (tokens.length > 0) return tokens;
+      return [`user:${userId}`];
+    }
+    return [`member:${member._id.toString()}`];
   }
   const contact = contactFor(member, channel);
   return contact ? [contact] : [];
@@ -280,3 +299,8 @@ export async function getStats(tenantId: string): Promise<NotificationStats> {
 export function getChannelAvailability() {
   return channelAvailability();
 }
+
+export function subscribeToUserNotifications(userId: string, listener: (payload: any) => void): () => void {
+  return addNotificationListener(userId, listener);
+}
+
