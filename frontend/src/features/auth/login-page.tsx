@@ -2,21 +2,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { EmailVerificationDialog } from "./components/email-verification-dialog";
 import { FirstLoginModal } from "./components/first-login-modal";
 import { ForgotPasswordDialog } from "./components/forgot-password-dialog";
+import { LoginIllustration } from "./components/login-illustration";
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, "Enter your phone number or email"),
-  password: z.string().min(1, "Enter your password"),
+  identifier: z.string().min(1, "Please enter your username, email, or phone"),
+  password: z.string().min(1, "Please enter your password"),
   rememberDevice: z.boolean(),
 });
 
@@ -31,16 +31,20 @@ export function LoginPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [lastEnteredPassword, setLastEnteredPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: "", password: "", rememberDevice: false },
   });
+
+  const rememberDevice = watch("rememberDevice");
 
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
@@ -57,65 +61,151 @@ export function LoginPage() {
         navigate("/dashboard", { replace: true });
       }
     } catch (error: any) {
-      if (error instanceof ApiError && (error.code === "EMAIL_NOT_VERIFIED" || error.message.toLowerCase().includes("verify your email"))) {
+      if (
+        error instanceof ApiError &&
+        (error.code === "EMAIL_NOT_VERIFIED" || error.message.toLowerCase().includes("verify your email"))
+      ) {
         setUnverifiedEmail(values.identifier);
         setShowVerificationModal(true);
       } else {
-        setFormError(error instanceof ApiError ? error.message : "Something went wrong — please try again");
+        setFormError(error instanceof ApiError ? error.message : "Invalid credentials. Please try again.");
       }
     }
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg-app px-4 py-8">
-      <div className="absolute -left-24 -top-24 size-80 rounded-full bg-brand-200/35 blur-3xl" />
-      <div className="absolute -bottom-28 -right-20 size-96 rounded-full bg-[var(--good-100)]/80 blur-3xl" />
-      <div className="relative w-full max-w-sm rounded-xl border border-border-default bg-bg-surface/95 p-6 shadow-[0_18px_50px_rgb(30_33_42/0.12)] backdrop-blur sm:p-8">
-          <div className="mb-7">
-            <div className="mb-5 flex size-11 items-center justify-center rounded-md bg-accent-primary font-display text-xl font-bold text-text-on-brand shadow-[0_6px_16px_rgb(114_83_32/0.22)]">K</div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent-primary"><ShieldCheck className="size-3.5" /> Secure workspace</p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-text-primary">Welcome back</h1>
-          <p className="mt-2 text-sm leading-6 text-text-secondary">Log in with your phone number or email to access your workspace.</p>
+    <div className="relative min-h-screen w-full flex flex-col justify-center items-center p-0 sm:px-6 sm:py-8 overflow-x-hidden bg-bg-surface sm:bg-bg-app">
+      {/* ── Project ambient background glows (Desktop only) ── */}
+      <div className="pointer-events-none absolute -left-28 -top-28 size-96 rounded-full bg-accent-primary/10 blur-3xl hidden sm:block" />
+      <div className="pointer-events-none absolute -bottom-28 -right-28 size-96 rounded-full bg-primary-purple/10 blur-3xl hidden sm:block" />
+
+      {/* ── Mobile: Complete full page / Desktop: Elevated Card Container ── */}
+      <div className="relative w-full min-h-screen sm:min-h-0 sm:max-w-[420px] rounded-none sm:rounded-3xl bg-bg-surface border-0 sm:border sm:border-border-default shadow-none sm:shadow-xl px-6 py-8 sm:px-8 sm:py-8 z-10 flex flex-col justify-center">
+        {/* Hero Vector Illustration with Project Colors */}
+        <div className="mb-2">
+          <LoginIllustration />
         </div>
 
+        {/* Login Headings */}
+        <div className="mt-1 mb-5 text-left">
+          <h1 className="font-display text-2xl sm:text-[28px] font-bold text-text-primary tracking-tight">
+            Login
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-text-secondary font-medium">
+            Please Sign in to continue.
+          </p>
+        </div>
+
+        {/* Form Inputs */}
         <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} className="flex flex-col gap-4">
-          <Field label="Phone Number or Email" htmlFor="identifier" error={errors.identifier?.message}>
-            <Input id="identifier" type="text" placeholder="e.g. +919876543210 or user@domain.com" autoComplete="username" {...register("identifier")} />
-          </Field>
-
-          <Field label="Password" htmlFor="password" error={errors.password?.message}>
-            <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
-          </Field>
-
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-text-secondary cursor-pointer">
-              <input type="checkbox" className="h-4 w-4 rounded-xs" {...register("rememberDevice")} />
-              Remember device
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowForgotPassword(true)}
-              className="text-xs font-semibold text-accent-link hover:underline cursor-pointer"
+          {/* Username / Phone / Email Input */}
+          <div>
+            <div
+              className={`relative flex items-center rounded-2xl bg-bg-raised border transition-all px-4 py-3.5 ${
+                errors.identifier
+                  ? "border-bad-border bg-bad-bg/40"
+                  : "border-border-default/80 focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 focus-within:bg-bg-surface"
+              }`}
             >
-              Forgot password?
-            </button>
+              <User className="size-4.5 text-text-secondary shrink-0" strokeWidth={1.8} />
+              <input
+                id="identifier"
+                type="text"
+                placeholder="Username"
+                autoComplete="username"
+                className="w-full bg-transparent pl-3 text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none"
+                {...register("identifier")}
+              />
+            </div>
+            {errors.identifier ? (
+              <p className="mt-1 text-[11px] font-medium text-bad-fg px-3">{errors.identifier.message}</p>
+            ) : null}
           </div>
 
-          {formError ? <p className="rounded-md border border-bad-border bg-bad-bg px-3 py-2.5 text-sm font-medium text-bad-fg">{formError}</p> : null}
+          {/* Password Input with Dots & Eye Toggle */}
+          <div>
+            <div
+              className={`relative flex items-center rounded-2xl bg-bg-raised border transition-all px-4 py-3.5 ${
+                errors.password
+                  ? "border-bad-border bg-bad-bg/40"
+                  : "border-border-default/80 focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 focus-within:bg-bg-surface"
+              }`}
+            >
+              <Lock className="size-4.5 text-text-secondary shrink-0" strokeWidth={1.8} />
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••••••"
+                autoComplete="current-password"
+                className="w-full bg-transparent pl-3 text-sm font-medium text-text-primary placeholder:text-text-disabled tracking-wider outline-none"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="text-text-secondary hover:text-text-primary transition-colors p-1 shrink-0"
+              >
+                {showPassword ? <EyeOff className="size-4.5" /> : <Eye className="size-4.5" />}
+              </button>
+            </div>
+            {errors.password ? (
+              <p className="mt-1 text-[11px] font-medium text-bad-fg px-3">{errors.password.message}</p>
+            ) : null}
+          </div>
 
-          <Button type="submit" size="lg" disabled={isSubmitting} className="active-bounce">
-            {isSubmitting ? "Logging in…" : "Log in"}
+          {/* "Reminder me nextime" Switch & Forgot Password */}
+          <div className="flex items-center justify-between pt-0.5 pb-1">
+            <label htmlFor="rememberDevice" className="text-xs font-medium text-text-secondary select-none cursor-pointer">
+              Reminder me nextime
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-xs font-medium text-accent-link hover:underline transition-colors cursor-pointer"
+              >
+                Forgot?
+              </button>
+              <Switch
+                id="rememberDevice"
+                checked={rememberDevice}
+                onCheckedChange={(checked: boolean) => setValue("rememberDevice", checked)}
+                className="data-[state=checked]:bg-accent-primary scale-85 origin-right"
+              />
+            </div>
+          </div>
+
+          {/* Form Error Banner */}
+          {formError ? (
+            <p className="rounded-xl border border-bad-border bg-bad-bg px-3.5 py-2 text-xs font-medium text-bad-fg text-center leading-relaxed">
+              {formError}
+            </p>
+          ) : null}
+
+          {/* Big Pill Action Button: "Sign In" using project brand color */}
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-12 sm:h-13 mt-1 rounded-2xl bg-accent-primary hover:bg-brand-700 text-text-on-brand font-bold text-sm sm:text-base tracking-wide shadow-lg shadow-purple-600/25 active-bounce transition-all cursor-pointer"
+          >
+            {isSubmitting ? "Signing In…" : "Sign In"}
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-secondary">
-          New organization?{" "}
-          <Link to="/register" className="font-medium text-accent-link hover:underline">
-            Register organization
+        {/* Footer: "Don't have account? Sign Up" */}
+        <p className="mt-6 text-center text-xs sm:text-sm text-text-secondary">
+          Don't have account?{" "}
+          <Link to="/register" className="font-bold text-accent-primary hover:underline ml-1">
+            Sign Up
           </Link>
         </p>
+
+    
       </div>
 
+      {/* Existing Auth Dialogs (Preserved) */}
       <ForgotPasswordDialog
         open={showForgotPassword}
         initialIdentifier={watch("identifier") || ""}
@@ -140,10 +230,10 @@ export function LoginPage() {
           if (res.accessToken) {
             navigate("/dashboard", { replace: true });
           } else {
-            setFormError("Email verified successfully! If your account requires admin approval, you will be notified once activated.");
+            setFormError("Email verified successfully! Once approved, you will be notified.");
           }
         }}
       />
     </div>
-);
+  );
 }

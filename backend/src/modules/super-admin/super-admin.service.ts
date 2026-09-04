@@ -6,9 +6,8 @@ import { Role } from "../roles/role.model.js";
 import { Member } from "../members/member.model.js";
 import { ChitGroup } from "../chit-groups/chit-group.model.js";
 import { issueAuthResult, type AuthResult, type DeviceContext } from "../auth/auth.service.js";
-
-
 import { env } from "../../config/env.js";
+import type { CreateSuperAdminCredentialsInput } from "./super-admin.validators.js";
 
 /** Ensure system role for Super Admin exists. */
 export async function ensureSuperAdminRole() {
@@ -46,6 +45,84 @@ export async function seedSuperAdmin() {
       });
     }
   }
+}
+
+/** Create or update Super Admin credentials via API */
+export async function createSuperAdminCredentials(
+  input: CreateSuperAdminCredentialsInput,
+  deviceContext: DeviceContext = {},
+  requesterUser?: { roleSlug?: string; userId?: string },
+  headerSetupKey?: string,
+) {
+  const email = input.email.trim().toLowerCase();
+  const role = await ensureSuperAdminRole();
+
+  // Security gate:
+  // If at least one Super Admin account already exists in the system:
+  // Allow creation/reset if:
+  // 1. Requester is already authenticated as a SUPER_ADMIN, OR
+  // 2. Setup key provided matches env.SUPER_ADMIN_SETUP_KEY or env.JWT_ACCESS_SECRET, OR
+  // 3. Running in non-production mode (development/test)
+  const superAdminCount = await User.countDocuments({ tenantId: null });
+  const providedKey = input.setupKey || headerSetupKey;
+  const isSuperAdminUser = requesterUser?.roleSlug === "SUPER_ADMIN";
+  const expectedKey = env.SUPER_ADMIN_SETUP_KEY || env.JWT_ACCESS_SECRET;
+
+  if (superAdminCount > 0 && !isSuperAdminUser && env.NODE_ENV === "production") {
+    if (!providedKey || providedKey !== expectedKey) {
+      throw AppError.forbidden(
+        "Super Admin already exists. Provide valid setupKey or authenticate as Super Admin to manage credentials.",
+        "SETUP_KEY_REQUIRED",
+      );
+    }
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  let user = await User.findOne({ tenantId: null, email }).select("+passwordHash");
+  let action: "CREATED" | "UPDATED" = "CREATED";
+
+  if (user) {
+    action = "UPDATED";
+    user.name = input.name || user.name || "Super Admin";
+    user.phone = input.phone || user.phone || "+919999999999";
+    user.passwordHash = passwordHash;
+    user.status = "ACTIVE";
+    user.mustChangePassword = false;
+    user.roleId = role._id;
+    await user.save();
+  } else {
+    user = await User.create({
+      tenantId: null,
+      roleId: role._id,
+      name: input.name || "Super Admin",
+      email,
+      phone: input.phone || "+919999999999",
+      passwordHash,
+      status: "ACTIVE",
+      mustChangePassword: false,
+    });
+  }
+
+  let authResult: AuthResult | undefined;
+  if (input.autoLogin) {
+    user.lastLoginAt = new Date();
+    await user.save();
+    authResult = await issueAuthResult(user, deviceContext);
+  }
+
+  return {
+    message: action === "CREATED" ? "Super Admin credentials created successfully" : "Super Admin credentials updated successfully",
+    action,
+    user: {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      role: "SUPER_ADMIN",
+    },
+    auth: authResult,
+  };
 }
 
 

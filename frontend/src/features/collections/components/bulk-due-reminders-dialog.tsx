@@ -1,4 +1,4 @@
-import { Bell, CheckCircle2, Send, Smartphone, MessageSquare, Radio, Users } from "lucide-react";
+import { Bell, CheckCircle2, Send, Smartphone, MessageSquare, Radio } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -208,18 +208,11 @@ export function BulkDueRemindersDialog({
                       body: "Dear Member, dues of ₹1,000 for onam kuri are due today. Kindly pay on time.",
                       url: "/notifications",
                     });
-                    toast.info("Test Push Alert 🔔", {
-                      description: "Dear Member, dues of ₹1,000 for onam kuri are due today.",
-                    });
                   }}
                   className="gap-1.5 text-xs text-text-secondary hover:text-accent-primary justify-start"
                 >
                   <Bell size={13} /> Test on My Screen
                 </Button>
-                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <Users size={14} />
-                  <span>Target: ~{targetCount} members</span>
-                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2">

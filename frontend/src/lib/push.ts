@@ -130,6 +130,9 @@ export async function showPushNotification(
 ): Promise<boolean> {
   if (!isPushSupported() || Notification.permission !== "granted") return false;
   try {
+    if ("clearAppBadge" in navigator) {
+      void (navigator as any).clearAppBadge().catch(() => {});
+    }
     if ("serviceWorker" in navigator) {
       const reg = await Promise.race([
         navigator.serviceWorker.ready,

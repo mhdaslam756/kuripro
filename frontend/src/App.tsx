@@ -24,12 +24,14 @@ import { MemberLoginPage } from "@/features/public-portal/member-login-page";
 import { ProtectedRoute } from "@/routes/protected-route";
 import { Toaster } from "@/components/ui/sonner";
 import { AppInstallNotificationToasts } from "@/components/pwa/install-notification-toasts";
+import { DueNotificationPopup } from "@/features/notifications/components/due-notification-popup";
 
 export default function App() {
   return (
     <>
       <Toaster position="top-center" richColors closeButton />
       <AppInstallNotificationToasts />
+      <DueNotificationPopup />
       <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

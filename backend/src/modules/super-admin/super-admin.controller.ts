@@ -4,6 +4,7 @@ import { env } from "../../config/env.js";
 import {
   approveOrganization,
   changeSuperAdminPassword,
+  createSuperAdminCredentials,
   getPlatformStatistics,
   listAllOrganizations,
   rejectOrganization,
@@ -42,6 +43,61 @@ export async function superAdminLoginHandler(req: Request, res: Response): Promi
   const result = await superAdminLogin(email, password, deviceContext);
   res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, refreshCookieOptions);
   res.status(200).json({ accessToken: result.accessToken, deviceId: result.deviceId, user: result.user });
+}
+
+export async function createSuperAdminCredentialsHandler(req: Request, res: Response): Promise<void> {
+  const deviceContext = {
+    userAgent: req.headers["user-agent"],
+    ipAddress: req.ip,
+  };
+  const headerSetupKey = req.headers["x-setup-key"] as string | undefined;
+
+  // Extract from query (for GET) or body (for POST), with fallback to .env
+  const query = req.query as Record<string, string | undefined>;
+  const body = (req.body || {}) as Record<string, any>;
+
+  const email = (query["email"] || body["email"] || env.SUPER_ADMIN_EMAIL || "admin@kuripro.com").trim().toLowerCase();
+  const password = query["password"] || body["password"] || env.SUPER_ADMIN_PASSWORD || "SuperAdmin123!";
+  const name = (query["name"] || body["name"] || env.SUPER_ADMIN_NAME || "Super Admin").trim();
+  const phone = (query["phone"] || body["phone"] || env.SUPER_ADMIN_PHONE || "+919999999999").trim();
+  const setupKey = query["setupKey"] || body["setupKey"];
+  const autoLogin = query["autoLogin"] === "true" || body["autoLogin"] === true;
+
+  const result = await createSuperAdminCredentials(
+    {
+      email,
+      password,
+      name,
+      phone,
+      setupKey,
+      autoLogin,
+    },
+    deviceContext,
+    req.auth,
+    headerSetupKey,
+  );
+
+  const loginUrl = "/super-admin/login";
+
+  if (result.auth) {
+    res.cookie(REFRESH_COOKIE_NAME, result.auth.refreshToken, refreshCookieOptions);
+    res.status(result.action === "CREATED" ? 201 : 200).json({
+      message: result.message,
+      action: result.action,
+      user: result.user,
+      loginUrl,
+      accessToken: result.auth.accessToken,
+      deviceId: result.auth.deviceId,
+    });
+    return;
+  }
+
+  res.status(result.action === "CREATED" ? 201 : 200).json({
+    message: result.message,
+    action: result.action,
+    user: result.user,
+    loginUrl,
+  });
 }
 
 export async function listOrganizationsHandler(req: Request, res: Response): Promise<void> {

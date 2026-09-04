@@ -53,7 +53,8 @@ const envSchema = z.object({
   SUPER_ADMIN_EMAIL: z.string().optional(),
   SUPER_ADMIN_PASSWORD: z.string().optional(),
   SUPER_ADMIN_NAME: z.string().optional(),
-  SUPER_ADMIN_PHONE: z.string().optional()
+  SUPER_ADMIN_PHONE: z.string().optional(),
+  SUPER_ADMIN_SETUP_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

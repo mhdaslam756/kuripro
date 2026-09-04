@@ -1,5 +1,6 @@
 import { Bell, BellRing, CheckCircle2, Download, Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,14 @@ import { usePwa } from "@/lib/use-pwa";
  * 2. Enabling Push Notifications (reminders, dues, auctions)
  */
 export function AppInstallNotificationToasts() {
+  const location = useLocation();
+  const isAuthPage =
+    location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/register") ||
+    location.pathname.startsWith("/forgot-password") ||
+    location.pathname.startsWith("/portal") ||
+    location.pathname.startsWith("/super-admin");
+
   const { canInstall, installed } = usePwa();
   const [showInstallToast, setShowInstallToast] = useState(false);
   const [showPushToast, setShowPushToast] = useState(false);
@@ -23,6 +32,7 @@ export function AppInstallNotificationToasts() {
   const [isEnablingPush, setIsEnablingPush] = useState(false);
 
   useEffect(() => {
+    if (isAuthPage) return;
     // Check if app is already running in standalone mode or already installed
     const standalone = isStandalone() || installed;
     const installDismissed = sessionStorage.getItem("kuripro_install_dismissed") === "true";
@@ -35,9 +45,10 @@ export function AppInstallNotificationToasts() {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [canInstall, installed]);
+  }, [canInstall, installed, isAuthPage]);
 
   useEffect(() => {
+    if (isAuthPage) return;
     const pushDismissed = sessionStorage.getItem("kuripro_push_dismissed") === "true";
     const pushSupported = isPushSupported();
     const registered = hasRegisteredPush();
@@ -49,7 +60,9 @@ export function AppInstallNotificationToasts() {
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isAuthPage]);
+
+  if (isAuthPage) return null;
 
   async function handleInstall() {
     if (isIosDevice()) {

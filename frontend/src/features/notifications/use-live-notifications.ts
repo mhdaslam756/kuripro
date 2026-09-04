@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { API_BASE_URL, api, getAccessToken } from "@/lib/api-client";
 import { enablePush, playNotificationChime, showPushNotification } from "@/lib/push";
+import { triggerDuePopup } from "./components/due-notification-popup";
 
 export function useLiveNotifications(): void {
   const { user } = useAuth();
@@ -53,15 +54,35 @@ export function useLiveNotifications(): void {
         url: data.url || "/notifications",
       });
 
-      // In-app interactive toast
-      toast.info(data.title, {
-        description: data.body,
-        duration: 8000,
-        action: {
-          label: "View",
-          onClick: () => navigate(data.url || "/notifications"),
-        },
-      });
+      const isMember = user?.role?.slug === "MEMBER";
+
+      const isDue =
+        data.type === "REMINDER" ||
+        data.type === "DUE_REMINDER" ||
+        data.title?.toLowerCase().includes("due") ||
+        data.body?.toLowerCase().includes("due") ||
+        data.title?.toLowerCase().includes("installment") ||
+        data.body?.toLowerCase().includes("installment");
+
+      if (isDue && isMember) {
+        // Show prominent Due Popup Modal ONLY for Members receiving their due reminder
+        triggerDuePopup({
+          id: data.id,
+          title: data.title,
+          body: data.body,
+          url: data.url || "/notifications",
+        });
+      } else if (!isDue) {
+        // In-app interactive toast for other non-due notifications
+        toast.info(data.title, {
+          description: data.body,
+          duration: 8000,
+          action: {
+            label: "View",
+            onClick: () => navigate(data.url || "/notifications"),
+          },
+        });
+      }
 
       // Refresh notification inbox and dashboards
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -107,41 +128,47 @@ export function useLiveNotifications(): void {
 
     connect();
 
-    // 3. Fallback active-poll check every 12 seconds to guarantee 100% delivery
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await api.get<{ items: Array<{ id: string; subject?: string; body: string; createdAt: string }> }>(
-          "/notifications/history?limit=3",
-        );
-        const latestItems = res?.items ?? [];
+    // 3. Fallback active-poll check every 12 seconds ONLY for MEMBERS
+    // For organizers/staff, /notifications/history returns the outbound audit log of all sent messages.
+    // We must never treat the organization's outbound messages as inbound alerts to the organization.
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-        // On first poll, seed known notification IDs so we don't alert old ones
-        if (initialLoadRef.current) {
-          initialLoadRef.current = false;
+    if (user.role?.slug === "MEMBER") {
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await api.get<{ items: Array<{ id: string; subject?: string; body: string; createdAt: string }> }>(
+            "/notifications/history?limit=3",
+          );
+          const latestItems = res?.items ?? [];
+
+          // On first poll, seed known notification IDs so we don't alert old ones
+          if (initialLoadRef.current) {
+            initialLoadRef.current = false;
+            for (const item of latestItems) {
+              seenNotificationIdsRef.current.add(item.id);
+            }
+            return;
+          }
+
           for (const item of latestItems) {
-            seenNotificationIdsRef.current.add(item.id);
+            if (!seenNotificationIdsRef.current.has(item.id)) {
+              handleIncomingNotification({
+                id: item.id,
+                title: item.subject ?? "Payment Reminder 🔔",
+                body: item.body,
+                url: "/notifications",
+              });
+            }
           }
-          return;
+        } catch {
+          // Polling failure is non-fatal
         }
-
-        for (const item of latestItems) {
-          if (!seenNotificationIdsRef.current.has(item.id)) {
-            handleIncomingNotification({
-              id: item.id,
-              title: item.subject ?? "Payment Reminder 🔔",
-              body: item.body,
-              url: "/notifications",
-            });
-          }
-        }
-      } catch {
-        // Polling failure is non-fatal
-      }
-    }, 12000);
+      }, 12000);
+    }
 
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
       if (eventSource) {
         eventSource.close();
         eventSource = null;

@@ -211,9 +211,6 @@ export function ReminderDialog({ open, onOpenChange, installment, chitGroupName 
                       body: pushBody.trim() || defaultPushBody,
                       url: "/notifications",
                     });
-                    toast.info("Test Push Alert 🔔", {
-                      description: pushBody.trim() || defaultPushBody,
-                    });
                   }}
                   className="gap-1.5 text-xs text-text-secondary hover:text-accent-primary justify-start"
                 >

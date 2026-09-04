@@ -308,11 +308,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-label="Notifications"
             >
               <Bell size={17} />
-              {/* Unread dot */}
-              <span
-                className="absolute right-2 top-2 size-2 rounded-full bg-bad-fg ring-2 ring-bg-surface"
-                aria-hidden="true"
-              />
             </NavLink>
 
             <div className="hidden lg:block">
