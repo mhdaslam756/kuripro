@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import type { DeviceContext } from "../auth/auth.service.js";
+import { setRefreshCookie } from "../auth/cookie.helper.js";
 import * as publicService from "./public.service.js";
 import type { PublicMemberLoginInput, PublicMemberRegisterInput } from "./public.validators.js";
 
@@ -30,12 +31,7 @@ export async function registerMember(req: Request, res: Response): Promise<void>
   const result = await publicService.registerPublicMember(slug, input, deviceContext);
 
   if (!result.requireEmailVerification && result.auth.refreshToken) {
-    res.cookie("refreshToken", result.auth.refreshToken, {
-      httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshCookie(res, result.auth.refreshToken);
   }
 
   res.status(201).json({
@@ -52,12 +48,7 @@ export async function loginMember(req: Request, res: Response): Promise<void> {
   const auth = await publicService.publicMemberLogin(slug, input, deviceContext);
 
   if (auth.refreshToken) {
-    res.cookie("refreshToken", auth.refreshToken, {
-      httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setRefreshCookie(res, auth.refreshToken);
   }
 
   res.status(200).json({ auth });

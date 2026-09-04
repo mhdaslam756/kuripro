@@ -5,6 +5,7 @@ export interface UpsertSessionInput {
   tenantId: ObjectIdLike | null;
   userId: ObjectIdLike;
   tokenId: string;
+  secretHash: string;
   deviceId: string;
   deviceLabel: string;
   userAgent?: string;
@@ -26,6 +27,7 @@ export async function upsertSession(data: UpsertSessionInput): Promise<SessionDo
     {
       $set: {
         tokenId: data.tokenId,
+        secretHash: data.secretHash,
         deviceLabel: data.deviceLabel,
         userAgent: data.userAgent,
         ipAddress: data.ipAddress,
@@ -48,17 +50,53 @@ export async function findSessionByTokenId(
 }
 
 /**
+ * Looks up an active session by current tokenId OR by previousTokenId if within the rotation grace period window.
+ */
+export async function findSessionByAnyTokenId(
+  tokenId: string,
+): Promise<{ session: SessionDocument; isGracePeriod: boolean } | null> {
+  const currentSession = await Session.findOne({
+    tokenId,
+    tenantId: { $exists: true },
+    revokedAt: { $exists: false },
+  });
+  if (currentSession) {
+    return { session: currentSession, isGracePeriod: false };
+  }
+
+  const graceSession = await Session.findOne({
+    previousTokenId: tokenId,
+    tenantId: { $exists: true },
+    revokedAt: { $exists: false },
+    previousTokenExpiresAt: { $gt: new Date() },
+  });
+  if (graceSession) {
+    return { session: graceSession, isGracePeriod: true };
+  }
+
+  return null;
+}
+
+/**
  * Looks up a session by its globally-unique tokenId without knowing the tenant in advance (e.g.
  * at logout, before the raw cookie token has been decoded into a tenant context). `tokenId` has
- * a unique index, so this is a narrow, single-record lookup — an intentional, documented use of
- * the tenant-scope plugin's cross-tenant escape hatch, not a bypass of tenant isolation.
+ * a unique index, so this is a narrow, single-record lookup.
  */
 export async function findSessionByTokenIdAnyTenant(tokenId: string): Promise<SessionDocument | null> {
   return Session.findOne({ tokenId, tenantId: { $exists: true } });
 }
 
-export async function touchSession(session: SessionDocument, tokenId: string, expiresAt: Date): Promise<void> {
+export async function touchSession(
+  session: SessionDocument,
+  tokenId: string,
+  secretHash: string,
+  expiresAt: Date,
+): Promise<void> {
+  session.previousTokenId = session.tokenId;
+  session.previousSecretHash = session.secretHash;
+  session.previousTokenExpiresAt = new Date(Date.now() + 30_000); // 30-second rotation grace period
   session.tokenId = tokenId;
+  session.secretHash = secretHash;
   session.lastUsedAt = new Date();
   session.expiresAt = expiresAt;
   await session.save();

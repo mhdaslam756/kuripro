@@ -1,9 +1,8 @@
-import type { CookieOptions, Request, Response } from "express";
-
-import { env } from "../../config/env.js";
+import type { Request, Response } from "express";
 import { AppError } from "../../utils/app-error.js";
 import * as authService from "./auth.service.js";
 import type { DeviceContext } from "./auth.service.js";
+import { clearRefreshCookie, readRefreshCookieValue, setRefreshCookie } from "./cookie.helper.js";
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
@@ -16,24 +15,6 @@ import type {
   VerifyEmailInput,
   VerifyOtpInput,
 } from "./auth.validators.js";
-
-const REFRESH_COOKIE_NAME = "kuripro_rt";
-
-const refreshCookieOptions: CookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: "strict",
-  path: "/api",
-  maxAge: env.JWT_REFRESH_TTL_SECONDS * 1000,
-};
-
-function setRefreshCookie(res: Response, refreshToken: string): void {
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
-}
-
-function readRefreshCookieValue(req: Request): string | undefined {
-  return (req.cookies as Record<string, string | undefined> | undefined)?.[REFRESH_COOKIE_NAME];
-}
 
 function readRefreshCookie(req: Request): string {
   const token = readRefreshCookieValue(req);
@@ -137,7 +118,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
   if (token) {
     await authService.logout(token);
   }
-  res.clearCookie(REFRESH_COOKIE_NAME, { path: "/api/auth" });
+  clearRefreshCookie(res);
   res.status(204).send();
 }
 

@@ -1,4 +1,4 @@
-export const API_BASE_URL: string = (import.meta.env["VITE_API_URL"] as string | undefined) ?? "http://localhost:4000/api";
+export const API_BASE_URL: string = (import.meta.env["VITE_API_URL"] as string | undefined) || "/api";
 
 let accessToken: string | null = null;
 
@@ -46,26 +46,39 @@ interface RequestOptions {
   skipAuthRetry?: boolean;
 }
 
-let refreshInFlight: Promise<void> | null = null;
+export interface SessionRefreshResult<TUser = any> {
+  accessToken: string;
+  user: TUser;
+}
+
+let refreshInFlight: Promise<SessionRefreshResult> | null = null;
 let onUnauthorizedHandler: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorizedHandler = handler;
 }
 
-async function refreshAccessToken(): Promise<void> {
-  refreshInFlight ??= (async () => {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, { method: "POST", credentials: "include" });
-    if (!res.ok) {
-      throw new Error("Refresh failed");
-    }
-    const data = (await res.json()) as { accessToken: string };
-    setAccessToken(data.accessToken);
-  })().finally(() => {
-    refreshInFlight = null;
-  });
+export function refreshSessionTokens<TUser = any>(): Promise<SessionRefreshResult<TUser>> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new ApiError(res.status, "UNAUTHORIZED", "Refresh failed");
+      }
+      const data = (await res.json()) as SessionRefreshResult<TUser>;
+      setAccessToken(data.accessToken);
+      return data;
+    })().finally(() => {
+      setTimeout(() => {
+        refreshInFlight = null;
+      }, 500);
+    });
+  }
 
-  return refreshInFlight;
+  return refreshInFlight as Promise<SessionRefreshResult<TUser>>;
 }
 
 function isPublicAuthEndpoint(path: string): boolean {
@@ -99,9 +112,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (res.status === 401 && !options.skipAuthRetry && !isPublicAuthEndpoint(path)) {
     try {
-      await refreshAccessToken();
+      await refreshSessionTokens();
       return await request<T>(path, { ...options, skipAuthRetry: true });
-    } catch (err) {
+    } catch {
       setAccessToken(null);
       onUnauthorizedHandler?.();
       throw new ApiError(401, "UNAUTHORIZED", "Session expired");
@@ -144,7 +157,7 @@ async function downloadBlob(path: string, skipAuthRetry = false): Promise<Blob> 
 
   if (res.status === 401 && !skipAuthRetry && !isAuthEndpoint) {
     try {
-      await refreshAccessToken();
+      await refreshSessionTokens();
       return await downloadBlob(path, true);
     } catch {
       setAccessToken(null);

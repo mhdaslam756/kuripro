@@ -1,4 +1,4 @@
-import { api } from "./api-client";
+  import { api } from "./api-client";
 
 /**
  * Web push via Firebase Cloud Messaging. Config comes from public `VITE_FIREBASE_*` build vars; when
@@ -16,6 +16,15 @@ const firebaseConfig = {
 const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 
 const PUSH_TOKEN_KEY = "kuripro_push_token";
+
+export function isFirebaseConfigured(): boolean {
+  return Boolean(
+    isPushSupported() &&
+      vapidKey &&
+      firebaseConfig.apiKey &&
+      firebaseConfig.projectId
+  );
+}
 
 export function isPushConfigured(): boolean {
   return isPushSupported();
@@ -38,13 +47,18 @@ export function notificationPermission(): NotificationPermission | "unsupported"
 }
 
 async function getMessagingInstance() {
-  const [{ initializeApp, getApps }, { getMessaging, isSupported }] = await Promise.all([
-    import("firebase/app"),
-    import("firebase/messaging"),
-  ]);
-  if (!(await isSupported())) return null;
-  const app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
-  return getMessaging(app);
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const [{ initializeApp, getApps }, { getMessaging, isSupported }] = await Promise.all([
+      import("firebase/app"),
+      import("firebase/messaging"),
+    ]);
+    if (!(await isSupported())) return null;
+    const app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
+    return getMessaging(app);
+  } catch {
+    return null;
+  }
 }
 
 export type EnablePushResult =
@@ -52,12 +66,40 @@ export type EnablePushResult =
   | { ok: false; error: string; token?: undefined };
 
 export async function enablePush(): Promise<EnablePushResult> {
-  if (!isPushSupported()) return { ok: false, error: "This browser doesn't support push notifications." };
+  if (!isPushSupported()) {
+    if (isIosDevice()) {
+      return {
+        ok: false,
+        error: "On iPhone/iPad, please add KuriPro to your Home Screen first to enable push alerts (Tap Share → Add to Home Screen).",
+      };
+    }
+    return { ok: false, error: "This browser doesn't support push notifications." };
+  }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return { ok: false, error: "Notification permission was not granted." };
+  if (Notification.permission === "denied") {
+    return {
+      ok: false,
+      error: "Notifications are blocked in your browser settings. Please click the lock or settings icon in your address bar to allow notifications.",
+    };
+  }
 
-  if (isPushConfigured()) {
+  let permission: NotificationPermission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch {
+    permission = await new Promise<NotificationPermission>((resolve) => {
+      Notification.requestPermission(resolve);
+    });
+  }
+
+  if (permission !== "granted") {
+    return {
+      ok: false,
+      error: "Notification permission was not granted. Please allow notifications in your browser settings.",
+    };
+  }
+
+  if (isFirebaseConfigured()) {
     try {
       const messaging = await getMessagingInstance();
       if (messaging) {
@@ -71,7 +113,7 @@ export async function enablePush(): Promise<EnablePushResult> {
         }
       }
     } catch {
-      // Fallback to dev token registration below if FCM client handshake failed
+      // Fallback to web token registration below if FCM client handshake failed
     }
   }
 
@@ -82,7 +124,7 @@ export async function enablePush(): Promise<EnablePushResult> {
     localStorage.setItem(PUSH_TOKEN_KEY, devToken);
     return { ok: true, token: devToken };
   } catch (err: any) {
-    return { ok: false, error: err?.message || "Failed to register push token." };
+    return { ok: false, error: err?.message || "Failed to register push token with server." };
   }
 }
 

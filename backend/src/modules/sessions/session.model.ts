@@ -7,8 +7,11 @@ export interface SessionDoc extends Timestamps {
   tenantId: Types.ObjectId | null;
   userId: Types.ObjectId;
 
-  /** Matches the refresh-token key's tokenId — this document is metadata only, never the secret. */
+  /** Matches the refresh-token key's tokenId. */
   tokenId: string;
+
+  /** SHA-256 hash of the refresh token secret string. */
+  secretHash: string;
 
   /** Stable client-generated id for "this browser/app install" — lets a returning device reuse one session row. */
   deviceId: string;
@@ -22,6 +25,13 @@ export interface SessionDoc extends Timestamps {
   lastUsedAt: Date;
   expiresAt: Date;
   revokedAt?: Date;
+
+  /** Rotation grace period: tokenId of immediately preceding rotated token. */
+  previousTokenId?: string;
+  /** SHA-256 hash of immediately preceding rotated token secret. */
+  previousSecretHash?: string;
+  /** Expiration of the rotation grace period window (e.g. 30s after rotation). */
+  previousTokenExpiresAt?: Date;
 }
 
 export type SessionDocument = HydratedDocument<SessionDoc>;
@@ -32,6 +42,7 @@ const sessionSchema = new Schema<SessionDoc>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
     tokenId: { type: String, required: true, unique: true },
+    secretHash: { type: String, required: true },
 
     deviceId: { type: String, required: true },
     deviceLabel: { type: String, required: true, trim: true },
@@ -43,6 +54,10 @@ const sessionSchema = new Schema<SessionDoc>(
     lastUsedAt: { type: Date, required: true, default: () => new Date() },
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date },
+
+    previousTokenId: { type: String, index: true },
+    previousSecretHash: { type: String },
+    previousTokenExpiresAt: { type: Date },
   },
   baseSchemaOptions,
 );

@@ -10,12 +10,10 @@ import { seedSystemRolesForOrganization } from "../roles/role.service.js";
 import { registerMember } from "../members/member.service.js";
 import {
   findSessionById,
-  findSessionByTokenId,
   findSessionByTokenIdAnyTenant,
   listActiveSessions,
   revokeAllSessions as repoRevokeAllSessions,
   revokeSession as repoRevokeSession,
-  touchSession,
   upsertSession,
 } from "../sessions/session.repository.js";
 import type { SessionDocument } from "../sessions/session.model.js";
@@ -145,6 +143,7 @@ export async function issueAuthResult(user: IssuableUser, deviceContext: DeviceC
     tenantId: context.tenantId,
     userId: context.userId,
     tokenId: issued.tokenId,
+    secretHash: issued.secretHash,
     deviceId,
     deviceLabel: deviceContext.deviceLabel ?? "Unknown device",
     userAgent: deviceContext.userAgent,
@@ -449,18 +448,13 @@ export async function changePassword(userId: string, currentPassword: string, ne
  * round-trip needed.
  */
 export async function refreshSession(refreshToken: string): Promise<Omit<AuthResult, "deviceId">> {
-  const { userId, tenantId, previousTokenId, next } = await rotateRefreshToken(refreshToken);
+  const { userId, next } = await rotateRefreshToken(refreshToken);
 
   const user = await findUserById(userId);
   if (!user) {
     throw AppError.unauthorized();
   }
   const context = await buildAuthContext(user);
-
-  const session = await findSessionByTokenId(previousTokenId, tenantId);
-  if (session) {
-    await touchSession(session, next.tokenId, next.expiresAt);
-  }
 
   return {
     accessToken: generateAccessToken(context),

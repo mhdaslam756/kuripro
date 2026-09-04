@@ -1,6 +1,7 @@
-import type { CookieOptions, Request, Response } from "express";
+import type { Request, Response } from "express";
 
 import { env } from "../../config/env.js";
+import { setRefreshCookie } from "../auth/cookie.helper.js";
 import {
   approveOrganization,
   changeSuperAdminPassword,
@@ -11,16 +12,6 @@ import {
   setOrganizationStatus,
   superAdminLogin,
 } from "./super-admin.service.js";
-
-const REFRESH_COOKIE_NAME = "kuripro_rt";
-
-const refreshCookieOptions: CookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: "strict",
-  path: "/api",
-  maxAge: env.JWT_REFRESH_TTL_SECONDS * 1000,
-};
 
 export async function changeSuperAdminPasswordHandler(req: Request, res: Response): Promise<void> {
   const userId = req.auth?.userId;
@@ -41,7 +32,7 @@ export async function superAdminLoginHandler(req: Request, res: Response): Promi
   };
 
   const result = await superAdminLogin(email, password, deviceContext);
-  res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, refreshCookieOptions);
+  setRefreshCookie(res, result.refreshToken);
   res.status(200).json({ accessToken: result.accessToken, deviceId: result.deviceId, user: result.user });
 }
 
@@ -80,7 +71,7 @@ export async function createSuperAdminCredentialsHandler(req: Request, res: Resp
   const loginUrl = "/super-admin/login";
 
   if (result.auth) {
-    res.cookie(REFRESH_COOKIE_NAME, result.auth.refreshToken, refreshCookieOptions);
+    setRefreshCookie(res, result.auth.refreshToken);
     res.status(result.action === "CREATED" ? 201 : 200).json({
       message: result.message,
       action: result.action,

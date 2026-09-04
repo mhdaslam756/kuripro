@@ -1,10 +1,12 @@
-import { randomBytes, randomUUID, timingSafeEqual, createHash } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 import jwt from "jsonwebtoken";
 
 import { env } from "../../config/env.js";
 import type { AccessTokenPayload, AuthContext } from "../../types/auth.js";
 import { AppError } from "../../utils/app-error.js";
+import { Session } from "../sessions/session.model.js";
+import { findSessionByAnyTokenId, touchSession } from "../sessions/session.repository.js";
 
 /** "Remember this device" sessions get a much longer-lived refresh token than a default login. */
 export const REMEMBERED_DEVICE_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days
@@ -14,30 +16,14 @@ export interface RefreshIdentity {
   tenantId: string | null;
 }
 
-interface StoredRefreshToken extends RefreshIdentity {
-  secretHash: string;
-  ttlSeconds: number;
-  expiresAt: number;
-}
-
 export interface IssuedRefreshToken {
   token: string;
   tokenId: string;
+  secretHash: string;
   expiresAt: Date;
 }
 
-const refreshTokenStore = new Map<string, StoredRefreshToken>();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [tokenId, record] of refreshTokenStore.entries()) {
-    if (record.expiresAt < now) {
-      refreshTokenStore.delete(tokenId);
-    }
-  }
-}, 600_000).unref();
-
-function hashSecret(secret: string): string {
+export function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
 }
 
@@ -54,28 +40,24 @@ export function generateAccessToken(context: AuthContext): string {
 }
 
 export async function issueRefreshToken(
-  identity: RefreshIdentity,
+  _identity: RefreshIdentity,
   ttlSeconds: number = env.JWT_REFRESH_TTL_SECONDS,
 ): Promise<IssuedRefreshToken> {
   const tokenId = randomUUID();
   const secret = randomBytes(32).toString("hex");
   const expiresAtMs = Date.now() + ttlSeconds * 1000;
+  const secretHash = hashSecret(secret);
 
-  const record: StoredRefreshToken = {
-    userId: identity.userId,
-    tenantId: identity.tenantId,
-    secretHash: hashSecret(secret),
-    ttlSeconds,
-    expiresAt: expiresAtMs,
+  return {
+    token: `${tokenId}.${secret}`,
+    tokenId,
+    secretHash,
+    expiresAt: new Date(expiresAtMs),
   };
-
-  refreshTokenStore.set(tokenId, record);
-
-  return { token: `${tokenId}.${secret}`, tokenId, expiresAt: new Date(expiresAtMs) };
 }
 
 export async function revokeRefreshTokenById(tokenId: string): Promise<void> {
-  refreshTokenStore.delete(tokenId);
+  await Session.updateOne({ tokenId, tenantId: { $exists: true } }, { $set: { revokedAt: new Date() } });
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {
@@ -92,30 +74,53 @@ export async function rotateRefreshToken(
     throw AppError.unauthorized("Malformed refresh token");
   }
 
-  const stored = refreshTokenStore.get(tokenId);
-  if (!stored || stored.expiresAt < Date.now()) {
-    if (stored) refreshTokenStore.delete(tokenId);
+  const lookup = await findSessionByAnyTokenId(tokenId);
+  if (!lookup) {
+    throw AppError.unauthorized("Refresh token expired or already used");
+  }
+
+  const { session, isGracePeriod } = lookup;
+  if (session.revokedAt || session.expiresAt.getTime() < Date.now()) {
     throw AppError.unauthorized("Refresh token expired or already used");
   }
 
   const providedHash = hashSecret(secret);
-  const storedHashBuffer = Buffer.from(stored.secretHash, "hex");
+  const expectedHash = isGracePeriod ? session.previousSecretHash : session.secretHash;
+
+  if (!expectedHash) {
+    throw AppError.unauthorized("Invalid refresh token");
+  }
+
+  const storedHashBuffer = Buffer.from(expectedHash, "hex");
   const providedHashBuffer = Buffer.from(providedHash, "hex");
 
   const isValid =
     storedHashBuffer.length === providedHashBuffer.length &&
     timingSafeEqual(storedHashBuffer, providedHashBuffer);
 
-  await revokeRefreshTokenById(tokenId);
-
   if (!isValid) {
     throw AppError.unauthorized("Invalid refresh token");
   }
 
-  const next = await issueRefreshToken(
-    { userId: stored.userId, tenantId: stored.tenantId },
-    stored.ttlSeconds,
-  );
+  const ttlSeconds = session.isTrusted ? REMEMBERED_DEVICE_TTL_SECONDS : env.JWT_REFRESH_TTL_SECONDS;
+  const newTokenId = randomUUID();
+  const newSecret = randomBytes(32).toString("hex");
+  const newExpiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  const newSecretHash = hashSecret(newSecret);
 
-  return { userId: stored.userId, tenantId: stored.tenantId, previousTokenId: tokenId, next };
+  await touchSession(session, newTokenId, newSecretHash, newExpiresAt);
+
+  const next: IssuedRefreshToken = {
+    token: `${newTokenId}.${newSecret}`,
+    tokenId: newTokenId,
+    secretHash: newSecretHash,
+    expiresAt: newExpiresAt,
+  };
+
+  return {
+    userId: session.userId.toString(),
+    tenantId: session.tenantId ? session.tenantId.toString() : null,
+    previousTokenId: tokenId,
+    next,
+  };
 }

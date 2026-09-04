@@ -91,3 +91,4 @@ Structured logging via `pino` (`config/logger.ts`), attached per-request via `pi
 ## Validation
 
 Every request boundary (`body`, `query`, `params`) is validated with Zod via `middleware/validate.js`, before the controller runs — a controller should never need to defensively check `req.body` shape itself.
+

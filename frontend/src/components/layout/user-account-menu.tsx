@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
-import { enablePush, hasRegisteredPush, isPushSupported, sendLocalTestNotification } from "@/lib/push";
+import { enablePush, hasRegisteredPush, isIosDevice, isPushSupported, sendLocalTestNotification } from "@/lib/push";
 import { isStandalone } from "@/lib/pwa";
 import { promptInstall } from "@/lib/pwa-runtime";
 import { usePwa } from "@/lib/use-pwa";
@@ -36,21 +36,29 @@ export function UserAccountMenu() {
       );
       toast.success("Push notifications active. Test alert sent!");
     } else {
-      const res = await enablePush();
-      if (res.ok) {
-        setRegistered(true);
-        toast.success("Push notifications enabled!");
-        void sendLocalTestNotification(
-          "Push Notifications Enabled 🔔",
-          "You will now receive timely reminders for kuri dues, live auctions, and payouts.",
-        );
-      } else {
-        toast.error(res.error || "Could not enable push notifications");
+      try {
+        const res = await enablePush();
+        if (res.ok) {
+          setRegistered(true);
+          toast.success("Push notifications enabled!");
+          void sendLocalTestNotification(
+            "Push Notifications Enabled 🔔",
+            "You will now receive timely reminders for kuri dues, live auctions, and payouts.",
+          );
+        } else {
+          toast.error(res.error || "Could not enable push notifications");
+        }
+      } catch (err: any) {
+        toast.error(err?.message || "Could not enable push notifications");
       }
     }
   }
 
   async function handleInstallApp() {
+    if (isIosDevice()) {
+      toast.info("To install on iOS: Tap Share at the bottom of Safari, then tap 'Add to Home Screen'.");
+      return;
+    }
     try {
       const accepted = await promptInstall();
       if (accepted) {
