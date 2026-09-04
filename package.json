@@ -16,8 +16,5 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.4"
-  },
-  "dependencies": {
-    "web-push": "^3.6.7"
   }
 }

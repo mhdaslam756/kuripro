@@ -74,6 +74,10 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
             body,
           },
         }),
+        {
+          TTL: 86400,
+          urgency: "high",
+        },
       );
       return { providerMessageId: `webpush-${res.statusCode}` };
     } catch (err: any) {

@@ -118,8 +118,11 @@ self.addEventListener("push", (event) => {
       body: payload.body ?? "",
       icon: "/pwa-192.png",
       badge: "/pwa-192.png",
+      vibrate: [200, 100, 200],
+      tag: "kuripro-notification",
+      renotify: true,
       data: { url: payload.url ?? "/" },
-    }),
+    } as any),
   );
 });
 

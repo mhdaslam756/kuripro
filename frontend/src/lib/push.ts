@@ -93,10 +93,32 @@ export async function enablePush(): Promise<EnablePushResult> {
     try {
       const registration = await navigator.serviceWorker.ready;
       let subscription = await registration.pushManager.getSubscription();
+      const expectedKey = urlBase64ToUint8Array(activeVapidKey);
+
+      if (subscription) {
+        const rawKey = subscription.options?.applicationServerKey;
+        if (rawKey) {
+          const currentKeyArray = new Uint8Array(rawKey);
+          let keyMatches = currentKeyArray.length === expectedKey.length;
+          if (keyMatches) {
+            for (let i = 0; i < currentKeyArray.length; i++) {
+              if (currentKeyArray[i] !== expectedKey[i]) {
+                keyMatches = false;
+                break;
+              }
+            }
+          }
+          if (!keyMatches) {
+            await subscription.unsubscribe();
+            subscription = null;
+          }
+        }
+      }
+
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(activeVapidKey) as unknown as BufferSource,
+          applicationServerKey: expectedKey as unknown as BufferSource,
         });
       }
       if (subscription) {
