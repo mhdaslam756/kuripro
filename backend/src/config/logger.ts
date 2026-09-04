@@ -2,15 +2,16 @@ import pino from "pino";
 
 import { env } from "./env.js";
 
+const isProductionOrCloud = env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+
 export const logger = pino({
-  level: env.NODE_ENV === "production" ? "info" : "debug",
-  transport:
-    env.NODE_ENV === "production"
-      ? undefined
-      : {
-          target: "pino-pretty",
-          options: { colorize: true, translateTime: "HH:MM:ss", ignore: "pid,hostname" },
-        },
+  level: isProductionOrCloud ? "info" : "debug",
+  transport: isProductionOrCloud
+    ? undefined
+    : {
+        target: "pino-pretty",
+        options: { colorize: true, translateTime: "HH:MM:ss", ignore: "pid,hostname" },
+      },
   redact: {
     paths: [
       "req.headers.authorization",
