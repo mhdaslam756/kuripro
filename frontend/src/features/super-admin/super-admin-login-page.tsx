@@ -27,10 +27,11 @@ export function SuperAdminLoginPage() {
     try {
       const response = await api.post<{
         accessToken: string;
+        refreshToken?: string;
         user: AuthUser;
       }>("/super-admin/login", { email, password });
 
-      loginWithTokens(response.accessToken, response.user);
+      loginWithTokens(response.accessToken, response.user, response.refreshToken);
       navigate("/super-admin/dashboard", { replace: true });
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : "Invalid email or password. Please try again.");

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { api, getDeviceId, refreshSessionTokens, setAccessToken, setUnauthorizedHandler } from "./api-client";
+import { api, getDeviceId, refreshSessionTokens, setAccessToken, setRefreshToken, setUnauthorizedHandler } from "./api-client";
 import { queryClient } from "./query-client";
 import { getSavedAccounts, saveAccount } from "./saved-accounts";
 
@@ -16,6 +16,7 @@ export interface AuthUser {
 
 interface LoginResponse {
   accessToken: string;
+  refreshToken?: string;
   deviceId: string;
   user: AuthUser;
 }
@@ -37,7 +38,7 @@ interface AuthContextValue {
   /** True only while the initial silent-refresh bootstrap is in flight on app load. */
   isLoading: boolean;
   login: (email: string, password: string, rememberDevice?: boolean) => Promise<AuthUser>;
-  loginWithTokens: (accessToken: string, user: AuthUser) => void;
+  loginWithTokens: (accessToken: string, user: AuthUser, refreshToken?: string) => void;
   updateUser: (patch: Partial<AuthUser>) => void;
   registerOrganization: (input: RegisterOrganizerInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -98,8 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  function loginWithTokens(accessToken: string, authUser: AuthUser) {
+  function loginWithTokens(accessToken: string, authUser: AuthUser, refreshToken?: string) {
     setAccessToken(accessToken);
+    if (refreshToken) {
+      setRefreshToken(refreshToken);
+    }
     setUser(authUser);
     saveAccount(authUser);
   }
@@ -113,6 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       deviceLabel: navigator.userAgent.slice(0, 100),
     });
     setAccessToken(res.accessToken);
+    if (res.refreshToken) {
+      setRefreshToken(res.refreshToken);
+    }
     setUser(res.user);
     saveAccount(res.user);
     return res.user;
@@ -125,6 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       deviceLabel: navigator.userAgent.slice(0, 100),
     });
     setAccessToken(res.accessToken);
+    if (res.refreshToken) {
+      setRefreshToken(res.refreshToken);
+    }
     setUser(res.user);
     saveAccount(res.user);
   }
@@ -134,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post("/auth/logout");
     } finally {
       setAccessToken(null);
+      setRefreshToken(null);
       setUser(null);
     }
   }

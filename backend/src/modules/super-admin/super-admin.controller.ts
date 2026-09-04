@@ -33,7 +33,12 @@ export async function superAdminLoginHandler(req: Request, res: Response): Promi
 
   const result = await superAdminLogin(email, password, deviceContext);
   setRefreshCookie(res, result.refreshToken);
-  res.status(200).json({ accessToken: result.accessToken, deviceId: result.deviceId, user: result.user });
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
 }
 
 export async function createSuperAdminCredentialsHandler(req: Request, res: Response): Promise<void> {

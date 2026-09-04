@@ -1,13 +1,40 @@
 export const API_BASE_URL: string = (import.meta.env["VITE_API_URL"] as string | undefined) || "/api";
 
+const ACCESS_TOKEN_KEY = "kuripro_access_token";
+const REFRESH_TOKEN_KEY = "kuripro_refresh_token";
+
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+  }
 }
 
 export function getAccessToken(): string | null {
+  if (!accessToken && typeof window !== "undefined") {
+    accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  }
   return accessToken;
+}
+
+export function setRefreshToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
+export function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 const DEVICE_ID_STORAGE_KEY = "kuripro_device_id";
@@ -48,6 +75,7 @@ interface RequestOptions {
 
 export interface SessionRefreshResult<TUser = any> {
   accessToken: string;
+  refreshToken?: string;
   user: TUser;
 }
 
@@ -61,15 +89,28 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 export function refreshSessionTokens<TUser = any>(): Promise<SessionRefreshResult<TUser>> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
+      const storedRt = getRefreshToken();
+      const headers: Record<string, string> = {};
+      if (storedRt) {
+        headers["x-refresh-token"] = storedRt;
+        headers["Content-Type"] = "application/json";
+      }
       const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
+        headers,
         credentials: "include",
+        body: storedRt ? JSON.stringify({ refreshToken: storedRt }) : undefined,
       });
       if (!res.ok) {
+        setAccessToken(null);
+        setRefreshToken(null);
         throw new ApiError(res.status, "UNAUTHORIZED", "Refresh failed");
       }
       const data = (await res.json()) as SessionRefreshResult<TUser>;
       setAccessToken(data.accessToken);
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken);
+      }
       return data;
     })().finally(() => {
       setTimeout(() => {

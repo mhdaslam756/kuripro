@@ -72,7 +72,7 @@ export function usePublicMemberRegister(slug: string) {
 
       if (!res.requireEmailVerification && res.auth) {
         setAccessToken(res.auth.accessToken);
-        loginWithTokens(res.auth.accessToken, res.auth.user);
+        loginWithTokens(res.auth.accessToken, res.auth.user, (res.auth as any).refreshToken);
       }
 
       return res;
@@ -88,12 +88,13 @@ export function usePublicMemberLogin(slug: string) {
       const res = await api.post<{
         auth: {
           accessToken: string;
+          refreshToken?: string;
           user: any;
         };
       }>(`/public/org/${slug}/login`, input);
 
       setAccessToken(res.auth.accessToken);
-      loginWithTokens(res.auth.accessToken, res.auth.user);
+      loginWithTokens(res.auth.accessToken, res.auth.user, res.auth.refreshToken);
 
       return res;
     },
