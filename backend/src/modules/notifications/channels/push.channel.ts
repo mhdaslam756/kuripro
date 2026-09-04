@@ -1,4 +1,3 @@
-import webpush from "web-push";
 import { getMessaging } from "firebase-admin/messaging";
 
 import { env } from "../../../config/env.js";
@@ -9,13 +8,32 @@ import { deleteTokensByValue } from "../../devices/device-token.repository.js";
 
 const isWebPushConfigured = Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
 
-if (isWebPushConfigured) {
-  webpush.setVapidDetails(
-    env.VAPID_SUBJECT,
-    env.VAPID_PUBLIC_KEY!,
-    env.VAPID_PRIVATE_KEY!,
-  );
+let webpushInstance: any = null;
+let webpushInitAttempted = false;
+
+async function getWebPush(): Promise<any> {
+  if (webpushInstance) return webpushInstance;
+  if (webpushInitAttempted && !webpushInstance) return null;
+  webpushInitAttempted = true;
+
+  try {
+    const mod = await import("web-push");
+    webpushInstance = mod.default || mod;
+    if (isWebPushConfigured && webpushInstance?.setVapidDetails) {
+      webpushInstance.setVapidDetails(
+        env.VAPID_SUBJECT,
+        env.VAPID_PUBLIC_KEY!,
+        env.VAPID_PRIVATE_KEY!,
+      );
+    }
+  } catch {
+    webpushInstance = null;
+  }
+  return webpushInstance;
 }
+
+// Background initialization so it never blocks server startup
+void getWebPush().catch(() => {});
 
 /**
  * Server-side push delivery channel.
@@ -35,9 +53,13 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
     if (!isWebPushConfigured) {
       return { providerMessageId: "webpush-unconfigured-stream" };
     }
+    const wp = await getWebPush();
+    if (!wp) {
+      return { providerMessageId: "webpush-stream" };
+    }
     try {
       const subscription = JSON.parse(message.to);
-      const res = await webpush.sendNotification(
+      const res = await wp.sendNotification(
         subscription,
         JSON.stringify({
           notification: {
