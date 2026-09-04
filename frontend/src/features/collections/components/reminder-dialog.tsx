@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate, formatPaise } from "@/lib/format";
 import { ApiError } from "@/lib/api-client";
-import { playNotificationChime, showPushNotification } from "@/lib/push";
 import { useSendSingle } from "@/features/notifications/use-notifications";
 import type { Installment } from "../types";
 import {
@@ -200,36 +199,19 @@ export function ReminderDialog({ open, onOpenChange, installment, chitGroupName 
                 Delivered instantly to all registered phones, tablets, or desktop browsers linked to {memberName}.
               </p>
 
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border-default/60 pt-3">
+              <div className="flex items-center justify-end gap-2 border-t border-border-default/60 pt-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
                 <Button
                   type="button"
-                  variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    playNotificationChime();
-                    void showPushNotification(pushSubject.trim() || defaultPushSubject, {
-                      body: pushBody.trim() || defaultPushBody,
-                      url: "/notifications",
-                    });
-                  }}
-                  className="gap-1.5 text-xs text-text-secondary hover:text-accent-primary justify-start"
+                  disabled={sendSingle.isPending}
+                  onClick={() => void handleSendPush()}
+                  className="gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-xs active-bounce"
                 >
-                  <Bell size={13} /> Test on My Screen
+                  <Send size={13} /> {sendSingle.isPending ? "Sending Push…" : "Send Push Reminder"}
                 </Button>
-                <div className="flex items-center justify-end gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={sendSingle.isPending}
-                    onClick={() => void handleSendPush()}
-                    className="gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-xs active-bounce"
-                  >
-                    <Send size={13} /> {sendSingle.isPending ? "Sending Push…" : "Send Push Reminder"}
-                  </Button>
-                </div>
               </div>
             </TabsContent>
 

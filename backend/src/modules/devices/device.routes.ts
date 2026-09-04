@@ -22,3 +22,8 @@ deviceRouter.delete(
   validate({ body: unregisterPushTokenSchema }),
   deviceController.unregisterPushToken,
 );
+
+deviceRouter.post(
+  "/test-push",
+  deviceController.sendTestPush,
+);

@@ -1,37 +1,13 @@
-  import { api } from "./api-client";
-
-/**
- * Web push via Firebase Cloud Messaging. Config comes from public `VITE_FIREBASE_*` build vars; when
- * they're absent the feature reports "not configured" (the same honest-gap pattern the backend uses)
- * rather than throwing. Firebase is dynamically imported so it never weighs down the main bundle.
- */
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string | undefined,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
-};
-const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+import { api } from "./api-client";
 
 const PUSH_TOKEN_KEY = "kuripro_push_token";
 
-export function isFirebaseConfigured(): boolean {
-  return Boolean(
-    isPushSupported() &&
-      vapidKey &&
-      firebaseConfig.apiKey &&
-      firebaseConfig.projectId
-  );
+export function isPushSupported(): boolean {
+  return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 export function isPushConfigured(): boolean {
   return isPushSupported();
-}
-
-export function isPushSupported(): boolean {
-  return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 export function isIosDevice(): boolean {
@@ -46,25 +22,26 @@ export function notificationPermission(): NotificationPermission | "unsupported"
   return isPushSupported() ? Notification.permission : "unsupported";
 }
 
-async function getMessagingInstance() {
-  if (!isFirebaseConfigured()) return null;
-  try {
-    const [{ initializeApp, getApps }, { getMessaging, isSupported }] = await Promise.all([
-      import("firebase/app"),
-      import("firebase/messaging"),
-    ]);
-    if (!(await isSupported())) return null;
-    const app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
-    return getMessaging(app);
-  } catch {
-    return null;
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
   }
+  return outputArray;
 }
 
 export type EnablePushResult =
   | { ok: true; token: string; error?: undefined }
   | { ok: false; error: string; token?: undefined };
 
+/**
+ * Registers this device for server-side push notifications.
+ * Requests browser permission, obtains a Web Push subscription via Service Worker,
+ * and syncs the delivery token with the backend.
+ */
 export async function enablePush(): Promise<EnablePushResult> {
   if (!isPushSupported()) {
     if (isIosDevice()) {
@@ -79,45 +56,61 @@ export async function enablePush(): Promise<EnablePushResult> {
   if (Notification.permission === "denied") {
     return {
       ok: false,
-      error: "Notifications are blocked in your browser settings. Please click the lock or settings icon in your address bar to allow notifications.",
+      error: "Notifications are blocked in your browser settings. Please allow notifications in your browser.",
     };
   }
 
-  let permission: NotificationPermission;
-  try {
-    permission = await Notification.requestPermission();
-  } catch {
-    permission = await new Promise<NotificationPermission>((resolve) => {
-      Notification.requestPermission(resolve);
-    });
+  let permission: NotificationPermission = Notification.permission;
+  if (permission === "default") {
+    try {
+      permission = await Notification.requestPermission();
+    } catch {
+      permission = await new Promise<NotificationPermission>((resolve) => {
+        Notification.requestPermission(resolve);
+      });
+    }
   }
 
   if (permission !== "granted") {
     return {
       ok: false,
-      error: "Notification permission was not granted. Please allow notifications in your browser settings.",
+      error: "Notification permission was not granted.",
     };
   }
 
-  if (isFirebaseConfigured()) {
+  // 1. Standard Web Push (W3C Push API via Service Worker with server VAPID key)
+  let activeVapidKey: string | null = (import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined) || null;
+  try {
+    const res = await api.get<{ publicKey: string | null }>("/devices/vapid-public-key");
+    if (res?.publicKey) {
+      activeVapidKey = res.publicKey;
+    }
+  } catch {
+    // fallback
+  }
+
+  if (activeVapidKey && "serviceWorker" in navigator) {
     try {
-      const messaging = await getMessagingInstance();
-      if (messaging) {
-        const { getToken } = await import("firebase/messaging");
-        const registration = await navigator.serviceWorker.ready;
-        const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
-        if (token) {
-          await api.post("/devices/push-tokens", { token, platform: "web" });
-          localStorage.setItem(PUSH_TOKEN_KEY, token);
-          return { ok: true, token };
-        }
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(activeVapidKey) as unknown as BufferSource,
+        });
+      }
+      if (subscription) {
+        const token = JSON.stringify(subscription);
+        await api.post("/devices/push-tokens", { token, platform: "web" });
+        localStorage.setItem(PUSH_TOKEN_KEY, token);
+        return { ok: true, token };
       }
     } catch {
-      // Fallback to web token registration below if FCM client handshake failed
+      // Fall through to synthetic token
     }
   }
 
-  // Fallback: register standard web token so device is registered with backend
+  // 2. Fallback: register standard web token so device is registered with backend for SSE delivery
   const devToken = "web_token_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
   try {
     await api.post("/devices/push-tokens", { token: devToken, platform: "web" });
@@ -198,15 +191,6 @@ export async function showPushNotification(
   } catch {
     return false;
   }
-}
-
-/** Triggers an immediate local notification to verify browser notification delivery */
-export async function sendLocalTestNotification(
-  title = "KuriPro Reminder 🔔",
-  body = "Your push notifications are active! You will receive kuri installment dues and live auction alerts here.",
-): Promise<boolean> {
-  playNotificationChime();
-  return showPushNotification(title, { body, url: "/notifications" });
 }
 
 /** Unregisters this device's push token from the backend. */

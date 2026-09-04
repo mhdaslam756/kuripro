@@ -20,14 +20,12 @@ import {
   Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { formatDateTime, humanize } from "@/lib/format";
-import { enablePush, hasRegisteredPush, isPushSupported, sendLocalTestNotification } from "@/lib/push";
 import { cn } from "@/lib/utils";
 import type { NotificationRecord } from "../types";
 import { useHistory } from "../use-notifications";
@@ -105,111 +103,6 @@ const CATEGORY_TABS = [
   { id: "PAYMENTS", label: "Receipts", icon: Receipt },
   { id: "ANNOUNCEMENTS", label: "Updates", icon: Sparkles },
 ] as const;
-
-export function PushNotificationBanner() {
-  const supported = isPushSupported();
-  const [registered, setRegistered] = useState(hasRegisteredPush());
-  const [busy, setBusy] = useState(false);
-  const [testing, setTesting] = useState(false);
-
-  if (!supported) return null;
-
-  async function handleEnable() {
-    setBusy(true);
-    try {
-      const res = await enablePush();
-      if (res.ok) {
-        setRegistered(true);
-        toast.success("Push notifications enabled on this device!");
-        void sendLocalTestNotification(
-          "Push Notifications Enabled 🔔",
-          "You will now receive instant push alerts for kuri installment dues and auction events.",
-        );
-      } else {
-        toast.error(res.error || "Could not enable push notifications");
-      }
-    } catch {
-      toast.error("An error occurred while enabling push notifications");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleTest() {
-    setTesting(true);
-    try {
-      const success = await sendLocalTestNotification(
-        "KuriPro Reminder Test 🔔",
-        "Your device is connected! When an installment is due or an auction closes, you'll see a reminder alert here.",
-      );
-      if (success) {
-        toast.success("Test reminder alert sent to your device!");
-      } else {
-        toast.error("Could not trigger notification. Check browser permissions.");
-      }
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  if (registered) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 sm:px-4 sm:py-3 text-xs shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
-            <CheckCircle2 size={15} />
-          </span>
-          <div>
-            <p className="font-semibold text-text-primary">Push Alerts Active</p>
-            <p className="text-[11px] text-text-secondary">Instant reminder alerts for cycle dues &amp; auction results are enabled on this device.</p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={testing}
-          onClick={() => void handleTest()}
-          className="h-8 gap-1.5 rounded-xl text-xs font-semibold active-bounce border-border-default hover:bg-bg-raised"
-        >
-          <Bell size={12} /> {testing ? "Sending…" : "Test Alert"}
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-500/30 bg-gradient-to-r from-brand-950/40 via-brand-900/20 to-bg-surface p-4 sm:p-5 shadow-md">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600/20 text-accent-primary shadow-xs border border-brand-500/30">
-            <BellRing size={20} className="animate-pulse" />
-          </div>
-          <div>
-            <h3 className="font-display text-sm sm:text-base font-bold text-text-primary flex items-center gap-2">
-              Enable Reminder Push Notifications
-              <span className="rounded-full bg-brand-500/20 px-2 py-0.5 text-[10px] font-bold text-accent-primary border border-brand-500/30">
-                Recommended
-              </span>
-            </h3>
-            <p className="mt-0.5 text-xs text-text-secondary max-w-xl">
-              Never miss an upcoming installment due date or auction announcement. Get instant push alerts pushed directly to your phone or desktop.
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          disabled={busy}
-          onClick={() => void handleEnable()}
-          className="shrink-0 active-bounce gap-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 text-xs shadow-md"
-        >
-          <Smartphone size={14} />
-          {busy ? "Enabling…" : "Enable Push Alerts"}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export function MemberNotificationsView() {
   const { user } = useAuth();
@@ -300,9 +193,6 @@ export function MemberNotificationsView() {
             </Link>
           </div>
         </div>
-
-        {/* Push Notification Opt-in / Status Banner */}
-        <PushNotificationBanner />
 
         {/* Mobile Filter Scroll Pills */}
         <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-1">
@@ -486,7 +376,7 @@ export function MemberNotificationsView() {
 
             <div className="flex items-center gap-2">
               <Link to="/auctions">
-                <Button size="sm"  className="border-white/20 text-white hover:bg-white/10 rounded-xl gap-1.5 text-xs font-semibold">
+                <Button size="sm" className="border-white/20 text-white hover:bg-white/10 rounded-xl gap-1.5 text-xs font-semibold">
                   <Gavel size={14} /> Live Bids
                 </Button>
               </Link>
@@ -530,9 +420,6 @@ export function MemberNotificationsView() {
             })}
           </div>
         </div>
-
-        {/* Push Notification Opt-in / Status Banner */}
-        <PushNotificationBanner />
 
         {/* Desktop Search */}
         {notifications.length > 0 && (
@@ -762,3 +649,8 @@ export function MemberNotificationsView() {
     </div>
   );
 }
+
+export function PushNotificationBanner() {
+  return null;
+}
+

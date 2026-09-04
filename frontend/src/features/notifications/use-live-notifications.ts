@@ -1,40 +1,44 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth-context";
-import { API_BASE_URL, api, getAccessToken } from "@/lib/api-client";
+import { API_BASE_URL, getAccessToken } from "@/lib/api-client";
 import { enablePush, playNotificationChime, showPushNotification } from "@/lib/push";
 import { triggerDuePopup } from "./components/due-notification-popup";
 
 export function useLiveNotifications(): void {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
-  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     if (!user) return;
 
-    // 1. Auto-refresh push registration if permission is already granted
-    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-      void enablePush();
+    // Silently register device with backend for server push delivery
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        void enablePush();
+      } else if (Notification.permission === "default") {
+        void Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            void enablePush();
+          }
+        });
+      }
     }
 
     const token = getAccessToken();
     if (!token) return;
 
-    // 2. Real-time SSE stream connection
+    // Real-time SSE stream connection for server-side push delivery
     const streamUrl = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
     let eventSource: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     function handleIncomingNotification(data: {
-      id: string;
-      title: string;
-      body: string;
+      id?: string;
+      title?: string;
+      body?: string;
       type?: string;
       url?: string;
     }) {
@@ -45,46 +49,39 @@ export function useLiveNotifications(): void {
         seenNotificationIdsRef.current.add(data.id);
       }
 
-      // Play audio chime
-      playNotificationChime();
+      const title = data.title || "KuriPro 🔔";
+      const body = data.body || "";
+      const url = data.url || "/notifications";
 
-      // Native OS / Browser push banner
-      void showPushNotification(data.title, {
-        body: data.body,
-        url: data.url || "/notifications",
+      // 1. Native OS / Browser Push Banner from Server Dispatch
+      void showPushNotification(title, {
+        body,
+        url,
       });
 
-      const isMember = user?.role?.slug === "MEMBER";
+      // 2. Play gentle audio alert chime
+      playNotificationChime();
 
+      // 3. For Members receiving an installment due reminder, show Due Modal
+      const isMember = user?.role?.slug === "MEMBER";
       const isDue =
         data.type === "REMINDER" ||
         data.type === "DUE_REMINDER" ||
-        data.title?.toLowerCase().includes("due") ||
-        data.body?.toLowerCase().includes("due") ||
-        data.title?.toLowerCase().includes("installment") ||
-        data.body?.toLowerCase().includes("installment");
+        title.toLowerCase().includes("due") ||
+        body.toLowerCase().includes("due") ||
+        title.toLowerCase().includes("installment") ||
+        body.toLowerCase().includes("installment");
 
       if (isDue && isMember) {
-        // Show prominent Due Popup Modal ONLY for Members receiving their due reminder
         triggerDuePopup({
-          id: data.id,
-          title: data.title,
-          body: data.body,
-          url: data.url || "/notifications",
-        });
-      } else if (!isDue) {
-        // In-app interactive toast for other non-due notifications
-        toast.info(data.title, {
-          description: data.body,
-          duration: 8000,
-          action: {
-            label: "View",
-            onClick: () => navigate(data.url || "/notifications"),
-          },
+          id: data.id || `due_${Date.now()}`,
+          title,
+          body,
+          url,
         });
       }
 
-      // Refresh notification inbox and dashboards
+      // 4. Silently update query caches
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["member-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -106,7 +103,7 @@ export function useLiveNotifications(): void {
         eventSource.onmessage = (event: MessageEvent) => {
           try {
             const data = JSON.parse(event.data);
-            if (data && data.title && data.body) {
+            if (data) {
               handleIncomingNotification(data);
             }
           } catch {
@@ -128,51 +125,13 @@ export function useLiveNotifications(): void {
 
     connect();
 
-    // 3. Fallback active-poll check every 12 seconds ONLY for MEMBERS
-    // For organizers/staff, /notifications/history returns the outbound audit log of all sent messages.
-    // We must never treat the organization's outbound messages as inbound alerts to the organization.
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    if (user.role?.slug === "MEMBER") {
-      pollInterval = setInterval(async () => {
-        try {
-          const res = await api.get<{ items: Array<{ id: string; subject?: string; body: string; createdAt: string }> }>(
-            "/notifications/history?limit=3",
-          );
-          const latestItems = res?.items ?? [];
-
-          // On first poll, seed known notification IDs so we don't alert old ones
-          if (initialLoadRef.current) {
-            initialLoadRef.current = false;
-            for (const item of latestItems) {
-              seenNotificationIdsRef.current.add(item.id);
-            }
-            return;
-          }
-
-          for (const item of latestItems) {
-            if (!seenNotificationIdsRef.current.has(item.id)) {
-              handleIncomingNotification({
-                id: item.id,
-                title: item.subject ?? "Payment Reminder 🔔",
-                body: item.body,
-                url: "/notifications",
-              });
-            }
-          }
-        } catch {
-          // Polling failure is non-fatal
-        }
-      }, 12000);
-    }
-
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
-      if (pollInterval) clearInterval(pollInterval);
       if (eventSource) {
         eventSource.close();
         eventSource = null;
       }
     };
-  }, [user, queryClient, navigate]);
+  }, [user, queryClient]);
 }
+

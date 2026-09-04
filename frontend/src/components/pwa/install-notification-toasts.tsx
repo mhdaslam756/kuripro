@@ -1,12 +1,11 @@
-import { Bell, BellRing, CheckCircle2, Download, Share, X } from "lucide-react";
+import { Download, Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { enablePush, hasRegisteredPush, isIosDevice, isPushSupported, sendLocalTestNotification } from "@/lib/push";
-import { isStandalone } from "@/lib/pwa";
+import { isIosDevice, isStandalone } from "@/lib/pwa";
 import { promptInstall } from "@/lib/pwa-runtime";
 import { usePwa } from "@/lib/use-pwa";
 
@@ -26,10 +25,8 @@ export function AppInstallNotificationToasts() {
 
   const { canInstall, installed } = usePwa();
   const [showInstallToast, setShowInstallToast] = useState(false);
-  const [showPushToast, setShowPushToast] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
-  const [isEnablingPush, setIsEnablingPush] = useState(false);
 
   useEffect(() => {
     if (isAuthPage) return;
@@ -46,21 +43,6 @@ export function AppInstallNotificationToasts() {
       return () => clearTimeout(timer);
     }
   }, [canInstall, installed, isAuthPage]);
-
-  useEffect(() => {
-    if (isAuthPage) return;
-    const pushDismissed = sessionStorage.getItem("kuripro_push_dismissed") === "true";
-    const pushSupported = isPushSupported();
-    const registered = hasRegisteredPush();
-
-    // 2. Push Notification Prompt Check (show if supported & not yet registered)
-    if (pushSupported && !registered && !pushDismissed) {
-      const timer = setTimeout(() => {
-        setShowPushToast(true);
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthPage]);
 
   if (isAuthPage) return null;
 
@@ -90,34 +72,6 @@ export function AppInstallNotificationToasts() {
   function dismissInstall() {
     setShowInstallToast(false);
     sessionStorage.setItem("kuripro_install_dismissed", "true");
-  }
-
-  async function handleEnablePush() {
-    setIsEnablingPush(true);
-    try {
-      const res = await enablePush();
-      if (res.ok) {
-        toast.success("Push notifications enabled!");
-        void sendLocalTestNotification(
-          "Notifications Active 🔔",
-          "You will now receive timely reminders for kuri dues, live auctions, and payouts.",
-        );
-        setShowPushToast(false);
-      } else {
-        toast.error(res.error || "Could not enable push notifications");
-        setShowPushToast(false);
-        sessionStorage.setItem("kuripro_push_dismissed", "true");
-      }
-    } catch {
-      setShowPushToast(false);
-    } finally {
-      setIsEnablingPush(false);
-    }
-  }
-
-  function dismissPush() {
-    setShowPushToast(false);
-    sessionStorage.setItem("kuripro_push_dismissed", "true");
   }
 
   return (
@@ -158,47 +112,6 @@ export function AppInstallNotificationToasts() {
                 onClick={dismissInstall}
                 className="flex size-7 items-center justify-center rounded-full text-text-secondary hover:bg-bg-raised active-bounce"
                 aria-label="Dismiss Install Prompt"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Push Notification Alert Card */}
-        {showPushToast ? (
-          <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border border-brand-500/30 bg-bg-surface/95 p-3.5 shadow-2xl backdrop-blur-2xl ring-1 ring-black/5 animate-in slide-in-from-bottom-5 duration-300">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand-500/15 text-accent-primary shadow-xs border border-brand-500/20">
-                <BellRing size={20} className="animate-pulse" />
-              </div>
-              <div>
-                <p className="font-display text-xs font-bold text-text-primary flex items-center gap-1.5">
-                  Enable Push Alerts
-                  <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.2 text-[9px] font-bold text-emerald-400">
-                    Reminders
-                  </span>
-                </p>
-                <p className="text-[11px] text-text-secondary line-clamp-1">
-                  Get instant dues reminders &amp; live auction winner alerts
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                type="button"
-                size="sm"
-                disabled={isEnablingPush}
-                onClick={() => void handleEnablePush()}
-                className="h-8 gap-1 rounded-xl bg-accent-primary hover:bg-brand-700 text-white px-3 text-xs font-bold shadow-xs active-bounce"
-              >
-                <Bell size={13} /> {isEnablingPush ? "Enabling…" : "Enable"}
-              </Button>
-              <button
-                type="button"
-                onClick={dismissPush}
-                className="flex size-7 items-center justify-center rounded-full text-text-secondary hover:bg-bg-raised active-bounce"
-                aria-label="Dismiss Push Prompt"
               >
                 <X size={15} />
               </button>
@@ -276,80 +189,6 @@ export function AppInstallNotificationToasts() {
 }
 
 /**
- * Compact Header Action Button for Enabling Push Notifications.
- * Displays "Enable Push" when not enabled, or a checkmark test trigger when active.
- */
-export function HeaderPushNotificationButton() {
-  const supported = isPushSupported();
-  const [registered, setRegistered] = useState(hasRegisteredPush());
-  const [loading, setLoading] = useState(false);
-
-  if (!supported) return null;
-
-  async function handleToggle() {
-    setLoading(true);
-    try {
-      if (registered) {
-        // Send a test notification to verify it works
-        const sent = await sendLocalTestNotification(
-          "KuriPro Push Active 🔔",
-          "Push notifications are working properly on your device!",
-        );
-        if (sent) {
-          toast.success("Test notification delivered to your device!");
-        } else {
-          toast.error("Could not trigger notification. Check browser settings.");
-        }
-      } else {
-        const res = await enablePush();
-        if (res.ok) {
-          setRegistered(true);
-          toast.success("Push notifications enabled!");
-          void sendLocalTestNotification(
-            "Push Notifications Enabled 🔔",
-            "You will now receive real-time dues reminders & auction alerts.",
-          );
-        } else {
-          toast.error(res.error || "Could not enable push notifications");
-        }
-      }
-    } catch {
-      toast.error("Failed to update push notification setting");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (registered) {
-    return (
-      <button
-        type="button"
-        onClick={() => void handleToggle()}
-        title="Push notifications active on this device. Click to send test alert."
-        className="active-bounce relative flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all"
-        aria-label="Push Notifications Active"
-      >
-        <CheckCircle2 size={16} />
-      </button>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={loading}
-      onClick={() => void handleToggle()}
-      title="Enable Push Notifications on this device"
-      className="active-bounce flex items-center gap-1.5 rounded-xl border border-brand-500/40 bg-brand-500/15 px-2.5 py-1.5 text-xs font-bold text-accent-primary hover:bg-brand-500/25 transition-all shadow-xs"
-      aria-label="Enable Push Notifications"
-    >
-      <BellRing size={14} className="animate-pulse text-accent-primary shrink-0" />
-      <span className="hidden sm:inline">Enable Push</span>
-    </button>
-  );
-}
-
-/**
  * Compact Header Action Button for Installing the PWA App.
  * Automatically hidden if app is already running standalone.
  */
@@ -406,4 +245,8 @@ export function HeaderInstallAppButton() {
       </Dialog>
     </>
   );
+}
+
+export function HeaderPushNotificationButton() {
+  return null;
 }

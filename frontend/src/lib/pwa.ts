@@ -31,3 +31,12 @@ export function isStandalone(): boolean {
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
+
+/** True when running on an iOS device (iPhone/iPad/iPod). */
+export function isIosDevice(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}

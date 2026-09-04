@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/app-error.js";
 import * as authService from "./auth.service.js";
 import type { DeviceContext } from "./auth.service.js";
-import { clearRefreshCookie, readRefreshCookieValue, setRefreshCookie } from "./cookie.helper.js";
+import { clearRefreshCookie, readRefreshToken, readRefreshCookieValue, setRefreshCookie } from "./cookie.helper.js";
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
@@ -16,8 +16,8 @@ import type {
   VerifyOtpInput,
 } from "./auth.validators.js";
 
-function readRefreshCookie(req: Request): string {
-  const token = readRefreshCookieValue(req);
+function extractRefreshToken(req: Request): string {
+  const token = readRefreshToken(req);
   if (!token) {
     throw AppError.unauthorized("Missing refresh token");
   }
@@ -69,7 +69,12 @@ export async function login(req: Request, res: Response): Promise<void> {
   const input = req.body as LoginInput;
   const result = await authService.login(input, extractDeviceContext(req, input));
   setRefreshCookie(res, result.refreshToken);
-  res.status(200).json({ accessToken: result.accessToken, deviceId: result.deviceId, user: result.user });
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
 }
 
 export async function requestOtp(req: Request, res: Response): Promise<void> {
@@ -82,7 +87,12 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
   const input = req.body as VerifyOtpInput;
   const result = await authService.verifyOtpLogin(input.email, input.code, extractDeviceContext(req, input));
   setRefreshCookie(res, result.refreshToken);
-  res.status(200).json({ accessToken: result.accessToken, deviceId: result.deviceId, user: result.user });
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
 }
 
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
@@ -98,10 +108,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {
-  const token = readRefreshCookie(req);
+  const token = extractRefreshToken(req);
   const result = await authService.refreshSession(token);
   setRefreshCookie(res, result.refreshToken);
-  res.status(200).json({ accessToken: result.accessToken, user: result.user });
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    user: result.user,
+  });
 }
 
 export async function changePassword(req: Request, res: Response): Promise<void> {
@@ -114,7 +128,7 @@ export async function changePassword(req: Request, res: Response): Promise<void>
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
-  const token = readRefreshCookieValue(req);
+  const token = readRefreshToken(req);
   if (token) {
     await authService.logout(token);
   }

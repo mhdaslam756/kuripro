@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api-client";
-import { playNotificationChime, showPushNotification } from "@/lib/push";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -196,39 +195,19 @@ export function BulkDueRemindersDialog({
               <code className="text-accent-primary font-mono">{`{{dueDate}}`}</code>
             </p>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border-default/60 pt-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    playNotificationChime();
-                    void showPushNotification(subject.trim() || `Payment Reminder: ${chitGroupName}`, {
-                      body: "Dear Member, dues of ₹1,000 for onam kuri are due today. Kindly pay on time.",
-                      url: "/notifications",
-                    });
-                  }}
-                  className="gap-1.5 text-xs text-text-secondary hover:text-accent-primary justify-start"
-                >
-                  <Bell size={13} /> Test on My Screen
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={isSending}
-                  onClick={() => void handleSend()}
-                  className="gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-xs active-bounce"
-                >
-                  <Send size={13} /> {isSending ? "Sending…" : `Send ${channel} Reminders`}
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border-default/60 pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isSending}
+                onClick={() => void handleSend()}
+                className="gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-xs active-bounce"
+              >
+                <Send size={13} /> {isSending ? "Sending…" : `Send ${channel} Reminders`}
+              </Button>
             </div>
           </div>
         )}

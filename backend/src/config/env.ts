@@ -34,6 +34,11 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 
+  // Web Push (VAPID) keys for standard browser push notifications
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default("mailto:admin@kuripro.com"),
+
   // Notification channel providers — all optional. When a channel's vars are unset it stays
   // dormant and the dev console channel logs the message instead (see modules/notifications/channels).
   TWILIO_ACCOUNT_SID: z.string().optional(),
