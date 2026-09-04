@@ -69,8 +69,17 @@ function loadEnv(): Env {
 
   if (!parsed.success) {
     const issues = parsed.error.issues
-      .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
+      .map((issue) => `  ❌ ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
+
+    console.error("\n============================================================");
+    console.error("💥 RENDER / PRODUCTION STARTUP FAILURE: MISSING ENVIRONMENT VARIABLES");
+    console.error("============================================================");
+    console.error(issues);
+    console.error("\n👉 FIX: Go to Render Dashboard -> Your Service -> Environment,");
+    console.error("   and add the missing variables shown above.\n");
+    console.error("============================================================\n");
+
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
 

@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   const healthCheckWorker = startHealthCheckWorker();
   const notificationWorker = startNotificationWorker();
 
-  httpServer.listen(env.PORT, () => {
+  httpServer.listen(env.PORT, "0.0.0.0", () => {
     logger.info(`KuriPro backend listening on port ${env.PORT} [${env.NODE_ENV}]`);
   });
 
