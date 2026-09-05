@@ -2,21 +2,13 @@
   "name": "kuripro",
   "private": true,
   "version": "0.0.0",
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
-    "dev": "concurrently -k -n \"frontend,backend\" -c \"cyan.bold,magenta.bold\" \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "npm run dev --workspace frontend",
-    "dev:backend": "npm run dev --workspace backend",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:frontend": "npm run build --workspace frontend",
-    "build:backend": "npm run build --workspace backend",
-    "start": "npm run start --workspace backend",
-    "start:backend": "npm run start --workspace backend"
-  },
-  "devDependencies": {
-    "concurrently": "^10.0.4"
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "install:frontend": "npm --prefix frontend install",
+    "install:backend": "npm --prefix backend install",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install"
   }
 }
