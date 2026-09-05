@@ -79,7 +79,7 @@ export async function enablePush(): Promise<EnablePushResult> {
   }
 
   // 1. Standard Web Push (W3C Push API via Service Worker with server VAPID key)
-  let activeVapidKey: string | null = (import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined) || null;
+  let activeVapidKey: string | null = null;
   try {
     const res = await api.get<{ publicKey: string | null }>("/devices/vapid-public-key");
     if (res?.publicKey) {
@@ -89,9 +89,19 @@ export async function enablePush(): Promise<EnablePushResult> {
     // fallback
   }
 
+  if (!activeVapidKey) {
+    activeVapidKey =
+      (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
+      (import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined) ||
+      null;
+  }
+
   if (activeVapidKey && "serviceWorker" in navigator) {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration || !registration.active) {
+        registration = await navigator.serviceWorker.ready;
+      }
       let subscription = await registration.pushManager.getSubscription();
       const expectedKey = urlBase64ToUint8Array(activeVapidKey);
 
@@ -127,13 +137,16 @@ export async function enablePush(): Promise<EnablePushResult> {
         localStorage.setItem(PUSH_TOKEN_KEY, token);
         return { ok: true, token };
       }
-    } catch {
-      // Fall through to synthetic token
+    } catch (err) {
+      console.warn("PushManager subscription failed, falling back to real-time stream token:", err);
     }
   }
 
   // 2. Fallback: register standard web token so device is registered with backend for SSE delivery
-  const devToken = "web_token_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const existingToken = localStorage.getItem(PUSH_TOKEN_KEY);
+  const devToken = existingToken && existingToken.startsWith("web_token_")
+    ? existingToken
+    : "web_token_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
   try {
     await api.post("/devices/push-tokens", { token: devToken, platform: "web" });
     localStorage.setItem(PUSH_TOKEN_KEY, devToken);
@@ -191,25 +204,38 @@ export async function showPushNotification(
       void (navigator as any).clearAppBadge().catch(() => {});
     }
     if ("serviceWorker" in navigator) {
-      const reg = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<undefined>((resolve) => setTimeout(resolve, 600)),
-      ]);
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<undefined>((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      }
       if (reg && "showNotification" in reg) {
         await reg.showNotification(title, {
           body: options?.body,
           icon: options?.icon ?? "/pwa-192.png",
           badge: "/pwa-192.png",
+          vibrate: [200, 100, 200],
+          tag: `kuripro-${Date.now()}`,
           data: { url: options?.url ?? "/notifications" },
-        });
+        } as any);
         return true;
       }
     }
-    new Notification(title, {
-      body: options?.body,
-      icon: options?.icon ?? "/pwa-192.png",
-    });
-    return true;
+    // Fallback for non-service-worker environments (safely wrapped for Android Chrome)
+    if (typeof Notification === "function") {
+      try {
+        new Notification(title, {
+          body: options?.body,
+          icon: options?.icon ?? "/pwa-192.png",
+        });
+        return true;
+      } catch {
+        // Android Chrome throws 'Illegal constructor' when calling new Notification()
+      }
+    }
+    return false;
   } catch {
     return false;
   }
@@ -227,5 +253,7 @@ export async function disablePush(): Promise<void> {
 }
 
 export function hasRegisteredPush(): boolean {
-  return isPushSupported() && Notification.permission === "granted" && Boolean(localStorage.getItem(PUSH_TOKEN_KEY));
+  if (!isPushSupported() || Notification.permission !== "granted") return false;
+  const token = localStorage.getItem(PUSH_TOKEN_KEY);
+  return Boolean(token && token.includes('"endpoint"'));
 }

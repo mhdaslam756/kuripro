@@ -7,6 +7,9 @@ import { registerPushTokenSchema, unregisterPushTokenSchema } from "./device.val
 
 export const deviceRouter: Router = Router();
 
+// Public: any client can retrieve the VAPID public key needed to subscribe to Web Push
+deviceRouter.get("/vapid-public-key", deviceController.getVapidPublicKey);
+
 deviceRouter.use(requireAuth);
 
 // Any authenticated user can register their own device for push — it's a personal capability, not a

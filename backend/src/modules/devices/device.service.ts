@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import {
   deleteDeviceToken,
   listTokensForUser,
+  pruneSyntheticTokensForUser,
   upsertDeviceToken,
 } from "./device-token.repository.js";
 import type { RegisterPushTokenInput } from "./device.validators.js";
@@ -15,6 +16,9 @@ export async function registerPushToken(
   input: RegisterPushTokenInput,
   userAgent?: string,
 ): Promise<void> {
+  if (input.token.includes('"endpoint"')) {
+    await pruneSyntheticTokensForUser(userId).catch(() => null);
+  }
   await upsertDeviceToken({ tenantId, userId, token: input.token, platform: input.platform, userAgent });
 }
 

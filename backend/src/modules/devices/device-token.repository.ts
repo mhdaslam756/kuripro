@@ -46,3 +46,8 @@ export async function deleteTokensByValue(tokens: string[]): Promise<void> {
   if (tokens.length === 0) return;
   await DeviceToken.deleteMany({ tenantId: { $exists: true }, token: { $in: tokens } });
 }
+
+/** Prunes temporary synthetic tokens for a user when upgrading to real Web Push. */
+export async function pruneSyntheticTokensForUser(userId: string): Promise<void> {
+  await DeviceToken.deleteMany({ tenantId: { $exists: true }, userId, token: { $regex: "^web_token_" } });
+}

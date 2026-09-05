@@ -106,22 +106,40 @@ self.addEventListener("sync", (event: Event) => {
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;
-  let payload: { title?: string; body?: string; url?: string } = {};
+  let payload: { title?: string; body?: string; url?: string; id?: string } = {};
   try {
-    const json = event.data.json() as { notification?: { title?: string; body?: string }; data?: Record<string, string> };
-    payload = { title: json.notification?.title ?? json.data?.title, body: json.notification?.body ?? json.data?.body, url: json.data?.url };
+    const json = event.data.json() as {
+      notification?: { title?: string; body?: string; icon?: string };
+      data?: Record<string, string>;
+      title?: string;
+      body?: string;
+      url?: string;
+      id?: string;
+    };
+    payload = {
+      title: json.title ?? json.notification?.title ?? json.data?.title,
+      body: json.body ?? json.notification?.body ?? json.data?.body,
+      url: json.url ?? json.data?.url,
+      id: json.id ?? json.data?.id,
+    };
   } catch {
     payload = { body: event.data.text() };
   }
+
+  const title = payload.title || "KuriPro 🔔";
+  const iconUrl = new URL("/pwa-192.png", self.location.origin).href;
+  const badgeUrl = new URL("/pwa-192.png", self.location.origin).href;
+  const tag = payload.id || `kuripro-${Date.now()}`;
+
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? "KuriPro", {
+    self.registration.showNotification(title, {
       body: payload.body ?? "",
-      icon: "/pwa-192.png",
-      badge: "/pwa-192.png",
-      vibrate: [200, 100, 200],
-      tag: "kuripro-notification",
+      icon: iconUrl,
+      badge: badgeUrl,
+      vibrate: [300, 100, 300, 100, 300],
+      tag,
       renotify: true,
-      data: { url: payload.url ?? "/" },
+      data: { url: payload.url ?? "/notifications" },
     } as any),
   );
 });
