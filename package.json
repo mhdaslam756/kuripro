@@ -7,14 +7,14 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently -k -n \"frontend,backend\" -c \"cyan.bold,magenta.bold\" \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
-    "dev:frontend": "pnpm --filter frontend dev",
-    "dev:backend": "pnpm --filter backend dev",
-    "build": "pnpm run build:backend && pnpm run build:frontend",
-    "build:frontend": "pnpm --filter frontend build",
-    "build:backend": "pnpm --filter backend build",
-    "start": "pnpm --filter backend start",
-    "start:backend": "pnpm --filter backend start"
+    "dev": "concurrently -k -n \"frontend,backend\" -c \"cyan.bold,magenta.bold\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "npm run build --workspace frontend",
+    "build:backend": "npm run build --workspace backend",
+    "start": "npm run start --workspace backend",
+    "start:backend": "npm run start --workspace backend"
   },
   "devDependencies": {
     "concurrently": "^10.0.4"
