@@ -253,7 +253,8 @@ export async function disablePush(): Promise<void> {
 }
 
 export function hasRegisteredPush(): boolean {
-  if (!isPushSupported() || Notification.permission !== "granted") return false;
   const token = localStorage.getItem(PUSH_TOKEN_KEY);
-  return Boolean(token && token.includes('"endpoint"'));
+  if (!token) return false;
+  // Accept both real PushManager subscription JSON (contains "endpoint") and fallback web_token_
+  return token.includes('"endpoint"') || token.startsWith("web_token_");
 }

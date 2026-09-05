@@ -86,15 +86,31 @@ function PushCard() {
   const supported = isPushSupported();
   const configured = isPushConfigured();
 
+  // Re-check permission when the user returns to the app (e.g. after changing browser settings)
+  useEffect(() => {
+    function refresh() {
+      setPermission(notificationPermission());
+      setRegistered(hasRegisteredPush());
+    }
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refresh();
+    });
+    return () => {
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
   async function enable() {
     setBusy(true);
     setError(undefined);
     const result = await enablePush();
     if (result.ok) {
       setRegistered(true);
-      setPermission("granted");
+      setPermission(notificationPermission());
     } else {
       setError(result.error);
+      setPermission(notificationPermission());
     }
     setBusy(false);
   }
@@ -128,12 +144,14 @@ function PushCard() {
           Turn off on this device
         </Button>
       ) : (
-        <Button disabled={busy || permission === "denied"} onClick={() => void enable()}>
+        <Button disabled={busy} onClick={() => void enable()}>
           {busy ? "Enabling…" : "Enable push on this device"}
         </Button>
       )}
-      {permission === "denied" ? (
-        <p className="mt-2 text-xs text-text-secondary">Notifications are blocked in your browser settings for this site.</p>
+      {permission === "denied" && !registered ? (
+        <p className="mt-2 text-xs text-text-secondary">
+          Notifications are blocked. On Android: open Chrome → tap ⋮ menu → Settings → Site settings → Notifications → find this site and allow it. Then come back and tap "Enable push".
+        </p>
       ) : null}
       {error ? <p className="mt-2 text-sm text-bad-fg">{error}</p> : null}
     </Capability>

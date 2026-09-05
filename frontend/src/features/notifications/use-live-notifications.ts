@@ -14,17 +14,11 @@ export function useLiveNotifications(): void {
   useEffect(() => {
     if (!user) return;
 
-    // Silently register device with backend for server push delivery
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "granted") {
-        void enablePush();
-      } else if (Notification.permission === "default") {
-        void Notification.requestPermission().then((perm) => {
-          if (perm === "granted") {
-            void enablePush();
-          }
-        });
-      }
+    // Silently register device with backend for push delivery — only if permission is already granted.
+    // We intentionally do NOT auto-request permission here because Android Chrome permanently blocks
+    // notifications if the user dismisses the prompt. Let the user enable push from Device page.
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      void enablePush();
     }
 
     const token = getAccessToken();
