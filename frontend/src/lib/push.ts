@@ -86,7 +86,7 @@ export async function enablePush(): Promise<EnablePushResult> {
       activeVapidKey = res.publicKey;
     }
   } catch {
-    // fallback
+    // fallback to env vars
   }
 
   if (!activeVapidKey) {
@@ -98,51 +98,68 @@ export async function enablePush(): Promise<EnablePushResult> {
 
   if (activeVapidKey && "serviceWorker" in navigator) {
     try {
-      let registration = await navigator.serviceWorker.getRegistration();
-      if (!registration || !registration.active) {
-        registration = await navigator.serviceWorker.ready;
-      }
-      let subscription = await registration.pushManager.getSubscription();
-      const expectedKey = urlBase64ToUint8Array(activeVapidKey);
+      // Wait for SW to be ready with a timeout (Android Chrome can be slow to activate)
+      let registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<ServiceWorkerRegistration | null>((resolve) =>
+          setTimeout(() => resolve(null), 8000),
+        ),
+      ]);
 
-      if (subscription) {
-        const rawKey = subscription.options?.applicationServerKey;
-        if (rawKey) {
-          const currentKeyArray = new Uint8Array(rawKey);
-          let keyMatches = currentKeyArray.length === expectedKey.length;
-          if (keyMatches) {
-            for (let i = 0; i < currentKeyArray.length; i++) {
-              if (currentKeyArray[i] !== expectedKey[i]) {
-                keyMatches = false;
-                break;
+      // If ready timed out, try getRegistration as fallback
+      if (!registration) {
+        registration = (await navigator.serviceWorker.getRegistration()) ?? null;
+      }
+
+      if (!registration) {
+        console.warn("enablePush: No service worker registration available");
+        // Fall through to SSE fallback below
+      } else {
+        let subscription = await registration.pushManager.getSubscription();
+        const expectedKey = urlBase64ToUint8Array(activeVapidKey);
+
+        if (subscription) {
+          const rawKey = subscription.options?.applicationServerKey;
+          if (rawKey) {
+            const currentKeyArray = new Uint8Array(rawKey);
+            let keyMatches = currentKeyArray.length === expectedKey.length;
+            if (keyMatches) {
+              for (let i = 0; i < currentKeyArray.length; i++) {
+                if (currentKeyArray[i] !== expectedKey[i]) {
+                  keyMatches = false;
+                  break;
+                }
               }
             }
-          }
-          if (!keyMatches) {
-            await subscription.unsubscribe();
-            subscription = null;
+            if (!keyMatches) {
+              await subscription.unsubscribe();
+              subscription = null;
+            }
           }
         }
-      }
 
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: expectedKey as unknown as BufferSource,
-        });
-      }
-      if (subscription) {
-        const token = JSON.stringify(subscription);
-        await api.post("/devices/push-tokens", { token, platform: "web" });
-        localStorage.setItem(PUSH_TOKEN_KEY, token);
-        return { ok: true, token };
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: expectedKey as unknown as BufferSource,
+          });
+        }
+        if (subscription) {
+          const token = JSON.stringify(subscription);
+          await api.post("/devices/push-tokens", { token, platform: "web" });
+          localStorage.setItem(PUSH_TOKEN_KEY, token);
+          return { ok: true, token };
+        }
       }
     } catch (err) {
-      console.warn("PushManager subscription failed, falling back to real-time stream token:", err);
+      console.warn("enablePush: PushManager subscription failed:", err);
+      // Fall through to SSE fallback
     }
   }
 
-  // 2. Fallback: register standard web token so device is registered with backend for SSE delivery
+  // 2. Fallback: register a synthetic token so the device is registered with the backend for
+  //    real-time SSE delivery (in-app alerts while the app is open). Background push won't work
+  //    with this token — only the Web Push subscription above provides true background delivery.
   const existingToken = localStorage.getItem(PUSH_TOKEN_KEY);
   const devToken = existingToken && existingToken.startsWith("web_token_")
     ? existingToken

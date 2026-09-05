@@ -86,11 +86,20 @@ function PushCard() {
   const supported = isPushSupported();
   const configured = isPushConfigured();
 
+  // Check if we have a real Web Push subscription vs a fallback SSE token
+  function hasRealWebPush(): boolean {
+    const token = localStorage.getItem("kuripro_push_token");
+    return Boolean(token && token.includes('"endpoint"'));
+  }
+
+  const [isRealPush, setIsRealPush] = useState(hasRealWebPush());
+
   // Re-check permission when the user returns to the app (e.g. after changing browser settings)
   useEffect(() => {
     function refresh() {
       setPermission(notificationPermission());
       setRegistered(hasRegisteredPush());
+      setIsRealPush(hasRealWebPush());
     }
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", () => {
@@ -107,6 +116,7 @@ function PushCard() {
     const result = await enablePush();
     if (result.ok) {
       setRegistered(true);
+      setIsRealPush(hasRealWebPush());
       setPermission(notificationPermission());
     } else {
       setError(result.error);
@@ -119,11 +129,12 @@ function PushCard() {
     setBusy(true);
     await disablePush();
     setRegistered(false);
+    setIsRealPush(false);
     setBusy(false);
   }
 
-  const status = !supported ? "Not supported" : !configured ? "Unavailable" : registered ? "On" : permission === "denied" ? "Blocked" : "Off";
-  const tone: Tone = registered ? "success" : permission === "denied" ? "danger" : "neutral";
+  const status = !supported ? "Not supported" : !configured ? "Unavailable" : registered ? (isRealPush ? "On" : "In-app only") : permission === "denied" ? "Blocked" : "Off";
+  const tone: Tone = registered ? (isRealPush ? "success" : "warning") : permission === "denied" ? "danger" : "neutral";
 
   return (
     <Capability
@@ -140,9 +151,27 @@ function PushCard() {
           Push notifications are currently unavailable for this organization.
         </p>
       ) : registered ? (
-        <Button variant="outline" disabled={busy} onClick={() => void disable()}>
-          Turn off on this device
-        </Button>
+        <div className="flex flex-col gap-2">
+          {!isRealPush ? (
+            <>
+              <p className="text-xs text-text-secondary">
+                In-app alerts are active. For background push (when app is closed), tap "Retry background push" below.
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy} onClick={() => void enable()}>
+                  {busy ? "Retrying…" : "Retry background push"}
+                </Button>
+                <Button variant="outline" size="sm" disabled={busy} onClick={() => void disable()}>
+                  Turn off
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button variant="outline" disabled={busy} onClick={() => void disable()}>
+              Turn off on this device
+            </Button>
+          )}
+        </div>
       ) : (
         <Button disabled={busy} onClick={() => void enable()}>
           {busy ? "Enabling…" : "Enable push on this device"}
