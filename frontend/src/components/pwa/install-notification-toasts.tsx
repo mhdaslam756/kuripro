@@ -1,4 +1,4 @@
-import { Download, Share, X } from "lucide-react";
+import { Bell, Download, Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isIosDevice, isStandalone } from "@/lib/pwa";
 import { promptInstall } from "@/lib/pwa-runtime";
+import { enablePush, isPushSupported, notificationPermission } from "@/lib/push";
 import { usePwa } from "@/lib/use-pwa";
 
 /**
@@ -25,8 +26,10 @@ export function AppInstallNotificationToasts() {
 
   const { canInstall, installed } = usePwa();
   const [showInstallToast, setShowInstallToast] = useState(false);
+  const [showPushToast, setShowPushToast] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
 
   useEffect(() => {
     if (isAuthPage) return;
@@ -40,6 +43,16 @@ export function AppInstallNotificationToasts() {
       const timer = setTimeout(() => {
         setShowInstallToast(true);
       }, 1500);
+      return () => clearTimeout(timer);
+    }
+
+    // 2. Push Notification Prompt — show if install card is not showing and push isn't enabled
+    const pushDismissed = sessionStorage.getItem("kuripro_push_dismissed") === "true";
+    const pushPermission = notificationPermission();
+    if (!pushDismissed && isPushSupported() && pushPermission === "default") {
+      const timer = setTimeout(() => {
+        setShowPushToast(true);
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [canInstall, installed, isAuthPage]);
@@ -72,6 +85,35 @@ export function AppInstallNotificationToasts() {
   function dismissInstall() {
     setShowInstallToast(false);
     sessionStorage.setItem("kuripro_install_dismissed", "true");
+    // After dismissing install, show push prompt if needed
+    const pushPermission = notificationPermission();
+    if (isPushSupported() && pushPermission === "default") {
+      setTimeout(() => setShowPushToast(true), 800);
+    }
+  }
+
+  async function handleEnablePush() {
+    setIsEnablingPush(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        await enablePush();
+        toast.success("Push notifications enabled! 🔔");
+        setShowPushToast(false);
+      } else {
+        setShowPushToast(false);
+        sessionStorage.setItem("kuripro_push_dismissed", "true");
+      }
+    } catch {
+      setShowPushToast(false);
+    } finally {
+      setIsEnablingPush(false);
+    }
+  }
+
+  function dismissPush() {
+    setShowPushToast(false);
+    sessionStorage.setItem("kuripro_push_dismissed", "true");
   }
 
   return (
@@ -112,6 +154,48 @@ export function AppInstallNotificationToasts() {
                 onClick={dismissInstall}
                 className="flex size-7 items-center justify-center rounded-full text-text-secondary hover:bg-bg-raised active-bounce"
                 aria-label="Dismiss Install Prompt"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Push Notification Enable Card */}
+        {showPushToast && !showInstallToast ? (
+          <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-bg-surface/95 p-3.5 shadow-2xl backdrop-blur-2xl ring-1 ring-black/5 animate-in slide-in-from-bottom-5 duration-300">
+            <div className="flex items-center gap-3">
+              <div className="relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 font-display font-bold text-white shadow-md text-lg">
+                <Bell size={20} />
+                <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-red-500 ring-2 ring-bg-surface" />
+              </div>
+              <div>
+                <p className="font-display text-xs font-bold text-text-primary flex items-center gap-1.5">
+                  Enable Notifications
+                  <span className="rounded-full bg-amber-500/15 px-1.5 py-0.2 text-[9px] font-bold text-amber-600">
+                    Reminders
+                  </span>
+                </p>
+                <p className="text-[11px] text-text-secondary line-clamp-1">
+                  Get payment reminders, auction alerts & winner results
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                type="button"
+                size="sm"
+                disabled={isEnablingPush}
+                onClick={() => void handleEnablePush()}
+                className="h-8 gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white px-3 text-xs font-bold shadow-xs active-bounce"
+              >
+                <Bell size={13} /> {isEnablingPush ? "Enabling…" : "Enable"}
+              </Button>
+              <button
+                type="button"
+                onClick={dismissPush}
+                className="flex size-7 items-center justify-center rounded-full text-text-secondary hover:bg-bg-raised active-bounce"
+                aria-label="Dismiss Push Prompt"
               >
                 <X size={15} />
               </button>
@@ -247,6 +331,43 @@ export function HeaderInstallAppButton() {
   );
 }
 
+/**
+ * Compact Header Button for enabling push notifications.
+ * Shows only if push is supported but permission hasn't been granted yet.
+ */
 export function HeaderPushNotificationButton() {
-  return null;
+  const [permission, setPermission] = useState(notificationPermission());
+  const [busy, setBusy] = useState(false);
+
+  if (!isPushSupported() || permission === "granted" || permission === "unsupported") return null;
+
+  async function handleEnable() {
+    setBusy(true);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        await enablePush();
+        toast.success("Push notifications enabled! 🔔");
+      }
+      setPermission(perm);
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleEnable()}
+      disabled={busy}
+      title="Enable Push Notifications"
+      className="active-bounce flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 text-xs font-semibold text-amber-600 transition-all shadow-xs"
+      aria-label="Enable Notifications"
+    >
+      <Bell size={13} className="shrink-0" />
+      <span className="hidden md:inline">{busy ? "Enabling…" : "Enable Alerts"}</span>
+    </button>
+  );
 }
