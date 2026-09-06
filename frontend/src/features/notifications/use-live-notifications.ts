@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth-context";
 import { API_BASE_URL, getAccessToken } from "@/lib/api-client";
@@ -47,16 +48,30 @@ export function useLiveNotifications(): void {
       const body = data.body || "";
       const url = data.url || "/notifications";
 
-      // 1. Native OS / Browser Push Banner from Server Dispatch
-      void showPushNotification(title, {
-        body,
-        url,
+      // 1. Always show an in-app toast notification (works on ALL devices, no permission needed)
+      toast(title, {
+        description: body,
+        duration: 6000,
+        action: url
+          ? {
+              label: "View",
+              onClick: () => {
+                window.location.href = url;
+              },
+            }
+          : undefined,
       });
 
       // 2. Play gentle audio alert chime
       playNotificationChime();
 
-      // 3. For Members receiving an installment due reminder, show Due Modal
+      // 3. Try native OS / Browser Push Banner (requires notification permission)
+      void showPushNotification(title, {
+        body,
+        url,
+      });
+
+      // 4. For Members receiving an installment due reminder, show Due Modal
       const isMember = user?.role?.slug === "MEMBER";
       const isDue =
         data.type === "REMINDER" ||
@@ -75,7 +90,7 @@ export function useLiveNotifications(): void {
         });
       }
 
-      // 4. Silently update query caches
+      // 5. Silently update query caches
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["member-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -128,4 +143,3 @@ export function useLiveNotifications(): void {
     };
   }, [user, queryClient]);
 }
-
