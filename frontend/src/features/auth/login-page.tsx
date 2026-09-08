@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { z } from "zod";
 
@@ -195,12 +195,12 @@ export function LoginPage() {
         </form>
 
         {/* Footer: "Don't have account? Sign Up" */}
-        <p className="mt-6 text-center text-xs sm:text-sm text-text-secondary">
+        {/* <p className="mt-6 text-center text-xs sm:text-sm text-text-secondary">
           Don't have account?{" "}
           <Link to="/register" className="font-bold text-accent-primary hover:underline ml-1">
             Sign Up
           </Link>
-        </p>
+        </p> */}
 
     
       </div>

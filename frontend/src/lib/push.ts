@@ -96,70 +96,95 @@ export async function enablePush(): Promise<EnablePushResult> {
       null;
   }
 
+  let pushError: string | null = null;
+
   if (activeVapidKey && "serviceWorker" in navigator) {
     try {
-      // Wait for SW to be ready with a timeout (Android Chrome can be slow to activate)
-      let registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<ServiceWorkerRegistration | null>((resolve) =>
-          setTimeout(() => resolve(null), 8000),
-        ),
-      ]);
-
-      // If ready timed out, try getRegistration as fallback
-      if (!registration) {
+      // 1. Find existing registration or wait for ready
+      let registration: ServiceWorkerRegistration | null = null;
+      try {
         registration = (await navigator.serviceWorker.getRegistration()) ?? null;
+      } catch {
+        // ignore
       }
 
       if (!registration) {
-        console.warn("enablePush: No service worker registration available");
-        // Fall through to SSE fallback below
-      } else {
-        let subscription = await registration.pushManager.getSubscription();
+        try {
+          registration = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+          ]);
+        } catch {
+          // ignore
+        }
+      }
+
+      // If still no registration, explicitly register the service worker
+      if (!registration) {
+        try {
+          const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
+          registration = await navigator.serviceWorker.register(swUrl, {
+            scope: "/",
+            type: import.meta.env.DEV ? "module" : "classic",
+          });
+          await navigator.serviceWorker.ready;
+        } catch (regErr) {
+          console.warn("enablePush: Service worker registration fallback:", regErr);
+        }
+      }
+
+      if (registration && "pushManager" in registration) {
         const expectedKey = urlBase64ToUint8Array(activeVapidKey);
+        const appServerKey = expectedKey.buffer.slice(
+          expectedKey.byteOffset,
+          expectedKey.byteOffset + expectedKey.byteLength,
+        );
+
+        let subscription = await registration.pushManager.getSubscription();
 
         if (subscription) {
           const rawKey = subscription.options?.applicationServerKey;
+          let keyMatches = false;
           if (rawKey) {
             const currentKeyArray = new Uint8Array(rawKey);
-            let keyMatches = currentKeyArray.length === expectedKey.length;
-            if (keyMatches) {
-              for (let i = 0; i < currentKeyArray.length; i++) {
-                if (currentKeyArray[i] !== expectedKey[i]) {
-                  keyMatches = false;
-                  break;
-                }
-              }
+            if (currentKeyArray.length === expectedKey.length) {
+              keyMatches = currentKeyArray.every((byte, idx) => byte === expectedKey[idx]);
             }
-            if (!keyMatches) {
-              await subscription.unsubscribe();
-              subscription = null;
-            }
+          }
+          if (!keyMatches) {
+            await subscription.unsubscribe().catch(() => null);
+            subscription = null;
           }
         }
 
         if (!subscription) {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: expectedKey as unknown as BufferSource,
+            applicationServerKey: appServerKey as BufferSource,
           });
         }
+
         if (subscription) {
           const token = JSON.stringify(subscription);
-          await api.post("/devices/push-tokens", { token, platform: "web" });
+          await api.post("/devices/push-tokens", {
+            token,
+            platform: isIosDevice() ? "ios" : "web",
+          });
           localStorage.setItem(PUSH_TOKEN_KEY, token);
           return { ok: true, token };
         }
+      } else {
+        pushError = "PushManager not available on this browser/network context (requires HTTPS).";
       }
-    } catch (err) {
-      console.warn("enablePush: PushManager subscription failed:", err);
-      // Fall through to SSE fallback
+    } catch (err: any) {
+      console.error("enablePush: PushManager subscription failed:", err);
+      pushError = err?.message || String(err);
     }
   }
 
   // 2. Fallback: register a synthetic token so the device is registered with the backend for
   //    real-time SSE delivery (in-app alerts while the app is open). Background push won't work
-  //    with this token — only the Web Push subscription above provides true background delivery.
+  //    with this token when browser is off — only the Web Push subscription provides background delivery.
   const existingToken = localStorage.getItem(PUSH_TOKEN_KEY);
   const devToken = existingToken && existingToken.startsWith("web_token_")
     ? existingToken
@@ -167,7 +192,12 @@ export async function enablePush(): Promise<EnablePushResult> {
   try {
     await api.post("/devices/push-tokens", { token: devToken, platform: "web" });
     localStorage.setItem(PUSH_TOKEN_KEY, devToken);
-    return { ok: true, token: devToken };
+    return {
+      ok: false,
+      error: pushError
+        ? `Background push unavailable: ${pushError}. In-app alerts are active.`
+        : "Could not establish background push subscription. In-app alerts are active.",
+    };
   } catch (err: any) {
     return { ok: false, error: err?.message || "Failed to register push token with server." };
   }

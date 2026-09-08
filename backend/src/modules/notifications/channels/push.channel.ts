@@ -1,3 +1,4 @@
+import { logger } from "../../../config/logger.js";
 import { getMessaging } from "firebase-admin/messaging";
 
 import { env } from "../../../config/env.js";
@@ -26,7 +27,8 @@ async function getWebPush(): Promise<any> {
         env.VAPID_PRIVATE_KEY!,
       );
     }
-  } catch {
+  } catch (err) {
+    logger.error({ err }, "Failed to initialize web-push module");
     webpushInstance = null;
   }
   return webpushInstance;
@@ -51,46 +53,58 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
   // 1. Standard Web Push Subscription (W3C Push API JSON)
   if (message.to.includes('"endpoint"')) {
     if (!isWebPushConfigured) {
+      logger.warn("Web Push VAPID keys not configured on server; falling back to in-app stream");
       return { providerMessageId: "webpush-unconfigured-stream" };
     }
     const wp = await getWebPush();
     if (!wp) {
+      logger.warn("Web Push module could not be loaded; falling back to in-app stream");
       return { providerMessageId: "webpush-stream" };
     }
     try {
       const subscription = JSON.parse(message.to);
-      const res = await wp.sendNotification(
-        subscription,
-        JSON.stringify({
-          notification: {
-            title,
-            body,
-            icon: "/pwa-192.png",
-            badge: "/pwa-192.png",
-          },
-          data: {
-            url: "/notifications",
-            title,
-            body,
-          },
-        }),
-        {
-          TTL: 86400,
-          urgency: "high",
+      const payloadString = JSON.stringify({
+        title,
+        body,
+        icon: "/pwa-192.png",
+        badge: "/pwa-192.png",
+        notification: {
+          title,
+          body,
+          icon: "/pwa-192.png",
+          badge: "/pwa-192.png",
         },
-      );
+        data: {
+          url: "/notifications",
+          title,
+          body,
+        },
+      });
+
+      const res = await wp.sendNotification(subscription, payloadString, {
+        TTL: 86400,
+        urgency: "high",
+      });
+
+      logger.info({ statusCode: res.statusCode, endpoint: subscription.endpoint?.slice(0, 45) }, "Web Push dispatched successfully");
       return { providerMessageId: `webpush-${res.statusCode}` };
     } catch (err: any) {
+      logger.error(
+        { err: err?.message || err, statusCode: err?.statusCode, body: err?.body },
+        "WebPush sendNotification failed",
+      );
       if (err?.statusCode === 404 || err?.statusCode === 410) {
-        // Subscription expired or unsubscribed — prune token
+        // Subscription expired or unsubscribed — prune token from DB
+        logger.info({ tokenPrefix: message.to.slice(0, 40) }, "Pruning expired push subscription");
         void deleteTokensByValue([message.to]).catch(() => null);
       }
-      return { providerMessageId: "webpush-stream" };
+      throw err;
     }
   }
 
   // 2. Synthetic web/user tokens — real-time SSE stream covers these
   if (message.to.startsWith("web_token_") || message.to.startsWith("user:") || message.to.startsWith("member:")) {
+    logger.warn({ to: message.to }, "Push targeted a synthetic fallback token — real background push requires an active Web Push subscription");
     return { providerMessageId: "webpush-stream" };
   }
 

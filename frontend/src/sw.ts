@@ -102,28 +102,30 @@ self.addEventListener("sync", (event: Event) => {
   }
 });
 
-// --- Push notifications (FCM/Web Push): show background notifications ---
+// --- Push notifications (W3C Web Push / FCM): show background notifications even when app/browser is closed ---
 
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
   let payload: { title?: string; body?: string; url?: string; id?: string } = {};
-  try {
-    const json = event.data.json() as {
-      notification?: { title?: string; body?: string; icon?: string };
-      data?: Record<string, string>;
-      title?: string;
-      body?: string;
-      url?: string;
-      id?: string;
-    };
-    payload = {
-      title: json.title ?? json.notification?.title ?? json.data?.title,
-      body: json.body ?? json.notification?.body ?? json.data?.body,
-      url: json.url ?? json.data?.url,
-      id: json.id ?? json.data?.id,
-    };
-  } catch {
-    payload = { body: event.data.text() };
+
+  if (event.data) {
+    try {
+      const json = event.data.json() as {
+        notification?: { title?: string; body?: string; icon?: string };
+        data?: Record<string, string>;
+        title?: string;
+        body?: string;
+        url?: string;
+        id?: string;
+      };
+      payload = {
+        title: json.title ?? json.notification?.title ?? json.data?.title,
+        body: json.body ?? json.notification?.body ?? json.data?.body,
+        url: json.url ?? json.data?.url,
+        id: json.id ?? json.data?.id,
+      };
+    } catch {
+      payload = { body: event.data.text() };
+    }
   }
 
   const title = payload.title || "KuriPro 🔔";
@@ -133,12 +135,13 @@ self.addEventListener("push", (event) => {
 
   event.waitUntil(
     self.registration.showNotification(title, {
-      body: payload.body ?? "",
+      body: payload.body || "You have a new update from KuriPro",
       icon: iconUrl,
       badge: badgeUrl,
       vibrate: [300, 100, 300, 100, 300],
       tag,
       renotify: true,
+      requireInteraction: true,
       data: { url: payload.url ?? "/notifications" },
     } as any),
   );
@@ -146,11 +149,14 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = (event.notification.data as { url?: string } | undefined)?.url ?? "/";
+  const target = (event.notification.data as { url?: string } | undefined)?.url ?? "/notifications";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const existing = clients.find((c) => "focus" in c);
-      if (existing) return (existing as WindowClient).focus();
+      if (existing) {
+        void (existing as WindowClient).navigate(target);
+        return (existing as WindowClient).focus();
+      }
       return self.clients.openWindow(target);
     }),
   );

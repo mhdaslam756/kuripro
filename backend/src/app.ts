@@ -6,10 +6,9 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 
-import { corsOrigins, env } from "./config/env.js";
+import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
-import { pingQueue } from "./jobs/health-check.job.js";
 import { apiRouter } from "./routes/index.js";
 
 export function createApp(): Express {
@@ -19,27 +18,7 @@ export function createApp(): Express {
   app.set("trust proxy", 1);
 
   app.use(helmet());
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (corsOrigins.includes(origin) || corsOrigins.includes("*")) {
-          return callback(null, true);
-        }
-        if (env.NODE_ENV === "development") {
-          if (
-            /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
-              origin,
-            )
-          ) {
-            return callback(null, true);
-          }
-        }
-        return callback(new Error(`Not allowed by CORS: ${origin}`));
-      },
-      credentials: true,
-    }),
-  );
+  app.use(cors({ origin: true, credentials: true }));
   app.use(compression());
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
@@ -58,11 +37,6 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok" });
   });
 
-  app.get("/health/queue", async (_req, res) => {
-    const result = await pingQueue(3000);
-    res.status(200).json({ status: "ok", pongedAt: result.pongedAt });
-  });
-
   app.use("/api", apiRouter);
 
   app.use(notFoundHandler);
@@ -70,3 +44,4 @@ export function createApp(): Express {
 
   return app;
 }
+
