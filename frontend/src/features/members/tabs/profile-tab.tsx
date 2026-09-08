@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +9,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate, formatPaise, humanize } from "@/lib/format";
+import { DeleteMemberDialog } from "../components/delete-member-dialog";
 import { MemberFormDialog } from "../components/member-form-dialog";
 import type { Member } from "../types";
 import { useDeactivateMember, useInviteToPortal } from "../use-members";
@@ -21,9 +24,11 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 export function ProfileTab({ member }: { member: Member }) {
+  const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [email, setEmail] = useState(member.email ?? "");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   /** Set when the email already had an account here and the member was attached to it instead. */
@@ -58,8 +63,17 @@ export function ProfileTab({ member }: { member: Member }) {
         ) : null}
         {canUpdate ? <Button variant="outline" onClick={() => setEditOpen(true)}>Edit profile</Button> : null}
         {canDelete && member.status === "ACTIVE" ? (
-          <Button variant="destructive" disabled={deactivate.isPending} onClick={() => void deactivate.mutateAsync(member.id)}>
+          <Button variant="outline" disabled={deactivate.isPending} onClick={() => void deactivate.mutateAsync(member.id)}>
             {deactivate.isPending ? "Deactivating…" : "Deactivate"}
+          </Button>
+        ) : null}
+        {canDelete ? (
+          <Button
+            variant="destructive"
+            className="gap-1.5"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 size={15} /> Delete Member
           </Button>
         ) : null}
       </div>
@@ -155,6 +169,14 @@ export function ProfileTab({ member }: { member: Member }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteMemberDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        member={member}
+        onDeleted={() => navigate("/members")}
+      />
     </div>
   );
 }
+

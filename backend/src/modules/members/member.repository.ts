@@ -126,3 +126,9 @@ export async function listMembersWithBirthday(tenantId: string, month: number, d
     },
   });
 }
+
+export async function deleteMemberById(id: string, tenantId: string, session?: ClientSession): Promise<boolean> {
+  const result = await Member.deleteOne({ _id: id, tenantId }, { session });
+  return result.deletedCount > 0;
+}
+

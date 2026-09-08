@@ -247,3 +247,12 @@ export interface ImportCommitResult {
   skipped: number;
   reports: CsvRowReport[];
 }
+
+export interface MemberDeletionEligibility {
+  canDelete: boolean;
+  enrolledChitCount: number;
+  chits: Array<{ id: string; name: string }>;
+  isGuarantor: boolean;
+  reason?: string;
+}
+

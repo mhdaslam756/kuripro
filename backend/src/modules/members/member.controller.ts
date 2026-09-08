@@ -80,8 +80,27 @@ export async function update(req: Request, res: Response): Promise<void> {
 export async function deactivate(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;
+  if (req.query.permanent === "true") {
+    const result = await memberService.deleteMemberCompletely(tenantId, id, req.auth!.userId);
+    res.status(200).json(result);
+    return;
+  }
   const member = await memberService.deactivateMember(tenantId, id, req.auth!.userId);
   res.status(200).json({ member });
+}
+
+export async function checkDeletionEligibility(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  const eligibility = await memberService.checkMemberDeletionEligibility(tenantId, id);
+  res.status(200).json(eligibility);
+}
+
+export async function deleteCompletely(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  const result = await memberService.deleteMemberCompletely(tenantId, id, req.auth!.userId);
+  res.status(200).json(result);
 }
 
 export async function exportCsv(req: Request, res: Response): Promise<void> {

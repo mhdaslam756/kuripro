@@ -216,3 +216,8 @@ export async function listChitMembershipsByMemberId(
     select: "name",
   });
 }
+
+export async function countChitMembershipsByMemberId(tenantId: string, memberId: string): Promise<number> {
+  return ChitMembership.countDocuments({ tenantId, memberId });
+}
+

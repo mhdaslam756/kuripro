@@ -1,4 +1,4 @@
-import { ChevronRight, Download, Phone, Plus, Search, Upload, Users } from "lucide-react";
+import { ChevronRight, Download, Phone, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -22,9 +22,10 @@ import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { formatDate, humanize } from "@/lib/format";
 import { BulkImportDialog } from "./components/bulk-import-dialog";
+import { DeleteMemberDialog } from "./components/delete-member-dialog";
 import { MemberFormDialog } from "./components/member-form-dialog";
 import { KycStatusBadge, MemberStatusBadge, RiskBandBadge } from "./components/status-badges";
-import { KYC_STATUSES, MEMBER_STATUSES, RISK_BANDS } from "./types";
+import { KYC_STATUSES, MEMBER_STATUSES, RISK_BANDS, type Member } from "./types";
 import { buildMemberQueryString, useMembers, type MemberListFilters } from "./use-members";
 
 const ALL = "__all__";
@@ -58,6 +59,9 @@ export function MembersPage() {
 
   const canImportExport = hasPermission("members.import_export");
   const canCreate = hasPermission("members.create");
+  const canDelete = hasPermission("members.delete");
+
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
   async function handleExport() {
     setExporting(true);
@@ -211,7 +215,23 @@ export function MembersPage() {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight size={20} className="shrink-0 text-text-secondary" />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {canDelete ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-9 p-0 text-text-secondary hover:text-bad-fg hover:bg-bad-bg/60 rounded-xl"
+                        title="Delete Member"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMemberToDelete(member);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    ) : null}
+                    <ChevronRight size={20} className="shrink-0 text-text-secondary" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -229,6 +249,7 @@ export function MembersPage() {
                       <TableHeaderCell>KYC</TableHeaderCell>
                       <TableHeaderCell>Risk</TableHeaderCell>
                       <TableHeaderCell>Joined</TableHeaderCell>
+                      {canDelete ? <TableHeaderCell className="text-right">Action</TableHeaderCell> : null}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -251,6 +272,22 @@ export function MembersPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-text-secondary">{formatDate(member.createdAt)}</TableCell>
+                        {canDelete ? (
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="size-8 p-0 text-text-secondary hover:text-bad-fg hover:bg-bad-bg/60 rounded-lg"
+                              title="Delete Member"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMemberToDelete(member);
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </Button>
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -286,6 +323,19 @@ export function MembersPage() {
         onCreated={(memberId) => navigate(`/members/${memberId}`)}
       />
       <BulkImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      {memberToDelete ? (
+        <DeleteMemberDialog
+          open={Boolean(memberToDelete)}
+          onOpenChange={(open) => {
+            if (!open) setMemberToDelete(null);
+          }}
+          member={memberToDelete}
+          onDeleted={() => {
+            setMemberToDelete(null);
+            void refetch();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

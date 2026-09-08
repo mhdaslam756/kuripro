@@ -7,6 +7,7 @@ import type {
   ImportCommitResult,
   ImportPreviewResult,
   Member,
+  MemberDeletionEligibility,
   MemberRiskScore,
   Nominee,
   PaginatedMembers,
@@ -108,6 +109,27 @@ export function useDeactivateMember() {
   return useMutation({
     mutationFn: (id: string) => api.delete<{ member: Member }>(`/members/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }),
+  });
+}
+
+export function useMemberDeletionCheck(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["members", id, "deletion-check"],
+    queryFn: () => api.get<MemberDeletionEligibility>(`/members/${id}/deletion-check`),
+    enabled: Boolean(id) && enabled,
+    staleTime: 5000,
+  });
+}
+
+export function useDeleteMemberCompletely() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ success: boolean; message: string }>(`/members/${id}/permanent`),
+    onSuccess: (_, id) => {
+      void queryClient.invalidateQueries({ queryKey: ["members"] });
+      void queryClient.removeQueries({ queryKey: memberKey(id) });
+      void queryClient.removeQueries({ queryKey: ["members", id] });
+    },
   });
 }
 

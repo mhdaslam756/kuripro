@@ -6,6 +6,7 @@ import { logger } from "../../config/logger.js";
 import { listMemberActivity, recordActivity } from "../activity-logs/activity-log.service.js";
 import { findBranchByCodeOrName, findBranchById } from "../branches/branch.repository.js";
 import {
+  countChitMembershipsByMemberId,
   countDefaultedMemberships,
   listChitMembershipsByMemberId,
 } from "../chit-groups/chit-membership.repository.js";
@@ -50,7 +51,7 @@ import { getPaymentPunctualityStats, listPaymentsByMembershipIds } from "../paym
 import { listPayoutsByCycleIds } from "../payouts/payout.repository.js";
 import { getOrganizationRoleBySlug } from "../roles/role.service.js";
 import { createUser, findUserByEmail, findUserById } from "../users/user.repository.js";
-import type { UserDocument } from "../users/user.model.js";
+import { User, type UserDocument } from "../users/user.model.js";
 import { AppError } from "../../utils/app-error.js";
 import { generateTemporaryPassword, hashPassword } from "../../utils/password.js";
 import { rupeesToPaise } from "../../utils/money.js";
@@ -63,7 +64,7 @@ import {
   listFamilyMembersByMember,
   saveFamilyMember,
 } from "./family-member.repository.js";
-import type { FamilyMemberDocument } from "./family-member.model.js";
+import { FamilyMember, type FamilyMemberDocument } from "./family-member.model.js";
 import {
   countActiveGuarantorsForMember,
   createGuarantor,
@@ -71,9 +72,10 @@ import {
   listGuarantorsByMember,
   saveGuarantor,
 } from "./guarantor.repository.js";
-import type { GuarantorDocument } from "./guarantor.model.js";
+import { Guarantor, type GuarantorDocument } from "./guarantor.model.js";
 import {
   createMember,
+  deleteMemberById,
   findMemberByAadhaarHash,
   findMemberById,
   findMemberByPhone,
@@ -93,7 +95,7 @@ import {
   saveNominee,
   sumActiveShareForMember,
 } from "./nominee.repository.js";
-import type { NomineeDocument } from "./nominee.model.js";
+import { Nominee, type NomineeDocument } from "./nominee.model.js";
 import { generateQrDataUrl, generateQrToken } from "./qr-code.util.js";
 import { computeRiskScore } from "./risk-score.js";
 import {
@@ -213,6 +215,137 @@ export async function updateMemberProfile(
 
 export async function deactivateMember(tenantId: string, memberId: string, updatedBy: string): Promise<MemberDocument> {
   return updateMemberProfile(tenantId, memberId, { status: "INACTIVE" }, updatedBy);
+}
+
+export interface MemberDeletionEligibility {
+  canDelete: boolean;
+  enrolledChitCount: number;
+  chits: Array<{ id: string; name: string }>;
+  isGuarantor: boolean;
+  reason?: string;
+}
+
+export async function checkMemberDeletionEligibility(
+  tenantId: string,
+  memberId: string,
+): Promise<MemberDeletionEligibility> {
+  await getMemberById(tenantId, memberId);
+
+  const memberships = await listChitMembershipsByMemberId(tenantId, memberId);
+  const enrolledChitCount = memberships.length;
+
+  const chits = memberships.map((m) => {
+    const group = m.chitGroupId as any;
+    return {
+      id: group?._id ? group._id.toString() : String(group),
+      name: group?.name || "Chit Group",
+    };
+  });
+
+  const isGuarantor = Boolean(
+    await Guarantor.exists({ tenantId, guarantorMemberId: memberId, status: "ACTIVE" }),
+  );
+
+  if (enrolledChitCount > 0) {
+    const chitNames = chits.map((c) => `"${c.name}"`).join(", ");
+    return {
+      canDelete: false,
+      enrolledChitCount,
+      chits,
+      isGuarantor,
+      reason: `Member is currently enrolled in ${enrolledChitCount} chit group${enrolledChitCount > 1 ? "s" : ""} (${chitNames}). They cannot be permanently deleted while enrolled in any chits under this organization.`,
+    };
+  }
+
+  if (isGuarantor) {
+    return {
+      canDelete: false,
+      enrolledChitCount: 0,
+      chits: [],
+      isGuarantor: true,
+      reason: "Member is currently acting as an active guarantor for another member. Please remove or replace them as guarantor before deleting.",
+    };
+  }
+
+  return {
+    canDelete: true,
+    enrolledChitCount: 0,
+    chits: [],
+    isGuarantor: false,
+  };
+}
+
+export async function deleteMemberCompletely(
+  tenantId: string,
+  memberId: string,
+  actorUserId: string,
+): Promise<{ success: boolean; message: string }> {
+  const member = await getMemberById(tenantId, memberId);
+
+  // 1. Strict guard: cannot delete completely if enrolled in ANY chit under that admin/tenant
+  const enrolledChitCount = await countChitMembershipsByMemberId(tenantId, memberId);
+  if (enrolledChitCount > 0) {
+    const memberships = await listChitMembershipsByMemberId(tenantId, memberId);
+    const chitNames = memberships.map((m) => `"${(m.chitGroupId as any)?.name || "Chit Group"}"`).join(", ");
+    throw AppError.conflict(
+      `Cannot delete member completely: This member is enrolled in ${enrolledChitCount} chit group${enrolledChitCount > 1 ? "s" : ""} under this organization (${chitNames}). Members enrolled in chits can only be deactivated, not permanently deleted.`,
+    );
+  }
+
+  // 2. Strict guard: cannot delete if acting as an active guarantor for another member
+  const activeGuarantor = await Guarantor.exists({
+    tenantId,
+    guarantorMemberId: memberId,
+    status: "ACTIVE",
+  });
+  if (activeGuarantor) {
+    throw AppError.conflict(
+      "Cannot delete member completely: This member is currently acting as an active guarantor for another member. Remove them as guarantor first.",
+    );
+  }
+
+  // 3. Cascade delete associated sub-documents
+  await Promise.all([
+    Nominee.deleteMany({ tenantId, memberId }),
+    FamilyMember.deleteMany({ tenantId, memberId }),
+    Guarantor.deleteMany({ tenantId, memberId }),
+    Guarantor.deleteMany({ tenantId, guarantorMemberId: memberId }),
+  ]);
+
+  // 4. Clean up portal User login if created solely for this member with role MEMBER
+  if (member.userId) {
+    try {
+      const user = await findUserById(member.userId.toString());
+      if (user && user.tenantId?.toString() === tenantId) {
+        const memberRole = await getOrganizationRoleBySlug(tenantId, "MEMBER");
+        if (user.roleId.toString() === memberRole._id.toString()) {
+          const otherLinkedMembers = await Member.countDocuments({
+            tenantId,
+            userId: member.userId,
+            _id: { $ne: memberId },
+          });
+          if (otherLinkedMembers === 0) {
+            await User.deleteOne({ _id: member.userId, tenantId });
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, userId: member.userId }, "Error during cleanup of member user account");
+    }
+  }
+
+  // 5. Hard delete the Member document
+  await deleteMemberById(memberId, tenantId);
+
+  // 6. Record audit log under tenant
+  await recordActivity({
+    tenantId,
+    userId: actorUserId,
+    action: "MEMBER_DELETED",
+    message: `Permanently deleted member ${member.name} (${member.memberCode})`,
+  });
+
+  return { success: true, message: `Member ${member.name} (${member.memberCode}) was permanently deleted.` };
 }
 
 export async function searchMembersList(

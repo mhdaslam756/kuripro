@@ -83,6 +83,20 @@ memberRouter.patch(
   memberController.update,
 );
 
+memberRouter.get(
+  "/:id/deletion-check",
+  requirePermission("members.delete", "members.view"),
+  validate({ params: mongoIdParamSchema }),
+  memberController.checkDeletionEligibility,
+);
+
+memberRouter.delete(
+  "/:id/permanent",
+  requirePermission("members.delete"),
+  validate({ params: mongoIdParamSchema }),
+  memberController.deleteCompletely,
+);
+
 memberRouter.delete(
   "/:id",
   requirePermission("members.delete"),
