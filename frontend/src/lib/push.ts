@@ -98,14 +98,33 @@ export async function enablePush(): Promise<EnablePushResult> {
 
   let pushError: string | null = null;
 
-  if (activeVapidKey && "serviceWorker" in navigator) {
+  // Check 1: Insecure HTTP context (e.g. 192.168.x.x on mobile)
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    pushError = "Web Push requires a Secure Context (HTTPS or localhost). Browsers strictly block push notifications over unencrypted HTTP (such as http://192.168.x.x). Please connect via HTTPS or localhost.";
+  }
+  // Check 2: iOS Safari requires installation to Home Screen for Web Push
+  else if (isIosDevice() && !window.matchMedia("(display-mode: standalone)").matches && !(window.navigator as any).standalone) {
+    pushError = "On iPhone/iPad, Apple requires KuriPro to be added to your Home Screen first: Tap Share (rectangle with arrow) ➔ 'Add to Home Screen', then open KuriPro from your Home Screen to enable push.";
+  }
+  else if (activeVapidKey && "serviceWorker" in navigator) {
     try {
-      // 1. Find existing registration or wait for ready
+      // 1. Find existing registration
       let registration: ServiceWorkerRegistration | null = null;
       try {
         registration = (await navigator.serviceWorker.getRegistration()) ?? null;
       } catch {
         // ignore
+      }
+
+      if (!registration) {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          if (regs && regs.length > 0 && regs[0]) {
+            registration = regs[0];
+          }
+        } catch {
+          // ignore
+        }
       }
 
       if (!registration) {
@@ -127,54 +146,66 @@ export async function enablePush(): Promise<EnablePushResult> {
             scope: "/",
             type: import.meta.env.DEV ? "module" : "classic",
           });
-          await navigator.serviceWorker.ready;
-        } catch (regErr) {
-          console.warn("enablePush: Service worker registration fallback:", regErr);
+        } catch (regErr: any) {
+          pushError = `Service Worker registration failed: ${regErr?.message || regErr}`;
         }
       }
 
-      if (registration && "pushManager" in registration) {
-        const expectedKey = urlBase64ToUint8Array(activeVapidKey);
-        const appServerKey = expectedKey.buffer.slice(
-          expectedKey.byteOffset,
-          expectedKey.byteOffset + expectedKey.byteLength,
-        );
+      if (registration) {
+        // If not active yet, give it up to 3s to activate without hanging forever
+        if (!registration.active) {
+          await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((resolve) => setTimeout(resolve, 3000)),
+          ]).catch(() => null);
+        }
 
-        let subscription = await registration.pushManager.getSubscription();
+        const pushManager = registration.pushManager;
+        if (pushManager) {
+          const expectedKey = urlBase64ToUint8Array(activeVapidKey);
+          const appServerKey = expectedKey.buffer.slice(
+            expectedKey.byteOffset,
+            expectedKey.byteOffset + expectedKey.byteLength,
+          );
 
-        if (subscription) {
-          const rawKey = subscription.options?.applicationServerKey;
-          let keyMatches = false;
-          if (rawKey) {
-            const currentKeyArray = new Uint8Array(rawKey);
-            if (currentKeyArray.length === expectedKey.length) {
-              keyMatches = currentKeyArray.every((byte, idx) => byte === expectedKey[idx]);
+          let subscription = await pushManager.getSubscription().catch(() => null);
+
+          if (subscription) {
+            const rawKey = subscription.options?.applicationServerKey;
+            let keyMatches = false;
+            if (rawKey) {
+              const currentKeyArray = new Uint8Array(rawKey);
+              if (currentKeyArray.length === expectedKey.length) {
+                keyMatches = currentKeyArray.every((byte, idx) => byte === expectedKey[idx]);
+              }
+            }
+            if (!keyMatches) {
+              await subscription.unsubscribe().catch(() => null);
+              subscription = null;
             }
           }
-          if (!keyMatches) {
-            await subscription.unsubscribe().catch(() => null);
-            subscription = null;
+
+          if (!subscription) {
+            subscription = await pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appServerKey as BufferSource,
+            });
           }
-        }
 
-        if (!subscription) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: appServerKey as BufferSource,
-          });
+          if (subscription) {
+            const token = JSON.stringify(subscription);
+            await api.post("/devices/push-tokens", {
+              token,
+              platform: isIosDevice() ? "ios" : "web",
+            });
+            localStorage.setItem(PUSH_TOKEN_KEY, token);
+            return { ok: true, token };
+          }
+        } else {
+          pushError = "PushManager is not available on this browser registration (requires HTTPS).";
         }
-
-        if (subscription) {
-          const token = JSON.stringify(subscription);
-          await api.post("/devices/push-tokens", {
-            token,
-            platform: isIosDevice() ? "ios" : "web",
-          });
-          localStorage.setItem(PUSH_TOKEN_KEY, token);
-          return { ok: true, token };
-        }
-      } else {
-        pushError = "PushManager not available on this browser/network context (requires HTTPS).";
+      } else if (!pushError) {
+        pushError = "Service Worker could not be initialized on this browser.";
       }
     } catch (err: any) {
       console.error("enablePush: PushManager subscription failed:", err);
