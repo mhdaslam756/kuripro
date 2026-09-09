@@ -77,9 +77,17 @@ export async function sendTestPushToUser(
     // ignore
   }
 
+  if (tokens.length === 0) {
+    return {
+      dispatched: 0,
+      sse: true,
+      message: "In-app alert sent, but no device is registered for background push. Please tap 'Enable push' first.",
+    };
+  }
+
   return {
     dispatched,
     sse: true,
-    message: "Server push notification dispatched successfully.",
+    message: `Push notification dispatched to ${dispatched} device${dispatched === 1 ? "" : "s"}!`,
   };
 }

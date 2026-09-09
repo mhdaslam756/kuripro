@@ -7,6 +7,9 @@ import {
   WifiOff,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
+import { api } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,25 +84,17 @@ function PushCard() {
   const [permission, setPermission] = useState(notificationPermission());
   const [registered, setRegistered] = useState(hasRegisteredPush());
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string>();
 
   const supported = isPushSupported();
   const configured = isPushConfigured();
-
-  // Check if we have a real Web Push subscription vs a fallback SSE token
-  function hasRealWebPush(): boolean {
-    const token = localStorage.getItem("kuripro_push_token");
-    return Boolean(token && token.includes('"endpoint"'));
-  }
-
-  const [isRealPush, setIsRealPush] = useState(hasRealWebPush());
 
   // Re-check permission when the user returns to the app (e.g. after changing browser settings)
   useEffect(() => {
     function refresh() {
       setPermission(notificationPermission());
       setRegistered(hasRegisteredPush());
-      setIsRealPush(hasRealWebPush());
     }
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", () => {
@@ -116,8 +111,8 @@ function PushCard() {
     const result = await enablePush();
     if (result.ok) {
       setRegistered(true);
-      setIsRealPush(hasRealWebPush());
       setPermission(notificationPermission());
+      toast.success("Push notifications enabled on this device!");
     } else {
       setError(result.error);
       setPermission(notificationPermission());
@@ -129,12 +124,32 @@ function PushCard() {
     setBusy(true);
     await disablePush();
     setRegistered(false);
-    setIsRealPush(false);
     setBusy(false);
+    toast.info("Push notifications disabled on this device.");
   }
 
-  const status = !supported ? "Not supported" : !configured ? "Unavailable" : registered ? (isRealPush ? "On" : "In-app only") : permission === "denied" ? "Blocked" : "Off";
-  const tone: Tone = registered ? (isRealPush ? "success" : "warning") : permission === "denied" ? "danger" : "neutral";
+  async function sendTest() {
+    setTesting(true);
+    try {
+      const res = await api.post<{ dispatched: number; sse: boolean; message: string }>("/devices/test-push");
+      toast.success(res.message || "Test notification dispatched! Check your notification shade/lock screen.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to dispatch test notification.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  const status = !supported
+    ? "Not supported"
+    : !configured
+      ? "Unavailable"
+      : registered
+        ? "Active"
+        : permission === "denied"
+          ? "Blocked"
+          : "Off";
+  const tone: Tone = registered ? "success" : permission === "denied" ? "danger" : "neutral";
 
   return (
     <Capability
@@ -151,26 +166,18 @@ function PushCard() {
           Push notifications are currently unavailable for this organization.
         </p>
       ) : registered ? (
-        <div className="flex flex-col gap-2">
-          {!isRealPush ? (
-            <>
-              <p className="text-xs text-text-secondary">
-                In-app alerts are active. For background push (when app is closed), tap "Retry background push" below.
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" disabled={busy} onClick={() => void enable()}>
-                  {busy ? "Retrying…" : "Retry background push"}
-                </Button>
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => void disable()}>
-                  Turn off
-                </Button>
-              </div>
-            </>
-          ) : (
-            <Button variant="outline" disabled={busy} onClick={() => void disable()}>
-              Turn off on this device
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-secondary">
+            Push notifications are active on this device. You will receive updates even when the app or browser is closed.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={testing || busy} onClick={() => void sendTest()}>
+              <Bell className="mr-1.5 size-3.5" /> {testing ? "Sending…" : "Send test notification"}
             </Button>
-          )}
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void disable()}>
+              Turn off
+            </Button>
+          </div>
         </div>
       ) : (
         <Button disabled={busy} onClick={() => void enable()}>

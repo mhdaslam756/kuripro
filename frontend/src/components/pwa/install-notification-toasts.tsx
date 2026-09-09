@@ -95,12 +95,12 @@ export function AppInstallNotificationToasts() {
   async function handleEnablePush() {
     setIsEnablingPush(true);
     try {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        await enablePush();
+      const res = await enablePush();
+      if (res.ok) {
         toast.success("Push notifications enabled! 🔔");
         setShowPushToast(false);
       } else {
+        toast.error(res.error || "Could not enable notifications.");
         setShowPushToast(false);
         sessionStorage.setItem("kuripro_push_dismissed", "true");
       }
@@ -344,12 +344,14 @@ export function HeaderPushNotificationButton() {
   async function handleEnable() {
     setBusy(true);
     try {
-      const perm = await Notification.requestPermission();
-      if (perm === "granted") {
-        await enablePush();
+      const res = await enablePush();
+      if (res.ok) {
         toast.success("Push notifications enabled! 🔔");
+        setPermission("granted");
+      } else {
+        toast.error(res.error || "Could not enable notifications.");
+        setPermission(notificationPermission());
       }
-      setPermission(perm);
     } catch {
       // ignore
     } finally {

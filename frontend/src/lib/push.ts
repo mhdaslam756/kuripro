@@ -3,7 +3,8 @@ import { api } from "./api-client";
 const PUSH_TOKEN_KEY = "kuripro_push_token";
 
 export function isPushSupported(): boolean {
-  return typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 export function isPushConfigured(): boolean {
@@ -15,6 +16,18 @@ export function isIosDevice(): boolean {
   return (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+/**
+ * On iOS (iOS 16.4+), Apple WebKit only allows Push Notifications when the web app
+ * has been added to the Home Screen and is opened in standalone display mode.
+ */
+export function isIosStandalone(): boolean {
+  if (!isIosDevice()) return true;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((window.navigator as any).standalone)
   );
 }
 
@@ -38,25 +51,45 @@ export type EnablePushResult =
   | { ok: false; error: string; token?: undefined };
 
 /**
- * Registers this device for server-side push notifications.
- * Requests browser permission, obtains a Web Push subscription via Service Worker,
- * and syncs the delivery token with the backend.
+ * Registers this device for native background push notifications (Android, iOS PWA, Chrome, Safari, Edge, Firefox).
+ * 1. Checks browser support and secure HTTPS context.
+ * 2. Requests OS/browser notification permission.
+ * 3. Awaits the active Service Worker.
+ * 4. Subscribes with the server's VAPID public key.
+ * 5. Saves the standard W3C PushSubscription on the server.
  */
 export async function enablePush(): Promise<EnablePushResult> {
-  if (!isPushSupported()) {
-    if (isIosDevice()) {
-      return {
-        ok: false,
-        error: "On iPhone/iPad, please add KuriPro to your Home Screen first to enable push alerts (Tap Share → Add to Home Screen).",
-      };
-    }
-    return { ok: false, error: "This browser doesn't support push notifications." };
+  // 1. Basic platform & service worker check
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    return { ok: false, error: "Service Workers are not supported on this browser." };
   }
 
+  // 2. iOS Safari PWA restriction check
+  if (isIosDevice() && !isIosStandalone()) {
+    return {
+      ok: false,
+      error: "On iPhone/iPad, Apple requires KuriPro to be added to your Home Screen first: Tap Share (rectangle with arrow) ➔ 'Add to Home Screen', then open KuriPro from your Home Screen to enable notifications.",
+    };
+  }
+
+  // 3. Push API availability check
+  if (!("Notification" in window) || !("PushManager" in window)) {
+    return { ok: false, error: "This browser does not support the Web Push API." };
+  }
+
+  // 4. Secure Context (HTTPS or localhost) check
+  if (!window.isSecureContext) {
+    return {
+      ok: false,
+      error: "Web Push requires a Secure Context (HTTPS). Please connect over HTTPS.",
+    };
+  }
+
+  // 5. Browser notification permission check & prompt
   if (Notification.permission === "denied") {
     return {
       ok: false,
-      error: "Notifications are blocked in your browser settings. Please allow notifications in your browser.",
+      error: "Notifications are blocked in your browser settings. Please allow notifications for this site in your browser site settings.",
     };
   }
 
@@ -78,7 +111,7 @@ export async function enablePush(): Promise<EnablePushResult> {
     };
   }
 
-  // 1. Standard Web Push (W3C Push API via Service Worker with server VAPID key)
+  // 6. Obtain server VAPID public key
   let activeVapidKey: string | null = null;
   try {
     const res = await api.get<{ publicKey: string | null }>("/devices/vapid-public-key");
@@ -86,151 +119,94 @@ export async function enablePush(): Promise<EnablePushResult> {
       activeVapidKey = res.publicKey;
     }
   } catch {
-    // fallback to env vars
+    // API call failed, fallback to Vite environment variable
   }
 
   if (!activeVapidKey) {
-    activeVapidKey =
-      (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
-      (import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined) ||
-      null;
+    activeVapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) || null;
   }
 
-  let pushError: string | null = null;
-
-  // Check 1: Insecure HTTP context (e.g. 192.168.x.x on mobile)
-  if (typeof window !== "undefined" && !window.isSecureContext) {
-    pushError = "Web Push requires a Secure Context (HTTPS or localhost). Browsers strictly block push notifications over unencrypted HTTP (such as http://192.168.x.x). Please connect via HTTPS or localhost.";
-  }
-  // Check 2: iOS Safari requires installation to Home Screen for Web Push
-  else if (isIosDevice() && !window.matchMedia("(display-mode: standalone)").matches && !(window.navigator as any).standalone) {
-    pushError = "On iPhone/iPad, Apple requires KuriPro to be added to your Home Screen first: Tap Share (rectangle with arrow) ➔ 'Add to Home Screen', then open KuriPro from your Home Screen to enable push.";
-  }
-  else if (activeVapidKey && "serviceWorker" in navigator) {
-    try {
-      // 1. Find existing registration
-      let registration: ServiceWorkerRegistration | null = null;
-      try {
-        registration = (await navigator.serviceWorker.getRegistration()) ?? null;
-      } catch {
-        // ignore
-      }
-
-      if (!registration) {
-        try {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          if (regs && regs.length > 0 && regs[0]) {
-            registration = regs[0];
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!registration) {
-        try {
-          registration = await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
-          ]);
-        } catch {
-          // ignore
-        }
-      }
-
-      // If still no registration, explicitly register the service worker
-      if (!registration) {
-        try {
-          const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
-          registration = await navigator.serviceWorker.register(swUrl, {
-            scope: "/",
-            type: import.meta.env.DEV ? "module" : "classic",
-          });
-        } catch (regErr: any) {
-          pushError = `Service Worker registration failed: ${regErr?.message || regErr}`;
-        }
-      }
-
-      if (registration) {
-        // If not active yet, give it up to 3s to activate without hanging forever
-        if (!registration.active) {
-          await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((resolve) => setTimeout(resolve, 3000)),
-          ]).catch(() => null);
-        }
-
-        const pushManager = registration.pushManager;
-        if (pushManager) {
-          const expectedKey = urlBase64ToUint8Array(activeVapidKey);
-          const appServerKey = expectedKey.buffer.slice(
-            expectedKey.byteOffset,
-            expectedKey.byteOffset + expectedKey.byteLength,
-          );
-
-          let subscription = await pushManager.getSubscription().catch(() => null);
-
-          if (subscription) {
-            const rawKey = subscription.options?.applicationServerKey;
-            let keyMatches = false;
-            if (rawKey) {
-              const currentKeyArray = new Uint8Array(rawKey);
-              if (currentKeyArray.length === expectedKey.length) {
-                keyMatches = currentKeyArray.every((byte, idx) => byte === expectedKey[idx]);
-              }
-            }
-            if (!keyMatches) {
-              await subscription.unsubscribe().catch(() => null);
-              subscription = null;
-            }
-          }
-
-          if (!subscription) {
-            subscription = await pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: appServerKey as BufferSource,
-            });
-          }
-
-          if (subscription) {
-            const token = JSON.stringify(subscription);
-            await api.post("/devices/push-tokens", {
-              token,
-              platform: isIosDevice() ? "ios" : "web",
-            });
-            localStorage.setItem(PUSH_TOKEN_KEY, token);
-            return { ok: true, token };
-          }
-        } else {
-          pushError = "PushManager is not available on this browser registration (requires HTTPS).";
-        }
-      } else if (!pushError) {
-        pushError = "Service Worker could not be initialized on this browser.";
-      }
-    } catch (err: any) {
-      console.error("enablePush: PushManager subscription failed:", err);
-      pushError = err?.message || String(err);
-    }
-  }
-
-  // 2. Fallback: register a synthetic token so the device is registered with the backend for
-  //    real-time SSE delivery (in-app alerts while the app is open). Background push won't work
-  //    with this token when browser is off — only the Web Push subscription provides background delivery.
-  const existingToken = localStorage.getItem(PUSH_TOKEN_KEY);
-  const devToken = existingToken && existingToken.startsWith("web_token_")
-    ? existingToken
-    : "web_token_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  try {
-    await api.post("/devices/push-tokens", { token: devToken, platform: "web" });
-    localStorage.setItem(PUSH_TOKEN_KEY, devToken);
+  if (!activeVapidKey) {
     return {
       ok: false,
-      error: pushError
-        ? `Background push unavailable: ${pushError}. In-app alerts are active.`
-        : "Could not establish background push subscription. In-app alerts are active.",
+      error: "Push notifications are not configured on this server (missing VAPID public key).",
     };
+  }
+
+  // 7. Ensure Service Worker is active and obtain subscription
+  try {
+    // Ensure service worker is registered
+    try {
+      const existing = await navigator.serviceWorker.getRegistration();
+      if (!existing) {
+        const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
+        await navigator.serviceWorker.register(swUrl, {
+          scope: "/",
+          type: import.meta.env.DEV ? "module" : "classic",
+        });
+      }
+    } catch (regErr: any) {
+      console.warn("Manual registration notice:", regErr?.message || regErr);
+    }
+
+    // Await active Service Worker ready state
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<undefined>((_, reject) =>
+        setTimeout(() => reject(new Error("Service Worker activation timeout")), 10000),
+      ),
+    ]);
+
+    if (!registration || !registration.pushManager) {
+      return {
+        ok: false,
+        error: "PushManager is not available on this browser's Service Worker registration.",
+      };
+    }
+
+    const appServerKey = urlBase64ToUint8Array(activeVapidKey);
+    let subscription = await registration.pushManager.getSubscription().catch(() => null);
+
+    // If an existing subscription exists, verify whether it uses the current VAPID key
+    if (subscription) {
+      const rawKey = subscription.options?.applicationServerKey;
+      let keyMatches = false;
+      if (rawKey) {
+        const currentKeyArray = new Uint8Array(rawKey);
+        if (currentKeyArray.length === appServerKey.length) {
+          keyMatches = currentKeyArray.every((byte, idx) => byte === appServerKey[idx]);
+        }
+      }
+      if (!keyMatches) {
+        await subscription.unsubscribe().catch(() => null);
+        subscription = null;
+      }
+    }
+
+    // Subscribe to browser push service (FCM for Chrome/Android, APNs for Safari/iOS, etc.)
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: appServerKey as unknown as BufferSource,
+      });
+    }
+
+    const token = JSON.stringify(subscription);
+
+    // 8. Register the subscription token with backend
+    await api.post("/devices/push-tokens", {
+      token,
+      platform: isIosDevice() ? "ios" : "web",
+    });
+
+    localStorage.setItem(PUSH_TOKEN_KEY, token);
+    return { ok: true, token };
   } catch (err: any) {
-    return { ok: false, error: err?.message || "Failed to register push token with server." };
+    console.error("enablePush error:", err);
+    return {
+      ok: false,
+      error: err?.message ? `Failed to enable push: ${err.message}` : "Failed to enable push notifications.",
+    };
   }
 }
 
@@ -271,7 +247,7 @@ export function playNotificationChime(): void {
   }
 }
 
-/** Shows a native OS / browser notification popup banner */
+/** Shows an in-browser notification banner using the active Service Worker */
 export async function showPushNotification(
   title: string,
   options?: { body?: string; url?: string; icon?: string },
@@ -282,13 +258,7 @@ export async function showPushNotification(
       void (navigator as any).clearAppBadge().catch(() => {});
     }
     if ("serviceWorker" in navigator) {
-      let reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        reg = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<undefined>((resolve) => setTimeout(resolve, 1500)),
-        ]);
-      }
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
       if (reg && "showNotification" in reg) {
         await reg.showNotification(title, {
           body: options?.body,
@@ -301,38 +271,37 @@ export async function showPushNotification(
         return true;
       }
     }
-    // Fallback for non-service-worker environments (safely wrapped for Android Chrome)
-    if (typeof Notification === "function") {
-      try {
-        new Notification(title, {
-          body: options?.body,
-          icon: options?.icon ?? "/pwa-192.png",
-        });
-        return true;
-      } catch {
-        // Android Chrome throws 'Illegal constructor' when calling new Notification()
-      }
-    }
     return false;
   } catch {
     return false;
   }
 }
 
-/** Unregisters this device's push token from the backend. */
+/** Unregisters this device's push subscription from the backend and browser */
 export async function disablePush(): Promise<void> {
   const token = localStorage.getItem(PUSH_TOKEN_KEY);
-  if (!token) return;
   try {
-    await api.delete("/devices/push-tokens", { token });
+    if (token) {
+      await api.delete("/devices/push-tokens", { token }).catch(() => null);
+    }
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription().catch(() => null);
+        if (sub) {
+          await sub.unsubscribe().catch(() => null);
+        }
+      }
+    }
   } finally {
     localStorage.removeItem(PUSH_TOKEN_KEY);
   }
 }
 
+/** Checks whether a valid Web Push subscription token is stored on this device */
 export function hasRegisteredPush(): boolean {
+  if (typeof window === "undefined") return false;
   const token = localStorage.getItem(PUSH_TOKEN_KEY);
   if (!token) return false;
-  // Accept both real PushManager subscription JSON (contains "endpoint") and fallback web_token_
-  return token.includes('"endpoint"') || token.startsWith("web_token_");
+  return token.includes('"endpoint"');
 }

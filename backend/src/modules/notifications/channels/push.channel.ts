@@ -1,8 +1,5 @@
 import { logger } from "../../../config/logger.js";
-import { getMessaging } from "firebase-admin/messaging";
-
 import { env } from "../../../config/env.js";
-import { firebaseApp, isFirebaseConfigured } from "../../../config/firebase.js";
 import { AppError } from "../../../utils/app-error.js";
 import type { Channel, ChannelMessage, ChannelSendResult } from "./channel.js";
 import { deleteTokensByValue } from "../../devices/device-token.repository.js";
@@ -34,15 +31,16 @@ async function getWebPush(): Promise<any> {
   return webpushInstance;
 }
 
-// Background initialization so it never blocks server startup
+// Background initialization
 void getWebPush().catch(() => {});
 
 /**
  * Server-side push delivery channel.
- * Supports:
- * 1. Standard Web Push (W3C Push API via web-push and VAPID) for browsers even when closed
- * 2. Firebase Cloud Messaging (FCM) for native/FCM registration tokens
- * 3. Graceful degradation to real-time SSE stream delivery
+ * Implements standard W3C Web Push with VAPID (RFC 8291 / RFC 8292).
+ * Works across ALL devices:
+ * - Android (Chrome, Firefox, Edge, Samsung Internet)
+ * - iOS / iPadOS 16.4+ (PWA added to Home Screen via APNs)
+ * - Desktop (Chrome, Safari, Firefox, Edge)
  */
 async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
   if (!message.to) throw AppError.badRequest("No push token registered for this recipient");
@@ -50,17 +48,18 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
   const title = message.subject ?? "KuriPro 🔔";
   const body = message.body;
 
-  // 1. Standard Web Push Subscription (W3C Push API JSON)
+  // Standard Web Push subscription JSON
   if (message.to.includes('"endpoint"')) {
     if (!isWebPushConfigured) {
-      logger.warn("Web Push VAPID keys not configured on server; falling back to in-app stream");
-      return { providerMessageId: "webpush-unconfigured-stream" };
+      logger.warn("Web Push VAPID keys not configured on server");
+      throw AppError.badRequest("Web Push VAPID keys not configured on server");
     }
     const wp = await getWebPush();
     if (!wp) {
-      logger.warn("Web Push module could not be loaded; falling back to in-app stream");
-      return { providerMessageId: "webpush-stream" };
+      logger.error("Web Push module could not be loaded");
+      throw new Error("Web Push service unavailable");
     }
+
     try {
       const subscription = JSON.parse(message.to);
       const payloadString = JSON.stringify({
@@ -86,15 +85,18 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
         urgency: "high",
       });
 
-      logger.info({ statusCode: res.statusCode, endpoint: subscription.endpoint?.slice(0, 45) }, "Web Push dispatched successfully");
+      logger.info(
+        { statusCode: res.statusCode, endpoint: subscription.endpoint?.slice(0, 45) },
+        "Web Push dispatched successfully",
+      );
       return { providerMessageId: `webpush-${res.statusCode}` };
     } catch (err: any) {
       logger.error(
         { err: err?.message || err, statusCode: err?.statusCode, body: err?.body },
         "WebPush sendNotification failed",
       );
+      // 404 Not Found or 410 Gone means subscription has expired or user unsubscribed
       if (err?.statusCode === 404 || err?.statusCode === 410) {
-        // Subscription expired or unsubscribed — prune token from DB
         logger.info({ tokenPrefix: message.to.slice(0, 40) }, "Pruning expired push subscription");
         void deleteTokensByValue([message.to]).catch(() => null);
       }
@@ -102,58 +104,18 @@ async function sendPush(message: ChannelMessage): Promise<ChannelSendResult> {
     }
   }
 
-  // 2. Synthetic web/user tokens — real-time SSE stream covers these
+  // Purge any obsolete legacy synthetic tokens
   if (message.to.startsWith("web_token_") || message.to.startsWith("user:") || message.to.startsWith("member:")) {
-    logger.warn({ to: message.to }, "Push targeted a synthetic fallback token — real background push requires an active Web Push subscription");
-    return { providerMessageId: "webpush-stream" };
+    logger.warn({ to: message.to }, "Ignored obsolete non-push target");
+    void deleteTokensByValue([message.to]).catch(() => null);
+    throw AppError.badRequest("Target is not an active Web Push subscription");
   }
 
-  // 3. Firebase Cloud Messaging (FCM)
-  if (!firebaseApp) {
-    return { providerMessageId: "unconfigured-stream" };
-  }
-
-  try {
-    const id = await getMessaging(firebaseApp).send({
-      token: message.to,
-      notification: { title, body },
-      data: {
-        title,
-        body,
-        url: "/notifications",
-      },
-      webpush: {
-        notification: {
-          title,
-          body,
-          icon: "/pwa-192.png",
-          badge: "/pwa-192.png",
-        },
-        fcmOptions: {
-          link: "/notifications",
-        },
-      },
-    });
-    return { providerMessageId: id };
-  } catch (error: any) {
-    const errorCode = error?.code || error?.errorInfo?.code;
-    if (
-      errorCode === "messaging/registration-token-not-registered" ||
-      errorCode === "messaging/invalid-registration-token" ||
-      errorCode === "messaging/invalid-argument"
-    ) {
-      void deleteTokensByValue([message.to]).catch(() => null);
-    }
-    if (error?.message?.includes("invalid_grant") || error?.message?.includes("account not found")) {
-      return { providerMessageId: "stream-fallback" };
-    }
-    throw error;
-  }
+  throw AppError.badRequest("Unsupported push token format");
 }
 
 export const pushChannel: Channel = {
   channel: "PUSH",
-  isConfigured: isWebPushConfigured || isFirebaseConfigured,
+  isConfigured: isWebPushConfigured,
   send: sendPush,
 };
-

@@ -128,10 +128,9 @@ async function memberTargets(tenantId: string, member: MemberDocument, channel: 
     }
     if (userId) {
       const tokens = await pushTokensForUser(tenantId, userId);
-      if (tokens.length > 0) return tokens;
-      return [`user:${userId}`];
+      return tokens.filter((t) => t.includes('"endpoint"'));
     }
-    return [`member:${member._id.toString()}`];
+    return [];
   }
   const contact = contactFor(member, channel);
   return contact ? [contact] : [];
