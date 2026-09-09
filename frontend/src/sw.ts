@@ -9,7 +9,10 @@ declare const self: ServiceWorkerGlobalScope & {
 
 const CACHE = "kuripro-shell-v1";
 const APP_SHELL = "/index.html";
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api";
+// Use the configured API URL, falling back to a relative path so the SW always routes through the
+// same origin as the page: Vite's HTTPS proxy in dev, or the production server in prod.
+// DO NOT hardcode http://localhost:4000 — that resolves to the *device's* own localhost, not the dev machine.
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api";
 
 // Precache the built assets + app shell so the app opens offline.
 const PRECACHE_URLS = [APP_SHELL, ...self.__WB_MANIFEST.map((entry) => entry.url)];

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -8,6 +9,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    basicSsl(), // Enables HTTPS in dev — required for Web Push (PushManager) on mobile/local network
     react(),
     tailwindcss(),
     VitePWA({
@@ -46,6 +48,10 @@ export default defineConfig({
     }),
   ],
   server: {
+    // Expose to all network interfaces so mobile devices on the same Wi-Fi can reach the dev server.
+    // Combined with basicSsl() above, this gives https://192.168.x.x:5173 — a secure context
+    // that unlocks the Web Push API (PushManager) on Android Chrome.
+    host: true,
     proxy: {
       "/api": {
         target: "http://localhost:4000",
