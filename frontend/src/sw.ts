@@ -146,17 +146,23 @@ self.addEventListener("push", (event) => {
   const badgeUrl = new URL("/pwa-192.png", self.location.origin).href;
   const tag = payload.id || `kuripro-${Date.now()}`;
 
+  const notificationOptions: NotificationOptions = {
+    body: payload.body || "You have a new update from KuriPro",
+    icon: iconUrl,
+    badge: badgeUrl,
+    tag,
+    data: { url: payload.url ?? "/notifications" },
+  };
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: payload.body || "You have a new update from KuriPro",
-      icon: iconUrl,
-      badge: badgeUrl,
-      vibrate: [300, 100, 300, 100, 300],
-      tag,
-      renotify: true,
-      requireInteraction: true,
-      data: { url: payload.url ?? "/notifications" },
-    } as any),
+    self.registration
+      .showNotification(title, notificationOptions)
+      .catch((err) => {
+        console.warn("[SW] Rich showNotification failed, retrying minimal notification:", err);
+        return self.registration.showNotification(title, {
+          body: payload.body || "You have a new update from KuriPro",
+        });
+      }),
   );
 });
 

@@ -51,6 +51,7 @@ export async function sendTestPushToUser(
   };
 
   let dispatched = 0;
+  let lastError: string | null = null;
   for (const token of tokens) {
     try {
       await pushChannel.send({
@@ -59,8 +60,8 @@ export async function sendTestPushToUser(
         body: payload.body,
       });
       dispatched++;
-    } catch {
-      // Individual device failure logged or handled by push channel
+    } catch (err: any) {
+      lastError = err?.message || String(err);
     }
   }
 
@@ -85,9 +86,17 @@ export async function sendTestPushToUser(
     };
   }
 
+  if (dispatched === 0) {
+    return {
+      dispatched: 0,
+      sse: true,
+      message: `Failed to deliver push to registered device${tokens.length > 1 ? "s" : ""}: ${lastError ?? "delivery failed"}. Try disabling and re-enabling push.`,
+    };
+  }
+
   return {
     dispatched,
     sse: true,
-    message: `Push notification dispatched to ${dispatched} device${dispatched === 1 ? "" : "s"}!`,
+    message: `Push notification dispatched to ${dispatched} device${dispatched === 1 ? "" : "s"}! Check your device lock screen / notification shade.`,
   };
 }

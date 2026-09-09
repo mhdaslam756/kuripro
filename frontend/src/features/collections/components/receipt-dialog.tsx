@@ -1,9 +1,10 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MessageSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatPaise, humanize } from "@/lib/format";
+import { openWhatsAppChat } from "./whatsapp-reminder-dialog";
 import { useReceipt } from "../use-collections";
 
 interface Props {
@@ -67,11 +68,39 @@ export function ReceiptDialog({ open, onOpenChange, collectionId }: Props) {
               <p className="text-xs text-text-secondary">Scan to verify this receipt</p>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => window.print()}>
-                Print
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold gap-1.5 shadow-xs text-xs"
+                onClick={() => {
+                  const msg = `*Payment Receipt* 🧾
+━━━━━━━━━━━━━━━━━━━━
+Dear *${receipt.member.name}*,
+
+Your payment has been successfully recorded!
+
+📌 *Receipt No:* ${receipt.receiptNumber}
+💰 *Amount Paid:* ${formatPaise(receipt.amount)}
+🏢 *Scheme:* ${receipt.chitGroup.name}${receipt.cycleNumber ? ` (Cycle #${receipt.cycleNumber})` : ""}
+💳 *Method:* ${humanize(receipt.method)}
+📅 *Date:* ${formatDateTime(receipt.collectedAt)}
+${receipt.reference ? `🔖 *Reference:* ${receipt.reference}\n` : ""}━━━━━━━━━━━━━━━━━━━━
+Thank you! 🙏
+_KuriPro_`;
+                  openWhatsAppChat(receipt.member.phone ?? "", msg);
+                }}
+              >
+                <MessageSquare size={14} /> WhatsApp Receipt
               </Button>
-              <Button onClick={() => onOpenChange(false)}>Done</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                  Print
+                </Button>
+                <Button size="sm" onClick={() => onOpenChange(false)}>
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         )}

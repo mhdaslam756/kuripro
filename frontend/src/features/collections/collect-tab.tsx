@@ -1,4 +1,4 @@
-import { Bell, CloudUpload, RefreshCw, Trophy, Zap } from "lucide-react";
+import { Bell, CloudUpload, MessageSquare, RefreshCw, Trophy, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { CollectDialog } from "./components/collect-dialog";
 import { DueStatusBadge } from "./components/collection-badges";
 import { ReceiptDialog } from "./components/receipt-dialog";
 import { ReminderDialog } from "./components/reminder-dialog";
+import { WhatsAppCollectionListDialog } from "./components/whatsapp-collection-list-dialog";
+import { openWhatsAppChat } from "./components/whatsapp-reminder-dialog";
 import { clearSyncedFromQueue, countQueue, getQueue } from "./offline-queue";
 import type { Installment } from "./types";
 import {
@@ -84,13 +86,42 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
   const [offlineCount, setOfflineCount] = useState(0);
   const [bulkReminderOpen, setBulkReminderOpen] = useState(false);
   const [bulkReminderPaymentIds, setBulkReminderPaymentIds] = useState<string[] | undefined>(undefined);
+  const [whatsAppListOpen, setWhatsAppListOpen] = useState(false);
 
   const refreshOfflineCount = useCallback(() => {
     void countQueue().then(setOfflineCount);
   }, []);
 
   const groupName = groups?.items.find((g) => g.id === groupId)?.name ?? "";
+  const activeCycle = cycles?.items?.find((c) => c.id === cycleId);
   const unpaid = useMemo(() => (dues?.items ?? []).filter((d) => d.status !== "PAID" && d.status !== "WAIVED"), [dues]);
+  const paidCount = useMemo(() => (dues?.items ?? []).filter((d) => d.status === "PAID" || d.amountPaid >= d.amountDue).length, [dues]);
+
+  function handleShareRowReceipt(due: Installment) {
+    const membership = typeof due.chitMembershipId === "object" ? due.chitMembershipId : null;
+    const rawTicket = membership?.ticketNumber ?? "—";
+    const subTicket = membership?.subTicket ?? "";
+    const isHalf = membership?.shareType === "HALF" || (membership?.share !== undefined && membership.share < 1);
+    const ticketLabel = rawTicket !== "—" ? `#${rawTicket}${subTicket}${isHalf ? " (½)" : ""}` : "—";
+    const memberObj = membership?.memberId && typeof membership.memberId === "object" ? (membership.memberId as any) : null;
+    const memberName = memberObj?.name ?? "Member";
+    const phone = memberObj?.phone ?? "";
+    const amount = formatPaise(due.amountPaid || due.amountDue);
+
+    const msg = `*Payment Receipt* 🧾
+━━━━━━━━━━━━━━━━━━━━
+Dear *${memberName}*,
+
+Your installment payment of *${amount}* for *${groupName || "Kuri Scheme"}* (Ticket ${ticketLabel}) has been successfully received!
+
+📅 *Status:* Paid
+✅ *Payment Recorded*
+
+Thank you for your prompt payment! 🙏
+_KuriPro_`;
+
+    openWhatsAppChat(phone, msg);
+  }
 
   const filteredDues = useMemo(() => {
     const items = dues?.items ?? [];
@@ -185,7 +216,15 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
           </Select>
         </div>
         {canManageDues && groupId && groupId !== "ALL" ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setWhatsAppListOpen(true)}
+              className="gap-1.5 active-bounce border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 font-semibold shadow-xs"
+              title="Share WhatsApp Collection Done List"
+            >
+              <MessageSquare size={15} className="text-[#25D366]" /> Share Done List
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
@@ -272,11 +311,23 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
               </button>
             ))}
           </div>
-          {canRecord && unpaid.length > 0 ? (
-            <Button size="sm" className="gap-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs" onClick={() => setCollectTarget(unpaid[0])}>
-              <Zap size={14} /> Quick Collect Payment
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {paidCount > 0 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setWhatsAppListOpen(true)}
+                className="gap-1.5 font-semibold border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 text-xs shadow-xs"
+              >
+                <MessageSquare size={14} className="text-[#25D366]" /> WhatsApp Done List ({paidCount})
+              </Button>
+            ) : null}
+            {canRecord && unpaid.length > 0 ? (
+              <Button size="sm" className="gap-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs" onClick={() => setCollectTarget(unpaid[0])}>
+                <Zap size={14} /> Quick Collect Payment
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -455,6 +506,15 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                           >
                             View Receipt
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs h-8 px-2.5 active-bounce"
+                            title="Share WhatsApp Receipt"
+                            onClick={() => handleShareRowReceipt(due)}
+                          >
+                            <MessageSquare size={13} className="text-[#25D366]" /> Share
+                          </Button>
                         </div>
                       )
                     ) : null}
@@ -572,6 +632,15 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
                                 >
                                   View Receipt
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 font-semibold gap-1 text-xs h-7 px-2.5 active-bounce"
+                                  title="Share WhatsApp Receipt"
+                                  onClick={() => handleShareRowReceipt(due)}
+                                >
+                                  <MessageSquare size={13} className="text-[#25D366]" /> Share
+                                </Button>
                               </div>
                             )}
                           </TableCell>
@@ -628,6 +697,15 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
       />
 
       <ReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} collectionId={receiptId} />
+
+      <WhatsAppCollectionListDialog
+        open={whatsAppListOpen}
+        onOpenChange={setWhatsAppListOpen}
+        chitGroupName={groupName}
+        cycleNumber={activeCycle?.cycleNumber ?? (cycleId !== "ALL" ? cycleId : undefined)}
+        scheduledDate={activeCycle?.scheduledDate}
+        dues={dues?.items ?? []}
+      />
     </div>
   );
 }

@@ -35,8 +35,12 @@ const envSchema = z.object({
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 
   // Web Push (VAPID) keys for standard browser push notifications
-  VAPID_PUBLIC_KEY: z.string().optional(),
-  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_PUBLIC_KEY: z
+    .string()
+    .default("BPw8aZjC6acO1-hxJxJ6lcXn1OkmShpLBNIYYTeDdviOEdZQUMekvM-lkGezUb4UQvS7wMVsxY3GtQr4lFW_YGA"),
+  VAPID_PRIVATE_KEY: z
+    .string()
+    .default("JSlmBxjk1HVPHoLW0YlwX6EclbUcMl740m8RljNOS6M"),
   VAPID_SUBJECT: z.string().default("mailto:admin@kuripro.com"),
 
   // Notification channel providers — all optional. When a channel's vars are unset it stays
