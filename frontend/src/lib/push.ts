@@ -133,34 +133,60 @@ export async function enablePush(): Promise<EnablePushResult> {
     };
   }
 
-  // 7. Ensure Service Worker is active and obtain subscription
+  // 7. Ensure Service Worker is registered and ready
   try {
-    // Ensure service worker is registered
+    let registration: ServiceWorkerRegistration | null = null;
     try {
-      const existing = await navigator.serviceWorker.getRegistration();
-      if (!existing) {
+      registration = (await navigator.serviceWorker.getRegistration()) ?? null;
+    } catch {
+      // ignore
+    }
+
+    if (!registration) {
+      try {
         const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
-        await navigator.serviceWorker.register(swUrl, {
+        registration = await navigator.serviceWorker.register(swUrl, {
           scope: "/",
           type: import.meta.env.DEV ? "module" : "classic",
         });
+      } catch (regErr: any) {
+        console.warn("Manual registration notice:", regErr?.message || regErr);
       }
-    } catch (regErr: any) {
-      console.warn("Manual registration notice:", regErr?.message || regErr);
     }
 
-    // Await active Service Worker ready state
-    const registration = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<undefined>((_, reject) =>
-        setTimeout(() => reject(new Error("Service Worker activation timeout")), 10000),
-      ),
-    ]);
+    // If there is a waiting worker, tell it to activate immediately
+    if (registration?.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+
+    // If not active yet, wait briefly for ready or activation
+    if (!registration?.active) {
+      try {
+        const readyReg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
+        if (readyReg) {
+          registration = readyReg;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Final check for registration and pushManager
+    if (!registration || !registration.pushManager) {
+      try {
+        registration = (await navigator.serviceWorker.ready) || registration;
+      } catch {
+        // ignore
+      }
+    }
 
     if (!registration || !registration.pushManager) {
       return {
         ok: false,
-        error: "PushManager is not available on this browser's Service Worker registration.",
+        error: "PushManager is not available on this browser's Service Worker. Please reload the page.",
       };
     }
 
