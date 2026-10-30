@@ -79,6 +79,8 @@ export interface AuctionState {
     name: string;
     allotmentMethod: "AUCTION" | "LOTTERY";
     foremanCommissionPercent: number;
+    foremanCommissionMode?: "PERCENT" | "AMOUNT";
+    foremanCommissionAmount?: number;
     minBidDiscountPercent: number;
     maxBidDiscountPercent: number;
     installmentAmount: number;

@@ -2,6 +2,7 @@ import dns from "node:dns";
 import mongoose from "mongoose";
 
 import { env } from "./env.js";
+import { ChitMembership } from "../modules/chit-groups/chit-membership.model.js";
 import { logger } from "./logger.js";
 
 mongoose.set("strictQuery", true);
@@ -56,6 +57,14 @@ async function syncObsoleteIndexes(): Promise<void> {
     if (cmIndexes.some((i) => i.name === "chitGroupId_1_ticketNumber_1")) {
       logger.info("Dropping obsolete index chitGroupId_1_ticketNumber_1 on chitmemberships");
       await cmColl.dropIndex("chitGroupId_1_ticketNumber_1").catch(() => {});
+    }
+
+    // Slot uniqueness is now limited to ACTIVE memberships (see chit_slot_active_unique) so a replaced
+    // member's EXITED record can share the slot. Drop the old unconditional unique index.
+    if (cmIndexes.some((i) => i.name === "chitGroupId_1_ticketNumber_1_subTicket_1")) {
+      logger.info("Dropping obsolete index chitGroupId_1_ticketNumber_1_subTicket_1 on chitmemberships");
+      await cmColl.dropIndex("chitGroupId_1_ticketNumber_1_subTicket_1").catch(() => {});
+      await ChitMembership.createIndexes().catch(() => {});
     }
 
     // 2. Drop old single-payout unique index on payouts if still present

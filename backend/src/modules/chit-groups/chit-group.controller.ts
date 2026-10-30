@@ -5,7 +5,14 @@ import type { MongoIdParam, NestedMongoIdParam } from "../../utils/common-valida
 import type { PaginationQuery } from "../../utils/pagination.js";
 import { resolveMemberForUser } from "../members/member.service.js";
 import * as chitGroupService from "./chit-group.service.js";
+import * as replacementService from "./membership-replacement.service.js";
 import { listChitMembershipsByMemberId } from "./chit-membership.repository.js";
+import type {
+  CompleteReplacementSettlementInput,
+  ReplaceMemberInput,
+  ReplacementPreviewQuery,
+  UpdateReplacementSettlementInput,
+} from "./membership-replacement.validators.js";
 import type {
   AddChitDocumentInput,
   AssignMembersInput,
@@ -137,4 +144,56 @@ export async function report(req: Request, res: Response): Promise<void> {
   const { id } = req.params as unknown as MongoIdParam;
   const summary = await chitGroupService.getChitSummaryReport(tenantId, id);
   res.status(200).json({ report: summary });
+}
+
+// --- Member replacement & exit settlement ---
+
+export async function replacementPreview(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id, childId } = req.params as unknown as NestedMongoIdParam;
+  const preview = await replacementService.previewReplacement(
+    tenantId,
+    id,
+    childId,
+    req.query as unknown as ReplacementPreviewQuery,
+  );
+  res.status(200).json({ preview });
+}
+
+export async function replaceMember(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id, childId } = req.params as unknown as NestedMongoIdParam;
+  const result = await replacementService.replaceMember(tenantId, id, childId, req.auth!.userId, req.body as ReplaceMemberInput);
+  res.status(201).json(result);
+}
+
+export async function membershipHistory(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  res.status(200).json(await replacementService.getMembershipHistory(tenantId, id));
+}
+
+export async function updateReplacementSettlement(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id, childId } = req.params as unknown as NestedMongoIdParam;
+  const replacement = await replacementService.updateReplacementSettlement(
+    tenantId,
+    id,
+    childId,
+    req.body as UpdateReplacementSettlementInput,
+  );
+  res.status(200).json({ replacement });
+}
+
+export async function completeReplacementSettlement(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id, childId } = req.params as unknown as NestedMongoIdParam;
+  const replacement = await replacementService.completeReplacementSettlement(
+    tenantId,
+    id,
+    childId,
+    req.auth!.userId,
+    req.body as CompleteReplacementSettlementInput,
+  );
+  res.status(200).json({ replacement });
 }

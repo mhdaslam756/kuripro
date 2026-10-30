@@ -37,6 +37,20 @@ export interface ChitMembershipDoc extends Timestamps {
   wonInCycleId?: Types.ObjectId;
 
   joinedAt: Date;
+
+  // --- Slot succession (member replacement) ---
+  // A slot (ticketNumber + subTicket) can be held by several memberships over time, but only one is
+  // ACTIVE at once. The outgoing record is kept as EXITED so its payment history is never lost.
+  /** First cycle this membership is responsible for; unset means it has held the slot since cycle 1. */
+  effectiveFromCycleNumber?: number;
+  /** The EXITED membership this one took over from. */
+  replacesMembershipId?: Types.ObjectId;
+  /** Set when this membership was replaced. */
+  replacedByMembershipId?: Types.ObjectId;
+  exitedAt?: Date;
+  /** Last cycle this membership was responsible for. */
+  lastCycleNumber?: number;
+  exitReason?: string;
 }
 
 export type ChitMembershipDocument = HydratedDocument<ChitMembershipDoc>;
@@ -58,11 +72,22 @@ const chitMembershipSchema = new Schema<ChitMembershipDoc>(
     wonInCycleId: { type: Schema.Types.ObjectId, ref: "ChitCycle" },
 
     joinedAt: { type: Date, required: true, default: () => new Date() },
+
+    effectiveFromCycleNumber: { type: Number, min: 1 },
+    replacesMembershipId: { type: Schema.Types.ObjectId, ref: "ChitMembership" },
+    replacedByMembershipId: { type: Schema.Types.ObjectId, ref: "ChitMembership" },
+    exitedAt: { type: Date },
+    lastCycleNumber: { type: Number, min: 0 },
+    exitReason: { type: String, trim: true },
   },
   baseSchemaOptions,
 );
 
-chitMembershipSchema.index({ chitGroupId: 1, ticketNumber: 1, subTicket: 1 }, { unique: true });
+// Unique only among ACTIVE memberships so an EXITED predecessor can coexist with its replacement.
+chitMembershipSchema.index(
+  { chitGroupId: 1, ticketNumber: 1, subTicket: 1 },
+  { unique: true, name: "chit_slot_active_unique", partialFilterExpression: { status: "ACTIVE" } },
+);
 chitMembershipSchema.index({ tenantId: 1, memberId: 1 });
 chitMembershipSchema.index({ tenantId: 1, chitGroupId: 1 });
 chitMembershipSchema.index({ chitGroupId: 1, memberId: 1 });

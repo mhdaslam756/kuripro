@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatPaise } from "@/lib/format";
+import { formatCommission } from "../types";
 import { useChitReport } from "../use-chit-groups";
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -30,7 +31,7 @@ export function ReportsTab({ chitGroupId }: { chitGroupId: string }) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Chit value" value={formatPaise(chitGroup.chitValue)} sub={`${chitGroup.frequencyLabel} · ${chitGroup.totalMembers} members`} />
           <Stat label="Installment / cycle" value={formatPaise(chitGroup.installmentAmount)} />
-          <Stat label="Commission" value={`${chitGroup.foremanCommissionPercent}%`} sub={chitGroup.allotmentMethod} />
+          <Stat label="Commission" value={formatCommission(chitGroup)} sub={chitGroup.allotmentMethod} />
           <Stat label="Runs" value={`${formatDate(chitGroup.startDate)}`} sub={`to ${formatDate(chitGroup.endDate)}`} />
         </div>
       </section>

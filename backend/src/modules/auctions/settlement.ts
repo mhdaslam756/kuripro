@@ -1,10 +1,27 @@
 import { percentageOfPaise } from "../../utils/money.js";
 
+export interface CommissionRules {
+  foremanCommissionMode?: "PERCENT" | "AMOUNT";
+  foremanCommissionPercent: number;
+  /** Fixed per-cycle commission in paise; used when the mode is AMOUNT. */
+  foremanCommissionAmount?: number;
+}
+
+/** The foreman's full (uncapped) commission on a pot, honouring the group's commission mode. */
+export function computeForemanCommission(potAmount: number, rules: CommissionRules): number {
+  if (rules.foremanCommissionMode === "AMOUNT") {
+    return Math.min(rules.foremanCommissionAmount ?? 0, potAmount);
+  }
+  return percentageOfPaise(potAmount, rules.foremanCommissionPercent);
+}
+
 export interface SettlementInput {
   /** Total pot for the cycle in paise (chit value). */
   potAmount: number;
   totalMembers: number;
   foremanCommissionPercent: number;
+  foremanCommissionMode?: "PERCENT" | "AMOUNT";
+  foremanCommissionAmount?: number;
   /**
    * The winner's forgone amount (paise). For an AUCTION this is the winning bid's discount; for a
    * LOTTERY/MANUAL winner there is no bidding, so it defaults to the foreman commission (the winner
@@ -36,9 +53,9 @@ export interface SettlementResult {
  * lost or created.
  */
 export function computeSettlement(input: SettlementInput): SettlementResult {
-  const { potAmount, totalMembers, foremanCommissionPercent, winningDiscount } = input;
+  const { potAmount, totalMembers, winningDiscount } = input;
 
-  const fullCommission = percentageOfPaise(potAmount, foremanCommissionPercent);
+  const fullCommission = computeForemanCommission(potAmount, input);
   const discountAmount = Math.max(0, Math.min(winningDiscount, potAmount));
 
   // Commission can't exceed the discount pool, else the dividend would be negative.

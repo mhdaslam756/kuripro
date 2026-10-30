@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ApiError } from "@/lib/api-client";
 import { formatDate, formatPaise } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ALLOTMENT_METHODS, CHIT_GROUP_FREQUENCIES, FREQUENCY_LABELS, type ChitGroup } from "../types";
+import { ALLOTMENT_METHODS, CHIT_GROUP_FREQUENCIES, COMMISSION_MODES, FREQUENCY_LABELS, type ChitGroup } from "../types";
 import { previewEndDate } from "../schedule-preview";
 import { useCreateChitGroup, useUpdateChitGroup, type CreateChitGroupInput } from "../use-chit-groups";
 
@@ -42,7 +42,9 @@ const schema = z
     customIntervalDays: z.number().int().min(1).max(365).optional(),
     startDate: z.string().min(1, "Required"),
     allotmentMethod: z.enum(ALLOTMENT_METHODS),
+    foremanCommissionMode: z.enum(COMMISSION_MODES),
     foremanCommissionPercent: z.number().min(0).max(100),
+    foremanCommissionAmountRupees: z.number().min(0).optional(),
     minBidDiscountPercent: z.number().min(0).max(100),
     maxBidDiscountPercent: z.number().min(0).max(100),
     bidIncrementPercent: z.number().min(0).max(100),
@@ -52,6 +54,17 @@ const schema = z
     message: "Interval days required for custom frequency",
     path: ["customIntervalDays"],
   })
+  .refine((d) => d.foremanCommissionMode !== "AMOUNT" || (d.foremanCommissionAmountRupees ?? 0) > 0, {
+    message: "Enter the commission amount",
+    path: ["foremanCommissionAmountRupees"],
+  })
+  .refine(
+    (d) =>
+      d.foremanCommissionMode !== "AMOUNT" ||
+      !Number.isFinite(d.chitValueRupees) ||
+      (d.foremanCommissionAmountRupees ?? 0) <= d.chitValueRupees,
+    { message: "Cannot exceed the chit value", path: ["foremanCommissionAmountRupees"] },
+  )
   .refine((d) => d.minBidDiscountPercent <= d.maxBidDiscountPercent, {
     message: "Min cannot exceed max",
     path: ["minBidDiscountPercent"],
@@ -69,7 +82,9 @@ function toDefaults(chit: ChitGroup | undefined): FormValues {
       frequency: "MONTHLY",
       startDate: "",
       allotmentMethod: "AUCTION",
+      foremanCommissionMode: "PERCENT",
       foremanCommissionPercent: 5,
+      foremanCommissionAmountRupees: undefined,
       minBidDiscountPercent: 0,
       maxBidDiscountPercent: 40,
       bidIncrementPercent: 1,
@@ -85,7 +100,11 @@ function toDefaults(chit: ChitGroup | undefined): FormValues {
     customIntervalDays: chit.customIntervalDays,
     startDate: chit.startDate.slice(0, 10),
     allotmentMethod: chit.auctionRules.allotmentMethod,
+    foremanCommissionMode: chit.auctionRules.foremanCommissionMode ?? "PERCENT",
     foremanCommissionPercent: chit.auctionRules.foremanCommissionPercent,
+    foremanCommissionAmountRupees: chit.auctionRules.foremanCommissionAmount
+      ? chit.auctionRules.foremanCommissionAmount / 100
+      : undefined,
     minBidDiscountPercent: chit.auctionRules.minBidDiscountPercent,
     maxBidDiscountPercent: chit.auctionRules.maxBidDiscountPercent,
     bidIncrementPercent: chit.auctionRules.bidIncrementPercent,
@@ -157,6 +176,7 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
   const chitValueRupees = watch("chitValueRupees");
   const startDate = watch("startDate");
   const customIntervalDays = watch("customIntervalDays");
+  const commissionMode = watch("foremanCommissionMode");
 
   const installment = totalMembers > 0 && chitValueRupees > 0 ? (chitValueRupees / totalMembers) * 100 : undefined;
   const endDate =
@@ -167,7 +187,10 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
   async function onSubmit(values: FormValues) {
     const auctionRules = {
       allotmentMethod: values.allotmentMethod,
+      foremanCommissionMode: values.foremanCommissionMode,
       foremanCommissionPercent: values.foremanCommissionPercent,
+      foremanCommissionAmountRupees:
+        values.foremanCommissionMode === "AMOUNT" ? values.foremanCommissionAmountRupees : undefined,
       minBidDiscountPercent: values.minBidDiscountPercent,
       maxBidDiscountPercent: values.maxBidDiscountPercent,
       bidIncrementPercent: values.bidIncrementPercent,
@@ -460,22 +483,65 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
                   </Select>
                 </FormField>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    icon={Percent}
-                    label="Foreman Commission (%)"
-                    error={errors.foremanCommissionPercent?.message}
+                <FormField
+                  icon={Coins}
+                  label="Commission Amount Mode"
+                  helpText="Charge the foreman's commission as a % of the pot, or as a fixed amount each cycle"
+                  disabled={scheduleLocked}
+                >
+                  <Select
+                    value={commissionMode}
+                    onValueChange={(v: string) =>
+                      setValue("foremanCommissionMode", v as FormValues["foremanCommissionMode"], { shouldValidate: true })
+                    }
                     disabled={scheduleLocked}
                   >
-                    <input
-                      id="foremanCommissionPercent"
-                      type="number"
-                      step="0.5"
+                    <SelectTrigger className="border-0 bg-transparent h-auto p-0 text-sm font-medium text-text-primary focus:ring-0 focus:border-0 shadow-none min-h-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PERCENT">Percentage of pot</SelectItem>
+                      <SelectItem value="AMOUNT">Fixed amount per cycle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {commissionMode === "AMOUNT" ? (
+                    <FormField
+                      icon={IndianRupee}
+                      label="Foreman Commission (₹ / cycle)"
+                      error={errors.foremanCommissionAmountRupees?.message}
                       disabled={scheduleLocked}
-                      className="w-full bg-transparent text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none disabled:cursor-not-allowed"
-                      {...register("foremanCommissionPercent", { valueAsNumber: true })}
-                    />
-                  </FormField>
+                    >
+                      <input
+                        id="foremanCommissionAmountRupees"
+                        type="number"
+                        step="1"
+                        disabled={scheduleLocked}
+                        className="w-full bg-transparent text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none disabled:cursor-not-allowed"
+                        {...register("foremanCommissionAmountRupees", {
+                          setValueAs: (v: string) => (v === "" || v === null ? undefined : Number(v)),
+                        })}
+                      />
+                    </FormField>
+                  ) : (
+                    <FormField
+                      icon={Percent}
+                      label="Foreman Commission (%)"
+                      error={errors.foremanCommissionPercent?.message}
+                      disabled={scheduleLocked}
+                    >
+                      <input
+                        id="foremanCommissionPercent"
+                        type="number"
+                        step="0.5"
+                        disabled={scheduleLocked}
+                        className="w-full bg-transparent text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none disabled:cursor-not-allowed"
+                        {...register("foremanCommissionPercent", { valueAsNumber: true })}
+                      />
+                    </FormField>
+                  )}
 
                   {allotmentMethod === "AUCTION" ? (
                     <FormField

@@ -14,6 +14,12 @@ import {
   listChitGroupsQuerySchema,
   updateChitGroupSchema,
 } from "./chit-group.validators.js";
+import {
+  completeReplacementSettlementSchema,
+  replaceMemberSchema,
+  replacementPreviewQuerySchema,
+  updateReplacementSettlementSchema,
+} from "./membership-replacement.validators.js";
 
 export const chitGroupRouter: Router = Router();
 
@@ -75,6 +81,43 @@ chitGroupRouter.delete(
   requirePermission("chit_group.enroll_member"),
   validate({ params: nestedMongoIdParamSchema }),
   chitGroupController.removeMember,
+);
+
+// --- Member replacement & exit settlement ---
+
+chitGroupRouter.get(
+  "/:id/members/:childId/replacement-preview",
+  requirePermission("chit_group.enroll_member"),
+  validate({ params: nestedMongoIdParamSchema, query: replacementPreviewQuerySchema }),
+  chitGroupController.replacementPreview,
+);
+
+chitGroupRouter.post(
+  "/:id/members/:childId/replace",
+  requirePermission("chit_group.enroll_member"),
+  validate({ params: nestedMongoIdParamSchema, body: replaceMemberSchema }),
+  chitGroupController.replaceMember,
+);
+
+chitGroupRouter.get(
+  "/:id/membership-history",
+  requirePermission("chit_group.enroll_member"),
+  validate({ params: mongoIdParamSchema }),
+  chitGroupController.membershipHistory,
+);
+
+chitGroupRouter.patch(
+  "/:id/replacements/:childId/settlement",
+  requirePermission("chit_group.enroll_member"),
+  validate({ params: nestedMongoIdParamSchema, body: updateReplacementSettlementSchema }),
+  chitGroupController.updateReplacementSettlement,
+);
+
+chitGroupRouter.post(
+  "/:id/replacements/:childId/settlement/complete",
+  requirePermission("chit_group.enroll_member"),
+  validate({ params: nestedMongoIdParamSchema, body: completeReplacementSettlementSchema }),
+  chitGroupController.completeReplacementSettlement,
 );
 
 // --- Activation ---

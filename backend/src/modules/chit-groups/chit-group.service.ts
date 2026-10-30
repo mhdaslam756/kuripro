@@ -1,11 +1,12 @@
 import mongoose, { Types } from "mongoose";
 
+import { computeForemanCommission } from "../auctions/settlement.js";
 import { insertChitCycles, listChitCycles as repoListChitCycles } from "../chit-cycles/chit-cycle.repository.js";
 import { findMemberById, listMembersByIds } from "../members/member.repository.js";
 import { findTenantById } from "../tenants/tenant.repository.js";
 import { AppError } from "../../utils/app-error.js";
 import type { AttachmentEntry } from "../../utils/attachment.js";
-import { percentageOfPaise, rupeesToPaise } from "../../utils/money.js";
+import { rupeesToPaise } from "../../utils/money.js";
 import type { PaginatedResult, PaginationQuery } from "../../utils/pagination.js";
 import type { ChitGroupDocument } from "./chit-group.model.js";
 import {
@@ -64,6 +65,12 @@ export async function createChitGroup(
     throw AppError.badRequest("minBidDiscountPercent cannot exceed maxBidDiscountPercent");
   }
 
+  const foremanCommissionAmount = rupeesToPaise(input.auctionRules.foremanCommissionAmountRupees ?? 0);
+  if (input.auctionRules.foremanCommissionMode === "AMOUNT") {
+    if (foremanCommissionAmount < 1) throw AppError.badRequest("foremanCommissionAmountRupees is required for AMOUNT commission mode");
+    if (foremanCommissionAmount > chitValue) throw AppError.badRequest("Commission amount cannot exceed the chit value");
+  }
+
   const endDate = computeEndDate({
     startDate: input.startDate,
     frequency: input.frequency,
@@ -84,8 +91,10 @@ export async function createChitGroup(
     endDate,
     auctionRules: {
       allotmentMethod: input.auctionRules.allotmentMethod,
+      foremanCommissionMode: input.auctionRules.foremanCommissionMode,
       foremanCommissionPercent:
         input.auctionRules.foremanCommissionPercent ?? tenant.settings.defaultForemanCommissionPercent,
+      foremanCommissionAmount: foremanCommissionAmount,
       minBidDiscountPercent: input.auctionRules.minBidDiscountPercent,
       maxBidDiscountPercent,
       bidIncrementPercent: input.auctionRules.bidIncrementPercent,
@@ -125,7 +134,13 @@ export async function updateChitGroup(
     if (input.auctionRules.minBidDiscountPercent > input.auctionRules.maxBidDiscountPercent) {
       throw AppError.badRequest("minBidDiscountPercent cannot exceed maxBidDiscountPercent");
     }
-    chitGroup.auctionRules = input.auctionRules;
+    const { foremanCommissionAmountRupees, ...rules } = input.auctionRules;
+    const foremanCommissionAmount = rupeesToPaise(foremanCommissionAmountRupees ?? 0);
+    if (rules.foremanCommissionMode === "AMOUNT") {
+      if (foremanCommissionAmount < 1) throw AppError.badRequest("foremanCommissionAmountRupees is required for AMOUNT commission mode");
+      if (foremanCommissionAmount > chitGroup.chitValue) throw AppError.badRequest("Commission amount cannot exceed the chit value");
+    }
+    chitGroup.auctionRules = { ...rules, foremanCommissionAmount };
   }
 
   // Structural fields reshape the schedule/pot and are locked once the scheme leaves DRAFT.
@@ -683,6 +698,8 @@ export interface ChitSummaryReport {
     status: string;
     allotmentMethod: string;
     foremanCommissionPercent: number;
+    foremanCommissionMode: "PERCENT" | "AMOUNT";
+    foremanCommissionAmount: number;
   };
   roster: { enrolled: number; enrolledShares: number; seatsRemaining: number };
   cycles: { total: number; scheduled: number; settled: number; currentCycleNumber: number };
@@ -727,6 +744,8 @@ export async function getChitSummaryReport(tenantId: string, chitGroupId: string
       status: chitGroup.status,
       allotmentMethod: chitGroup.auctionRules.allotmentMethod,
       foremanCommissionPercent: chitGroup.auctionRules.foremanCommissionPercent,
+      foremanCommissionMode: chitGroup.auctionRules.foremanCommissionMode ?? "PERCENT",
+      foremanCommissionAmount: chitGroup.auctionRules.foremanCommissionAmount ?? 0,
     },
     roster: {
       enrolled,
@@ -740,7 +759,7 @@ export async function getChitSummaryReport(tenantId: string, chitGroupId: string
       currentCycleNumber: chitGroup.currentCycleNumber,
     },
     financials: {
-      maxCommissionPerCycle: percentageOfPaise(chitGroup.chitValue, chitGroup.auctionRules.foremanCommissionPercent),
+      maxCommissionPerCycle: computeForemanCommission(chitGroup.chitValue, chitGroup.auctionRules),
       commissionCollectedToDate: commissionCollected,
       prizesDisbursedToDate: prizesDisbursed,
       dividendDistributedToDate: dividendDistributed,

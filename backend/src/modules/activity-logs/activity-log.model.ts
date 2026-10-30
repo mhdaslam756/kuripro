@@ -30,6 +30,8 @@ export const ACTIVITY_LOG_ACTIONS = [
   "COLLECTION_RECORDED",
   "COLLECTION_REVERSED",
   "PAYOUT_DISBURSED",
+  "CHIT_MEMBER_REPLACED",
+  "CHIT_REPLACEMENT_SETTLED",
 ] as const;
 export type ActivityLogAction = (typeof ACTIVITY_LOG_ACTIONS)[number];
 
