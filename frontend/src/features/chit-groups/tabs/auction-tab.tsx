@@ -2,7 +2,7 @@ import { Gavel, Shuffle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { humanize } from "@/lib/format";
-import type { ChitGroup } from "../types";
+import { formatCommission, type ChitGroup } from "../types";
 
 function Rule({ label, value }: { label: string; value: string }) {
   return (
@@ -25,7 +25,7 @@ export function AuctionTab({ chitGroup }: { chitGroup: ChitGroup }) {
       </CardHeader>
       <CardContent>
         <Rule label="Allotment method" value={humanize(auctionRules.allotmentMethod)} />
-        <Rule label="Foreman commission" value={`${auctionRules.foremanCommissionPercent}%`} />
+        <Rule label="Foreman commission" value={formatCommission(auctionRules)} />
         {isAuction ? (
           <>
             <Rule label="Minimum bid discount" value={`${auctionRules.minBidDiscountPercent}%`} />

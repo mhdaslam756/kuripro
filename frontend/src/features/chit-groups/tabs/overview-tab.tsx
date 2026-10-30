@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api-client";
 import { formatDate, formatPaise, humanize } from "@/lib/format";
 import { ChitGroupFormDialog } from "../components/chit-group-form-dialog";
-import { FREQUENCY_LABELS, type ChitGroup } from "../types";
+import { FREQUENCY_LABELS, formatCommission, type ChitGroup } from "../types";
 import { useActivateChitGroup, useChitMembers } from "../use-chit-groups";
 
 function Detail({ label, value }: { label: string; value: string }) {
@@ -72,7 +72,7 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
               <Detail label="Total slots" value={String(chitGroup.totalMembers)} />
               <Detail label="Installment / cycle" value={formatPaise(chitGroup.installmentAmount)} />
               <Detail label="Allotment" value={humanize(chitGroup.auctionRules.allotmentMethod)} />
-              <Detail label="Commission" value={`${chitGroup.auctionRules.foremanCommissionPercent}%`} />
+              <Detail label="Commission" value={formatCommission(chitGroup.auctionRules)} />
             </dl>
           </CardContent>
         </Card>
@@ -91,6 +91,12 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     : FREQUENCY_LABELS[chitGroup.frequency]
                 }
               />
+              {chitGroup.collectionDays?.length ? (
+                <Detail
+                  label="Collection days"
+                  value={`${chitGroup.collectionDays.join(", ")} of each month`}
+                />
+              ) : null}
               <Detail label="Duration" value={`${chitGroup.totalMembers} cycles`} />
               <Detail label="Start date" value={formatDate(chitGroup.startDate)} />
               <Detail label="End date" value={formatDate(chitGroup.endDate)} />

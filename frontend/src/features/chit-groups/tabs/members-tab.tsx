@@ -1,4 +1,4 @@
-import { AlertCircle, Lock, MessageSquare, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, History, Lock, MessageSquare, Repeat, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -19,6 +19,8 @@ import { openWhatsAppChat } from "@/features/collections/components/whatsapp-rem
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AssignMembersDialog } from "../components/assign-members-dialog";
+import { MembershipHistoryDialog } from "../components/membership-history-dialog";
+import { ReplaceMemberDialog } from "../components/replace-member-dialog";
 import type { ChitGroup, ChitMembership, ChitMembershipMember } from "../types";
 import { useChitMembers, useRemoveMember } from "../use-chit-groups";
 
@@ -60,11 +62,15 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
   const [assignOpen, setAssignOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [replaceMembershipId, setReplaceMembershipId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const isMemberRole = user?.role?.slug === "MEMBER";
   const isNotStarted = chitGroup.status === "DRAFT";
   const canAssign = hasPermission("chit_group.enroll_member") && isNotStarted;
   const canRemove = hasPermission("chit_group.enroll_member") && isNotStarted;
+  const canReplace = hasPermission("chit_group.enroll_member") && chitGroup.status === "ACTIVE";
+  const canViewHistory = hasPermission("chit_group.enroll_member") && !isNotStarted && !isMemberRole;
   const items = roster?.items ?? [];
   const totalEnrolledShares = items.reduce(
     (sum, m) => sum + (m.share ?? (m.shareType === "HALF" ? 0.5 : 1)),
@@ -118,6 +124,11 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
             {seatsRemaining > 0 ? ` · ${seatsRemaining} slot${seatsRemaining === 1 ? "" : "s"} capacity remaining` : " · all slots filled"}
           </p>
         </div>
+        {canViewHistory ? (
+          <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>
+            <History size={15} /> Membership history
+          </Button>
+        ) : null}
         {canAssign ? (
           <Button size="sm" onClick={() => setAssignOpen(true)}>
             <UserPlus size={15} /> {seatsRemaining > 0 ? "Assign members / slots" : "Manage Roster"}
@@ -228,6 +239,18 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           </Button>
                         </Link>
                       ) : null}
+                      {canReplace ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label="Replace member"
+                          className="h-9 px-3 text-xs font-semibold rounded-xl gap-1"
+                          onClick={() => setReplaceMembershipId(membershipId)}
+                        >
+                          <Repeat size={14} /> Replace
+                        </Button>
+                      ) : null}
                       {canRemove ? (
                         <Button
                           type="button"
@@ -334,6 +357,18 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                                   </Button>
                                 </Link>
                               ) : null}
+                              {canReplace ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  aria-label="Replace member"
+                                  className="gap-1 text-xs h-8"
+                                  onClick={() => setReplaceMembershipId(membershipId)}
+                                >
+                                  <Repeat size={13} /> Replace
+                                </Button>
+                              ) : null}
                               {canRemove ? (
                                 <Button
                                   type="button"
@@ -396,6 +431,23 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
           </DialogContent>
         </Dialog>
       ) : null}
+
+      {replaceMembershipId ? (
+        <ReplaceMemberDialog
+          open
+          onOpenChange={(open) => !open && setReplaceMembershipId(null)}
+          chitGroupId={chitGroup.id}
+          chitGroupName={chitGroup.name}
+          membershipId={replaceMembershipId}
+        />
+      ) : null}
+
+      <MembershipHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        chitGroupId={chitGroup.id}
+        canSettle={hasPermission("chit_group.enroll_member")}
+      />
 
       {/* Assign Members Dialog */}
       <AssignMembersDialog

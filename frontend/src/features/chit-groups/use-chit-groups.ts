@@ -2,13 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api-client";
 import type {
-  AuctionRules,
   BulkAssignResult,
   ChitCycle,
   ChitGroup,
   ChitGroupFrequency,
   ChitMembership,
   ChitSummaryReport,
+  CommissionMode,
+  MembershipHistorySlot,
+  ReplaceMemberInput,
+  ReplacementPreview,
   PaginatedChitGroups,
   PaginatedCycles,
   PaginatedMemberships,
@@ -34,6 +37,16 @@ export function useChitGroup(id: string | undefined) {
   });
 }
 
+export interface AuctionRulesInput {
+  allotmentMethod: string;
+  foremanCommissionMode: CommissionMode;
+  foremanCommissionPercent?: number;
+  foremanCommissionAmountRupees?: number;
+  minBidDiscountPercent: number;
+  maxBidDiscountPercent?: number;
+  bidIncrementPercent: number;
+}
+
 export interface CreateChitGroupInput {
   name: string;
   registrationNumber: string;
@@ -41,14 +54,9 @@ export interface CreateChitGroupInput {
   totalMembers: number;
   frequency: ChitGroupFrequency;
   customIntervalDays?: number;
+  collectionDays?: number[];
   startDate: string;
-  auctionRules: {
-    allotmentMethod: string;
-    foremanCommissionPercent?: number;
-    minBidDiscountPercent: number;
-    maxBidDiscountPercent?: number;
-    bidIncrementPercent: number;
-  };
+  auctionRules: AuctionRulesInput;
   termsAndConditions?: string;
 }
 
@@ -64,8 +72,9 @@ export interface UpdateChitGroupInput {
   name?: string;
   frequency?: ChitGroupFrequency;
   customIntervalDays?: number;
+  collectionDays?: number[];
   startDate?: string;
-  auctionRules?: AuctionRules;
+  auctionRules?: AuctionRulesInput;
   termsAndConditions?: string;
 }
 
@@ -146,6 +155,87 @@ function invalidateRoster(queryClient: ReturnType<typeof useQueryClient>, id: st
   void queryClient.invalidateQueries({ queryKey: ["chit-group-detail", id] });
   void queryClient.invalidateQueries({ queryKey: ["chit-group-report", id] });
   void queryClient.invalidateQueries({ queryKey: ["chit-groups"] });
+}
+
+// --- Member replacement & exit settlement ---
+
+export function useReplacementPreview(
+  chitGroupId: string,
+  membershipId: string | undefined,
+  params: { effectiveCycleNumber?: number; newMemberId?: string },
+) {
+  const query = new URLSearchParams();
+  if (params.effectiveCycleNumber) query.set("effectiveCycleNumber", String(params.effectiveCycleNumber));
+  if (params.newMemberId) query.set("newMemberId", params.newMemberId);
+  return useQuery({
+    queryKey: ["chit-group-replacement-preview", chitGroupId, membershipId, params],
+    queryFn: () =>
+      api
+        .get<{ preview: ReplacementPreview }>(
+          `/chit-groups/${chitGroupId}/members/${membershipId}/replacement-preview?${query.toString()}`,
+        )
+        .then((r) => r.preview),
+    enabled: Boolean(membershipId),
+    retry: false,
+  });
+}
+
+function invalidateHistory(queryClient: ReturnType<typeof useQueryClient>, id: string) {
+  void queryClient.invalidateQueries({ queryKey: ["chit-group-membership-history", id] });
+}
+
+export function useReplaceMember(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ membershipId, ...input }: ReplaceMemberInput & { membershipId: string }) =>
+      api.post<{ newMembershipId: string }>(`/chit-groups/${id}/members/${membershipId}/replace`, input),
+    onSuccess: () => {
+      invalidateRoster(queryClient, id);
+      invalidateHistory(queryClient, id);
+      void queryClient.invalidateQueries({ queryKey: ["chit-group-replacement-preview", id] });
+    },
+  });
+}
+
+export function useMembershipHistory(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["chit-group-membership-history", id],
+    queryFn: () => api.get<{ slots: MembershipHistorySlot[] }>(`/chit-groups/${id}/membership-history`).then((r) => r.slots),
+    enabled: Boolean(id) && enabled,
+  });
+}
+
+export function useUpdateReplacementSettlement(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      replacementId,
+      ...input
+    }: {
+      replacementId: string;
+      refundAmountRupees?: number;
+      deductionAmountRupees?: number;
+      deductionReason?: string;
+      notes?: string;
+    }) => api.patch(`/chit-groups/${id}/replacements/${replacementId}/settlement`, input),
+    onSuccess: () => invalidateHistory(queryClient, id),
+  });
+}
+
+export function useCompleteReplacementSettlement(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      replacementId,
+      ...input
+    }: {
+      replacementId: string;
+      settledAmountRupees?: number;
+      method: string;
+      notes?: string;
+    }) => api.post(`/chit-groups/${id}/replacements/${replacementId}/settlement/complete`, input),
+    onSuccess: () => invalidateHistory(queryClient, id),
+  });
 }
 
 // --- Schedule / cycles ---

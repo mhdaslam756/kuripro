@@ -8,16 +8,23 @@ export const CHIT_GROUP_FREQUENCIES = ["WEEKLY", "MONTHLY", "TWICE_MONTHLY", "TH
 export const CHIT_GROUP_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"] as const;
 export const ALLOTMENT_METHODS = ["AUCTION", "LOTTERY"] as const;
 
+export const COMMISSION_MODES = ["PERCENT", "AMOUNT"] as const;
+
 export type ChitGroupFrequency = (typeof CHIT_GROUP_FREQUENCIES)[number];
 export type ChitGroupStatus = (typeof CHIT_GROUP_STATUSES)[number];
 export type AllotmentMethod = (typeof ALLOTMENT_METHODS)[number];
+export type CommissionMode = (typeof COMMISSION_MODES)[number];
 
 /** Rules governing how each cycle's winner is decided and priced. Bid fields apply only to AUCTION. */
 export interface AuctionRules {
   /** AUCTION = members bid a discount; LOTTERY = random draw, no bidding. */
   allotmentMethod: AllotmentMethod;
-  /** Foreman's commission on the pot each cycle (paise math done at settlement). */
+  /** PERCENT = commission is `foremanCommissionPercent` of the pot; AMOUNT = a fixed `foremanCommissionAmount` per cycle. */
+  foremanCommissionMode: CommissionMode;
+  /** Foreman's commission on the pot each cycle (used when mode is PERCENT). */
   foremanCommissionPercent: number;
+  /** Fixed commission per cycle in paise (used when mode is AMOUNT). */
+  foremanCommissionAmount: number;
   /** Floor on the winning discount (AUCTION only). */
   minBidDiscountPercent: number;
   /** Statutory cap on the discount (AUCTION only) — under the Chit Funds Act, typically 30–40%. */
@@ -39,6 +46,8 @@ export interface ChitGroupDoc extends Timestamps {
   frequency: ChitGroupFrequency;
   /** Days between cycles when frequency is CUSTOM; ignored otherwise. */
   customIntervalDays?: number;
+  /** Fixed days of the month cycles are collected on (see chit-schedule). Unset = even intervals. */
+  collectionDays?: number[];
   startDate: Date;
   /** Last cycle's date, derived from the schedule at creation — the scheme's effective end. */
   endDate: Date;
@@ -58,7 +67,9 @@ export type ChitGroupDocument = HydratedDocument<ChitGroupDoc>;
 const auctionRulesSchema = new Schema<AuctionRules>(
   {
     allotmentMethod: { type: String, enum: ALLOTMENT_METHODS, required: true, default: "AUCTION" },
-    foremanCommissionPercent: { type: Number, required: true, min: 0, max: 100 },
+    foremanCommissionMode: { type: String, enum: COMMISSION_MODES, required: true, default: "PERCENT" },
+    foremanCommissionPercent: { type: Number, required: true, min: 0, max: 100, default: 0 },
+    foremanCommissionAmount: { type: Number, required: true, min: 0, default: 0 },
     minBidDiscountPercent: { type: Number, required: true, min: 0, max: 100, default: 0 },
     maxBidDiscountPercent: { type: Number, required: true, min: 0, max: 100 },
     bidIncrementPercent: { type: Number, required: true, min: 0, max: 100, default: 1 },
@@ -78,6 +89,7 @@ const chitGroupSchema = new Schema<ChitGroupDoc>(
 
     frequency: { type: String, enum: CHIT_GROUP_FREQUENCIES, required: true, default: "MONTHLY" },
     customIntervalDays: { type: Number, min: 1 },
+    collectionDays: { type: [Number], default: undefined },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
 

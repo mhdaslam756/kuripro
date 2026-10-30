@@ -1,18 +1,23 @@
 import { z } from "zod";
 
 import { paginationQuerySchema } from "../../utils/pagination.js";
-import { ALLOTMENT_METHODS, CHIT_GROUP_FREQUENCIES, CHIT_GROUP_STATUSES } from "./chit-group.model.js";
+import { ALLOTMENT_METHODS, CHIT_GROUP_FREQUENCIES, COMMISSION_MODES, CHIT_GROUP_STATUSES } from "./chit-group.model.js";
 
 const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
 
 const auctionRulesSchema = z.object({
   allotmentMethod: z.enum(ALLOTMENT_METHODS).default("AUCTION"),
+  foremanCommissionMode: z.enum(COMMISSION_MODES).default("PERCENT"),
   /** Optional — falls back to the tenant's default at the service boundary. */
   foremanCommissionPercent: z.number().min(0).max(100).optional(),
+  /** Rupees, not paise — converted at the service boundary. Used when foremanCommissionMode is AMOUNT. */
+  foremanCommissionAmountRupees: z.number().min(0).optional(),
   minBidDiscountPercent: z.number().min(0).max(100).default(0),
   maxBidDiscountPercent: z.number().min(0).max(100).optional(),
   bidIncrementPercent: z.number().min(0).max(100).default(1),
 });
+
+const collectionDaysSchema = z.array(z.number().int().min(1).max(31)).max(3);
 
 export const createChitGroupSchema = z
   .object({
@@ -23,8 +28,9 @@ export const createChitGroupSchema = z
     totalMembers: z.number().int().min(2).max(100),
     frequency: z.enum(CHIT_GROUP_FREQUENCIES).default("MONTHLY"),
     customIntervalDays: z.number().int().min(1).max(365).optional(),
+    collectionDays: collectionDaysSchema.optional(),
     startDate: z.coerce.date(),
-    auctionRules: auctionRulesSchema.default({ allotmentMethod: "AUCTION", minBidDiscountPercent: 0, bidIncrementPercent: 1 }),
+    auctionRules: auctionRulesSchema.default({ allotmentMethod: "AUCTION", foremanCommissionMode: "PERCENT", minBidDiscountPercent: 0, bidIncrementPercent: 1 }),
     termsAndConditions: z.string().optional(),
   })
   .refine((data) => data.frequency !== "CUSTOM" || data.customIntervalDays !== undefined, {
@@ -38,11 +44,15 @@ export const updateChitGroupSchema = z.object({
   name: z.string().min(2).optional(),
   frequency: z.enum(CHIT_GROUP_FREQUENCIES).optional(),
   customIntervalDays: z.number().int().min(1).max(365).optional(),
+  /** An empty array clears the fixed collection days. */
+  collectionDays: collectionDaysSchema.optional(),
   startDate: z.coerce.date().optional(),
   auctionRules: z
     .object({
       allotmentMethod: z.enum(ALLOTMENT_METHODS),
+      foremanCommissionMode: z.enum(COMMISSION_MODES).default("PERCENT"),
       foremanCommissionPercent: z.number().min(0).max(100),
+      foremanCommissionAmountRupees: z.number().min(0).optional(),
       minBidDiscountPercent: z.number().min(0).max(100),
       maxBidDiscountPercent: z.number().min(0).max(100),
       bidIncrementPercent: z.number().min(0).max(100),

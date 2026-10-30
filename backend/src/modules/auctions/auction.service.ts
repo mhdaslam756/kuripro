@@ -40,11 +40,11 @@ import { Payment } from "../payments/payment.model.js";
 import { createPayout, deletePayoutByCycle, findPayoutByCycle } from "../payouts/payout.repository.js";
 import { findTenantById } from "../tenants/tenant.repository.js";
 import { AppError } from "../../utils/app-error.js";
-import { formatPaiseAsINR, percentageOfPaise, rupeesToPaise } from "../../utils/money.js";
+import { formatPaiseAsINR, rupeesToPaise } from "../../utils/money.js";
 import { listAuctionEvents, recordAuctionEvent } from "./auction-event.repository.js";
 import type { AuctionEventDocument } from "./auction-event.model.js";
 import { generateMinutesPdf, generateWinnerVoucherPdf } from "./auction.pdf.js";
-import { computeSettlement } from "./settlement.js";
+import { computeForemanCommission, computeSettlement } from "./settlement.js";
 import type { RecordBidInput, SettleInput } from "./auction.validators.js";
 
 interface CycleContext {
@@ -287,13 +287,15 @@ export async function settleCycle(
   if (cycle.status === "SETTLED") throw AppError.conflict("This cycle is already settled");
   if (chitGroup.status !== "ACTIVE") throw AppError.conflict("The chit group is not active");
 
-  const fullCommission = percentageOfPaise(cycle.totalPotAmount, chitGroup.auctionRules.foremanCommissionPercent);
+  const fullCommission = computeForemanCommission(cycle.totalPotAmount, chitGroup.auctionRules);
   const { membership, winningBid, winningDiscount } = await resolveWinner(tenantId, ctx, input, fullCommission);
 
   const result = computeSettlement({
     potAmount: cycle.totalPotAmount,
     totalMembers: chitGroup.totalMembers,
     foremanCommissionPercent: chitGroup.auctionRules.foremanCommissionPercent,
+    foremanCommissionMode: chitGroup.auctionRules.foremanCommissionMode,
+    foremanCommissionAmount: chitGroup.auctionRules.foremanCommissionAmount,
     winningDiscount,
   });
   if (result.prizeAmount < 1) throw AppError.badRequest("Computed prize amount is not positive — check the discount");
@@ -580,6 +582,8 @@ export interface AuctionState {
     name: string;
     allotmentMethod: string;
     foremanCommissionPercent: number;
+    foremanCommissionMode: "PERCENT" | "AMOUNT";
+    foremanCommissionAmount: number;
     minBidDiscountPercent: number;
     maxBidDiscountPercent: number;
     installmentAmount: number;
@@ -715,6 +719,8 @@ export async function getAuctionState(tenantId: string, cycleId: string, request
       name: chitGroup.name,
       allotmentMethod: chitGroup.auctionRules.allotmentMethod,
       foremanCommissionPercent: chitGroup.auctionRules.foremanCommissionPercent,
+      foremanCommissionMode: chitGroup.auctionRules.foremanCommissionMode ?? "PERCENT",
+      foremanCommissionAmount: chitGroup.auctionRules.foremanCommissionAmount ?? 0,
       minBidDiscountPercent: chitGroup.auctionRules.minBidDiscountPercent,
       maxBidDiscountPercent: chitGroup.auctionRules.maxBidDiscountPercent,
       installmentAmount: chitGroup.installmentAmount,
