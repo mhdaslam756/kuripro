@@ -53,6 +53,8 @@ export interface ChitGroup {
   installmentAmount: number;
   frequency: ChitGroupFrequency;
   customIntervalDays?: number;
+  /** Fixed days of the month cycles are collected on; unset = even intervals from the start date. */
+  collectionDays?: number[];
   startDate: string;
   endDate: string;
   auctionRules: AuctionRules;

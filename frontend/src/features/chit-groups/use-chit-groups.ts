@@ -54,6 +54,7 @@ export interface CreateChitGroupInput {
   totalMembers: number;
   frequency: ChitGroupFrequency;
   customIntervalDays?: number;
+  collectionDays?: number[];
   startDate: string;
   auctionRules: AuctionRulesInput;
   termsAndConditions?: string;
@@ -71,6 +72,7 @@ export interface UpdateChitGroupInput {
   name?: string;
   frequency?: ChitGroupFrequency;
   customIntervalDays?: number;
+  collectionDays?: number[];
   startDate?: string;
   auctionRules?: AuctionRulesInput;
   termsAndConditions?: string;

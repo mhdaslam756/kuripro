@@ -46,6 +46,8 @@ export interface ChitGroupDoc extends Timestamps {
   frequency: ChitGroupFrequency;
   /** Days between cycles when frequency is CUSTOM; ignored otherwise. */
   customIntervalDays?: number;
+  /** Fixed days of the month cycles are collected on (see chit-schedule). Unset = even intervals. */
+  collectionDays?: number[];
   startDate: Date;
   /** Last cycle's date, derived from the schedule at creation — the scheme's effective end. */
   endDate: Date;
@@ -87,6 +89,7 @@ const chitGroupSchema = new Schema<ChitGroupDoc>(
 
     frequency: { type: String, enum: CHIT_GROUP_FREQUENCIES, required: true, default: "MONTHLY" },
     customIntervalDays: { type: Number, min: 1 },
+    collectionDays: { type: [Number], default: undefined },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
 

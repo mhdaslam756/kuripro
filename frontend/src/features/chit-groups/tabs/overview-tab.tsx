@@ -91,6 +91,12 @@ export function OverviewTab({ chitGroup }: { chitGroup: ChitGroup }) {
                     : FREQUENCY_LABELS[chitGroup.frequency]
                 }
               />
+              {chitGroup.collectionDays?.length ? (
+                <Detail
+                  label="Collection days"
+                  value={`${chitGroup.collectionDays.join(", ")} of each month`}
+                />
+              ) : null}
               <Detail label="Duration" value={`${chitGroup.totalMembers} cycles`} />
               <Detail label="Start date" value={formatDate(chitGroup.startDate)} />
               <Detail label="End date" value={formatDate(chitGroup.endDate)} />

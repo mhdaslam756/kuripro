@@ -8,7 +8,7 @@ import { AppError } from "../../utils/app-error.js";
 import type { AttachmentEntry } from "../../utils/attachment.js";
 import { rupeesToPaise } from "../../utils/money.js";
 import type { PaginatedResult, PaginationQuery } from "../../utils/pagination.js";
-import type { ChitGroupDocument } from "./chit-group.model.js";
+import type { ChitGroupDocument, ChitGroupFrequency } from "./chit-group.model.js";
 import {
   createChitGroup as repoCreateChitGroup,
   findChitGroupById,
@@ -26,7 +26,12 @@ import {
   sumChitMembershipShares,
   type TicketSlotInfo,
 } from "./chit-membership.repository.js";
-import { computeEndDate, computeScheduleDates, FREQUENCY_LABELS } from "./chit-schedule.js";
+import {
+  COLLECTION_DAYS_REQUIRED,
+  computeEndDate,
+  computeScheduleDates,
+  FREQUENCY_LABELS,
+} from "./chit-schedule.js";
 import type {
   AddChitDocumentInput,
   AssignMembersInput,
@@ -35,6 +40,22 @@ import type {
   ListChitGroupsQuery,
   UpdateChitGroupInput,
 } from "./chit-group.validators.js";
+
+/** Normalises (unique, ascending) and validates collection days against the frequency. */
+function normaliseCollectionDays(frequency: ChitGroupFrequency, days: number[] | undefined): number[] | undefined {
+  if (!days || days.length === 0) return undefined;
+  const unique = [...new Set(days)].sort((a, b) => a - b);
+  const required = COLLECTION_DAYS_REQUIRED[frequency];
+  if (required === undefined) {
+    throw AppError.badRequest("Collection days apply only to Monthly, Twice monthly and Three times monthly schemes");
+  }
+  if (unique.length !== required) {
+    throw AppError.badRequest(
+      `${FREQUENCY_LABELS[frequency]} needs exactly ${required} different collection day${required === 1 ? "" : "s"} of the month`,
+    );
+  }
+  return unique;
+}
 
 export async function createChitGroup(
   tenantId: string,
@@ -71,11 +92,14 @@ export async function createChitGroup(
     if (foremanCommissionAmount > chitValue) throw AppError.badRequest("Commission amount cannot exceed the chit value");
   }
 
+  const collectionDays = normaliseCollectionDays(input.frequency, input.collectionDays);
+
   const endDate = computeEndDate({
     startDate: input.startDate,
     frequency: input.frequency,
     count: input.totalMembers,
     customIntervalDays: input.customIntervalDays,
+    collectionDays,
   });
 
   return repoCreateChitGroup({
@@ -87,6 +111,7 @@ export async function createChitGroup(
     installmentAmount: chitValue / input.totalMembers,
     frequency: input.frequency,
     customIntervalDays: input.customIntervalDays,
+    collectionDays,
     startDate: input.startDate,
     endDate,
     auctionRules: {
@@ -145,7 +170,10 @@ export async function updateChitGroup(
 
   // Structural fields reshape the schedule/pot and are locked once the scheme leaves DRAFT.
   const structuralChange =
-    input.startDate !== undefined || input.frequency !== undefined || input.customIntervalDays !== undefined;
+    input.startDate !== undefined ||
+    input.frequency !== undefined ||
+    input.customIntervalDays !== undefined ||
+    input.collectionDays !== undefined;
   if (structuralChange) {
     if (!isDraft) {
       throw AppError.conflict("Schedule can only be changed while the chit group is in DRAFT status");
@@ -157,11 +185,17 @@ export async function updateChitGroup(
     if (chitGroup.frequency === "CUSTOM" && !chitGroup.customIntervalDays) {
       throw AppError.badRequest("customIntervalDays is required when frequency is CUSTOM");
     }
+    // Days sent explicitly win; otherwise keep the stored ones only if they still fit the frequency.
+    const requestedDays = input.collectionDays ?? chitGroup.collectionDays ?? undefined;
+    const keepStored =
+      input.collectionDays !== undefined || COLLECTION_DAYS_REQUIRED[chitGroup.frequency] === requestedDays?.length;
+    chitGroup.collectionDays = keepStored ? normaliseCollectionDays(chitGroup.frequency, requestedDays) : undefined;
     chitGroup.endDate = computeEndDate({
       startDate: chitGroup.startDate,
       frequency: chitGroup.frequency,
       count: chitGroup.totalMembers,
       customIntervalDays: chitGroup.customIntervalDays,
+      collectionDays: chitGroup.collectionDays,
     });
   }
 
@@ -458,6 +492,7 @@ export async function activateChitGroup(tenantId: string, chitGroupId: string): 
     frequency: chitGroup.frequency,
     count: chitGroup.totalMembers,
     customIntervalDays: chitGroup.customIntervalDays,
+    collectionDays: chitGroup.collectionDays,
   });
 
   const session = await mongoose.startSession();
@@ -639,6 +674,7 @@ export async function getSchedule(tenantId: string, chitGroupId: string): Promis
     frequency: chitGroup.frequency,
     count: chitGroup.totalMembers,
     customIntervalDays: chitGroup.customIntervalDays,
+    collectionDays: chitGroup.collectionDays,
   });
   return dates.map((scheduledDate, index) => ({
     cycleNumber: index + 1,

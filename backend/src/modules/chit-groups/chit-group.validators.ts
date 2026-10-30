@@ -17,6 +17,8 @@ const auctionRulesSchema = z.object({
   bidIncrementPercent: z.number().min(0).max(100).default(1),
 });
 
+const collectionDaysSchema = z.array(z.number().int().min(1).max(31)).max(3);
+
 export const createChitGroupSchema = z
   .object({
     name: z.string().min(2),
@@ -26,6 +28,7 @@ export const createChitGroupSchema = z
     totalMembers: z.number().int().min(2).max(100),
     frequency: z.enum(CHIT_GROUP_FREQUENCIES).default("MONTHLY"),
     customIntervalDays: z.number().int().min(1).max(365).optional(),
+    collectionDays: collectionDaysSchema.optional(),
     startDate: z.coerce.date(),
     auctionRules: auctionRulesSchema.default({ allotmentMethod: "AUCTION", foremanCommissionMode: "PERCENT", minBidDiscountPercent: 0, bidIncrementPercent: 1 }),
     termsAndConditions: z.string().optional(),
@@ -41,6 +44,8 @@ export const updateChitGroupSchema = z.object({
   name: z.string().min(2).optional(),
   frequency: z.enum(CHIT_GROUP_FREQUENCIES).optional(),
   customIntervalDays: z.number().int().min(1).max(365).optional(),
+  /** An empty array clears the fixed collection days. */
+  collectionDays: collectionDaysSchema.optional(),
   startDate: z.coerce.date().optional(),
   auctionRules: z
     .object({

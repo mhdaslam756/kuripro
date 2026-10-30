@@ -29,7 +29,7 @@ import { ApiError } from "@/lib/api-client";
 import { formatDate, formatPaise } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ALLOTMENT_METHODS, CHIT_GROUP_FREQUENCIES, COMMISSION_MODES, FREQUENCY_LABELS, type ChitGroup } from "../types";
-import { previewEndDate } from "../schedule-preview";
+import { COLLECTION_DAYS_REQUIRED, previewCollectionDates, previewEndDate } from "../schedule-preview";
 import { useCreateChitGroup, useUpdateChitGroup, type CreateChitGroupInput } from "../use-chit-groups";
 
 const schema = z
@@ -40,6 +40,7 @@ const schema = z
     totalMembers: z.number({ error: "Required" }).int().min(2, "At least 2").max(100, "Max 100"),
     frequency: z.enum(CHIT_GROUP_FREQUENCIES),
     customIntervalDays: z.number().int().min(1).max(365).optional(),
+    collectionDays: z.array(z.number().int().min(1, "1–31").max(31, "1–31").optional()).optional(),
     startDate: z.string().min(1, "Required"),
     allotmentMethod: z.enum(ALLOTMENT_METHODS),
     foremanCommissionMode: z.enum(COMMISSION_MODES),
@@ -54,6 +55,16 @@ const schema = z
     message: "Interval days required for custom frequency",
     path: ["customIntervalDays"],
   })
+  .refine(
+    (d) => {
+      const required = COLLECTION_DAYS_REQUIRED[d.frequency];
+      if (required === undefined) return true;
+      const days = (d.collectionDays ?? []).slice(0, required).filter((x): x is number => x !== undefined);
+      if (days.length === 0) return d.frequency === "MONTHLY"; // monthly may follow the start date's day
+      return days.length === required && new Set(days).size === required;
+    },
+    { message: "Enter the required number of different days", path: ["collectionDays"] },
+  )
   .refine((d) => d.foremanCommissionMode !== "AMOUNT" || (d.foremanCommissionAmountRupees ?? 0) > 0, {
     message: "Enter the commission amount",
     path: ["foremanCommissionAmountRupees"],
@@ -98,6 +109,7 @@ function toDefaults(chit: ChitGroup | undefined): FormValues {
     totalMembers: chit.totalMembers,
     frequency: chit.frequency,
     customIntervalDays: chit.customIntervalDays,
+    collectionDays: chit.collectionDays,
     startDate: chit.startDate.slice(0, 10),
     allotmentMethod: chit.auctionRules.allotmentMethod,
     foremanCommissionMode: chit.auctionRules.foremanCommissionMode ?? "PERCENT",
@@ -177,14 +189,30 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
   const startDate = watch("startDate");
   const customIntervalDays = watch("customIntervalDays");
   const commissionMode = watch("foremanCommissionMode");
+  const collectionDaysCount = COLLECTION_DAYS_REQUIRED[frequency] ?? 0;
+  const collectionDaysValue = watch("collectionDays");
+  const chosenDays = (collectionDaysValue ?? [])
+    .slice(0, collectionDaysCount)
+    .filter((d): d is number => typeof d === "number" && Number.isInteger(d) && d >= 1 && d <= 31);
+  const hasCollectionDays = collectionDaysCount > 0 && chosenDays.length === collectionDaysCount;
 
   const installment = totalMembers > 0 && chitValueRupees > 0 ? (chitValueRupees / totalMembers) * 100 : undefined;
   const endDate =
     startDate && totalMembers > 1
-      ? previewEndDate(new Date(startDate), frequency, totalMembers, customIntervalDays)
+      ? previewEndDate(new Date(startDate), frequency, totalMembers, customIntervalDays, chosenDays)
       : null;
 
+  const collectionDatesPreview =
+    hasCollectionDays && startDate
+      ? previewCollectionDates(new Date(startDate), chosenDays, Math.min(totalMembers || 0, 6))
+      : [];
+
   async function onSubmit(values: FormValues) {
+    const required = COLLECTION_DAYS_REQUIRED[values.frequency] ?? 0;
+    const collectionDays = (values.collectionDays ?? [])
+      .slice(0, required)
+      .filter((d): d is number => d !== undefined);
+
     const auctionRules = {
       allotmentMethod: values.allotmentMethod,
       foremanCommissionMode: values.foremanCommissionMode,
@@ -205,6 +233,7 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
           : {
               frequency: values.frequency,
               customIntervalDays: values.frequency === "CUSTOM" ? values.customIntervalDays : undefined,
+              collectionDays, // empty array clears previously saved days
               startDate: values.startDate,
               auctionRules,
             }),
@@ -217,6 +246,7 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
         totalMembers: values.totalMembers,
         frequency: values.frequency,
         customIntervalDays: values.frequency === "CUSTOM" ? values.customIntervalDays : undefined,
+        collectionDays: collectionDays.length > 0 ? collectionDays : undefined,
         startDate: values.startDate,
         auctionRules,
         termsAndConditions: values.termsAndConditions || undefined,
@@ -411,6 +441,45 @@ export function ChitGroupFormDialog({ open, onOpenChange, chitGroup, onCreated }
                     />
                   </FormField>
                 </div>
+
+                {collectionDaysCount > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className={`grid gap-4 ${collectionDaysCount === 1 ? "sm:grid-cols-1" : collectionDaysCount === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
+                    >
+                      {Array.from({ length: collectionDaysCount }, (_, i) => (
+                        <FormField
+                          key={i}
+                          icon={CalendarDays}
+                          label={`Collection day ${i + 1}${frequency === "MONTHLY" ? " (optional)" : ""}`}
+                          helpText="Day of the month (1–31)"
+                          error={i === 0 ? errors.collectionDays?.message : undefined}
+                          disabled={scheduleLocked}
+                        >
+                          <input
+                            id={`collectionDays.${i}`}
+                            type="number"
+                            min={1}
+                            max={31}
+                            placeholder={["e.g. 5", "e.g. 15", "e.g. 25"][i]}
+                            disabled={scheduleLocked}
+                            className="w-full bg-transparent text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none disabled:cursor-not-allowed"
+                            {...register(`collectionDays.${i}` as const, {
+                              setValueAs: (v: string) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+                            })}
+                          />
+                        </FormField>
+                      ))}
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      {hasCollectionDays
+                        ? `Collections: ${collectionDatesPreview.map((d) => formatDate(d.toISOString())).join(", ")}${(totalMembers || 0) > 6 ? " …" : ""}. Days past a month's end (30/31) fall on its last day.`
+                        : frequency === "MONTHLY"
+                          ? "Leave empty to collect on the same day as the start date each month."
+                          : `Pick ${collectionDaysCount} different days. The first collection is the first of these days on or after the start date.`}
+                    </p>
+                  </div>
+                ) : null}
 
                 {/* Live Calculation Preview Card */}
                 <div className="relative overflow-hidden rounded-2xl border border-accent-primary/20 bg-gradient-to-br from-accent-primary/10 via-bg-raised to-bg-surface p-4 text-text-secondary shadow-xs mt-1">
