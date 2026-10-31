@@ -117,7 +117,7 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
         </DialogHeader>
 
         {blockedMessage ? (
-          <p className="flex items-center gap-2 rounded-md border border-bad-fg/20 bg-bad-bg/10 p-3 text-sm text-bad-fg">
+          <p role="alert" className="flex items-center gap-2 rounded-md border border-bad-fg/20 bg-bad-bg/10 p-3 text-sm text-bad-fg">
             <AlertCircle size={16} /> {blockedMessage}
           </p>
         ) : isLoading || !preview || !snapshot ? (
@@ -152,9 +152,9 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
             <Section title="New member & start cycle">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Takes over from</label>
+                  <label htmlFor="replace-cycle" className="mb-1 block text-xs font-medium text-text-secondary">Takes over from</label>
                   <Select value={String(preview.effective.cycleNumber)} onValueChange={(v: string) => setCycle(Number(v))}>
-                    <SelectTrigger>
+                    <SelectTrigger id="replace-cycle">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -170,10 +170,11 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
                   </Select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Replacement member</label>
+                  <label htmlFor="replace-search" className="mb-1 block text-xs font-medium text-text-secondary">Replacement member</label>
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
                     <Input
+                      id="replace-search"
                       className="pl-8"
                       placeholder="Search by name or phone"
                       value={search}
@@ -193,6 +194,7 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
                     <li key={m.id}>
                       <button
                         type="button"
+                        aria-pressed={newMemberId === m.id}
                         onClick={() => setNewMemberId(m.id)}
                         className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-bg-raised ${
                           newMemberId === m.id ? "bg-brand-50" : ""
@@ -238,8 +240,8 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
               </div>
 
               <div className="mt-3">
-                <label className="mb-1 block text-xs font-medium text-text-secondary">Reason (optional)</label>
-                <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Relocating, cannot continue" />
+                <label htmlFor="replace-reason" className="mb-1 block text-xs font-medium text-text-secondary">Reason (optional)</label>
+                <Input id="replace-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Relocating, cannot continue" />
               </div>
             </Section>
 
@@ -249,8 +251,9 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Refund (₹)</label>
+                  <label htmlFor="replace-refund" className="mb-1 block text-xs font-medium text-text-secondary">Refund (₹)</label>
                   <Input
+                    id="replace-refund"
                     type="number"
                     min={0}
                     value={refund ?? String((snapshot.prepaidAmount / 100) || "")}
@@ -259,8 +262,8 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-text-secondary">Deductions (₹)</label>
-                  <Input type="number" min={0} value={deduction} onChange={(e) => setDeduction(e.target.value)} placeholder="0" />
+                  <label htmlFor="replace-deduction" className="mb-1 block text-xs font-medium text-text-secondary">Deductions (₹)</label>
+                  <Input id="replace-deduction" type="number" min={0} value={deduction} onChange={(e) => setDeduction(e.target.value)} placeholder="0" />
                 </div>
               </div>
               {deductionRupees > 0 ? (
@@ -289,7 +292,7 @@ export function ReplaceMemberDialog({ open, onOpenChange, chitGroupId, chitGroup
             </Section>
 
             {error ? (
-              <p className="flex items-center gap-2 rounded-md border border-bad-fg/20 bg-bad-bg/10 p-2.5 text-xs text-bad-fg">
+              <p role="alert" className="flex items-center gap-2 rounded-md border border-bad-fg/20 bg-bad-bg/10 p-2.5 text-sm text-bad-fg">
                 <AlertCircle size={14} /> {error}
               </p>
             ) : null}

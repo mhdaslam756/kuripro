@@ -65,7 +65,7 @@ export function MembershipHistoryDialog({ open, onOpenChange, chitGroupId, canSe
         {isLoading ? (
           <Skeleton className="h-40 w-full rounded-md" />
         ) : isError || !slots ? (
-          <p className="text-sm text-bad-fg">Couldn't load membership history.</p>
+          <p role="alert" className="text-sm text-bad-fg">Couldn't load membership history.</p>
         ) : slots.length === 0 ? (
           <p className="text-sm text-text-secondary">No memberships yet.</p>
         ) : (
@@ -114,7 +114,7 @@ export function MembershipHistoryDialog({ open, onOpenChange, chitGroupId, canSe
                               {s.status === "SETTLED" && s.settledAt ? (
                                 <span className="text-text-secondary">{formatDateTime(s.settledAt)}</span>
                               ) : canSettle ? (
-                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => startSettling(entry)}>
+                                <Button size="sm" variant="outline" className="min-h-11 px-3 text-xs sm:h-8 sm:min-h-0" onClick={() => startSettling(entry)}>
                                   Mark settled
                                 </Button>
                               ) : null}
@@ -137,9 +137,9 @@ export function MembershipHistoryDialog({ open, onOpenChange, chitGroupId, canSe
               {formatPaise(Math.abs(settlement.netAmount))}
             </h4>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (₹)" />
+              <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (₹)" aria-label="Settled amount in rupees" />
               <Select value={method} onValueChange={setMethod}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Payment method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -151,8 +151,8 @@ export function MembershipHistoryDialog({ open, onOpenChange, chitGroupId, canSe
                 </SelectContent>
               </Select>
             </div>
-            <Input className="mt-3" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
-            {error ? <p className="mt-2 text-xs text-bad-fg">{error}</p> : null}
+            <Input className="mt-3" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" aria-label="Settlement notes" />
+            {error ? <p role="alert" className="mt-2 text-sm text-bad-fg">{error}</p> : null}
             <div className="mt-3 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setSettling(null)} disabled={complete.isPending}>
                 Cancel

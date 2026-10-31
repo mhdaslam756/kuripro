@@ -20,7 +20,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-xl px-3 py-2.5 text-xs font-semibold outline-none focus:bg-bg-raised data-[state=open]:bg-bg-raised",
+      "flex cursor-default select-none items-center rounded-xl px-3 py-2.5 text-sm font-semibold min-h-10 outline-none focus:bg-bg-raised data-[state=open]:bg-bg-raised",
       inset && "pl-8",
       className
     )}
@@ -76,7 +76,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-xl px-3 py-2.5 text-xs font-semibold outline-none transition-colors focus:bg-brand-50/80 focus:text-accent-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 active:scale-[0.98]",
+      "relative flex cursor-pointer select-none items-center rounded-xl px-3 py-2.5 text-sm font-semibold min-h-10 outline-none transition-colors focus:bg-accent-primary/10 focus:text-accent-link data-[disabled]:pointer-events-none data-[disabled]:opacity-50 active:scale-[0.98]",
       inset && "pl-8",
       className
     )}
@@ -92,7 +92,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold outline-none transition-colors focus:bg-brand-50/80 focus:text-accent-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-pointer select-none items-center rounded-xl py-2.5 pl-8 pr-3 text-sm font-semibold min-h-10 outline-none transition-colors focus:bg-accent-primary/10 focus:text-accent-link data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     checked={checked}
@@ -116,7 +116,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold outline-none transition-colors focus:bg-brand-50/80 focus:text-accent-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-pointer select-none items-center rounded-xl py-2.5 pl-8 pr-3 text-sm font-semibold min-h-10 outline-none transition-colors focus:bg-accent-primary/10 focus:text-accent-link data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}

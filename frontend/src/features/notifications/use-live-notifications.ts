@@ -2,9 +2,22 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth-context";
-import { API_BASE_URL, getAccessToken } from "@/lib/api-client";
+import { API_BASE_URL, getAccessToken, refreshSessionTokens } from "@/lib/api-client";
 import { enablePush, playNotificationChime, showPushNotification } from "@/lib/push";
 import { triggerDuePopup } from "./components/due-notification-popup";
+
+const RETRY_BASE_MS = 4_000;
+const RETRY_MAX_MS = 60_000;
+
+/** True when the JWT's `exp` is in the past (or within 10s) — decoded locally, no verification. */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now() + 10_000;
+  } catch {
+    return false;
+  }
+}
 
 export function useLiveNotifications(): void {
   const { user } = useAuth();
@@ -38,12 +51,10 @@ export function useLiveNotifications(): void {
   useEffect(() => {
     if (!user) return;
 
-    const token = getAccessToken();
-    if (!token) return;
-
-    const streamUrl = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
     let eventSource: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = RETRY_BASE_MS;
+    let disposed = false;
 
     function handleIncomingNotification(data: {
       id?: string;
@@ -94,9 +105,30 @@ export function useLiveNotifications(): void {
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     }
 
-    function connect() {
+    function scheduleRetry() {
+      if (disposed) return;
+      retryTimer = setTimeout(() => void connect(), retryDelay);
+      retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
+    }
+
+    async function connect() {
+      if (disposed) return;
       try {
-        eventSource = new EventSource(streamUrl, { withCredentials: true });
+        // EventSource can't set headers, so the token goes in the URL. Read it fresh on every
+        // (re)connect — access tokens are short-lived, and a URL built once goes stale.
+        let token = getAccessToken();
+        if (!token || isTokenExpired(token)) {
+          token = (await refreshSessionTokens().catch(() => null))?.accessToken ?? getAccessToken();
+        }
+        if (!token || disposed) return; // signed out — nothing to stream
+
+        eventSource = new EventSource(`${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`, {
+          withCredentials: true,
+        });
+
+        eventSource.onopen = () => {
+          retryDelay = RETRY_BASE_MS;
+        };
 
         eventSource.addEventListener("notification", (event: MessageEvent) => {
           try {
@@ -123,16 +155,17 @@ export function useLiveNotifications(): void {
             eventSource.close();
             eventSource = null;
           }
-          retryTimer = setTimeout(connect, 4000);
+          scheduleRetry();
         };
       } catch {
-        retryTimer = setTimeout(connect, 4000);
+        scheduleRetry();
       }
     }
 
-    connect();
+    void connect();
 
     return () => {
+      disposed = true;
       if (retryTimer) clearTimeout(retryTimer);
       if (eventSource) {
         eventSource.close();

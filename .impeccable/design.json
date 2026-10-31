@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "title": "Design System: KuriPro",
+  "extensions": {
+    "colorMeta": {
+      "violet": { "role": "primary", "displayName": "Ledger Violet", "canonical": "#7c3aed", "tonalRamp": ["#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#c4b5fd", "#ede9fe"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#0f172a", "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0"] },
+      "paid-green-strong": { "role": "status", "displayName": "Strong Paid Green", "canonical": "#15803d", "tonalRamp": ["#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#4ade80", "#86efac", "#dcfce7"] }
+    },
+    "typographyMeta": {
+      "figure": { "displayName": "Figure", "purpose": "Amounts and counts, always in tabular numerals." },
+      "label": { "displayName": "Label", "purpose": "Small uppercase captions over figures." }
+    },
+    "shadows": [
+      { "name": "whisper", "value": "0 1px 2px rgba(0,0,0,0.05)", "purpose": "Cards, inputs and outline buttons at rest." },
+      { "name": "sheet", "value": "0 25px 50px -12px rgba(0,0,0,0.25)", "purpose": "Dialogs and bottom sheets only." }
+    ],
+    "motion": [
+      { "name": "press", "value": "transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Scale to 0.96-0.97 on tap." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one prominent action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:16px;border:1px solid rgba(139,92,246,0.3);background:linear-gradient(90deg,#6d28d9,#8b5cf6);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:transform .15s} .ds-btn-primary:hover{filter:brightness(1.08)} .ds-btn-primary:active{transform:scale(.97)} .ds-btn-primary:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px}"
+    },
+    {
+      "name": "Confirm Button",
+      "kind": "button",
+      "refersTo": "button-confirm",
+      "description": "Records money paid, once per screen.",
+      "html": "<button class=\"ds-btn-confirm\">Confirm Payout – ₹5,900</button>",
+      "css": ".ds-btn-confirm{display:inline-flex;align-items:center;justify-content:center;width:100%;height:48px;border-radius:16px;border:0;background:#15803d;color:#fff;font-weight:600;font-size:16px;cursor:pointer;transition:transform .15s} .ds-btn-confirm:hover{background:#166534} .ds-btn-confirm:active{transform:scale(.97)} .ds-btn-confirm:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions such as Minutes PDF.",
+      "html": "<button class=\"ds-btn-outline\">Minutes PDF</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 14px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#0f172a;font-weight:600;font-size:12px;cursor:pointer} .ds-btn-outline:hover{border-color:rgba(139,92,246,0.6);background:#f1f4f9} .ds-btn-outline:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "44px field with a violet focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search by name or phone\" />",
+      "css": ".ds-input{height:44px;width:100%;box-sizing:border-box;border-radius:10px;border:1px solid #e2e8f0;background:#fff;padding:0 16px;font-size:14px;color:#0f172a} .ds-input::placeholder{color:#94a3b8} .ds-input:focus{outline:none;border-color:#7c3aed;box-shadow:0 0 0 2px rgba(124,58,237,0.5)}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pill showing payment or membership state.",
+      "html": "<span class=\"ds-badge\">Payout Pending</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:4px;border-radius:9999px;border:1px solid rgba(217,119,6,0.28);background:rgba(217,119,6,0.12);color:#b45309;padding:2px 10px;font-size:12px;font-weight:600}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Paper surface on a hairline with a whisper shadow.",
+      "html": "<div class=\"ds-card\"><h3>Settlement</h3><p>₹5,900</p></div>",
+      "css": ".ds-card{border-radius:16px;border:1px solid rgba(226,232,240,0.8);background:#fff;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)} .ds-card h3{margin:0 0 4px;font-size:18px;font-weight:600;color:#0f172a} .ds-card p{margin:0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;color:#0f172a}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pocket Ledger",
+    "overview": "KuriPro is an account book that fits in an organizer's pocket. It is used on a mid-range Android phone, often away from a desk, so every screen has to feel exact before it feels pretty. Numbers read first; chrome stays quiet; violet marks what can be acted on.",
+    "keyCharacteristics": [
+      "Violet is the single accent; green, amber and red are reserved for payment state.",
+      "Hairline borders and white paper carry structure; shadow is a whisper at rest.",
+      "44px minimum touch targets; 16px input text on phones.",
+      "Tabular numerals for every amount; INR with lakh grouping."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Violet is the only decorative color. Green, amber and red mean payment state and nothing else.", "section": "colors" },
+      { "name": "The Number-First Rule", "body": "On any money screen the amount is the largest, highest-contrast element, in tabular figures.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every amount, count and date column uses tabular numerals.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Stronger shadow belongs to overlays.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use violet only as the accent, and reserve green/amber/red for payment state.",
+      "Do show amounts as INR with lakh grouping in tabular figures, largest on the screen.",
+      "Do keep every tappable target at least 44px and give it press feedback.",
+      "Do use Strong Paid Green for green text and for solid green buttons."
+    ],
+    "donts": [
+      "Don't convey state with color alone; pair it with a label or icon.",
+      "Don't use Mist, plain Paid Green or Pending Amber as small text on white.",
+      "Don't put heavy shadows on ordinary cards or add more than one gradient hero per screen.",
+      "Don't hard-code colors: use the CSS variables so light and dark both work."
+    ]
+  }
+}

@@ -65,6 +65,21 @@ export function useSettle(cycleId: string) {
   );
 }
 
+/** Marks the prize as paid: records a full disbursement for every outstanding payout of the cycle. */
+export function useConfirmPayout(cycleId: string) {
+  const queryClient = useQueryClient();
+  return useAuctionMutation(cycleId, async (input: { payoutIds: string[]; method: string; reference?: string }) => {
+    try {
+      for (const payoutId of input.payoutIds) {
+        await api.post(`/payouts/${payoutId}/disbursements`, { method: input.method, reference: input.reference });
+      }
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      void queryClient.invalidateQueries({ queryKey: ["payout"] });
+    }
+  });
+}
+
 export function useRepick(cycleId: string) {
   return useAuctionMutation(cycleId, (reason: string | undefined) =>
     api.post<unknown>(`/auctions/cycles/${cycleId}/repick`, { reason }),

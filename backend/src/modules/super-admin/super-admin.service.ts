@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { AppError } from "../../utils/app-error.js";
 import { Tenant } from "../tenants/tenant.model.js";
@@ -48,35 +50,34 @@ export async function seedSuperAdmin() {
 }
 
 /** Create or update Super Admin credentials via API */
-export async function createSuperAdminCredentials(
-  input: CreateSuperAdminCredentialsInput,
-  deviceContext: DeviceContext = {},
-  requesterUser?: { roleSlug?: string; userId?: string },
-  headerSetupKey?: string,
-) {
-  const email = input.email.trim().toLowerCase();
-  const role = await ensureSuperAdminRole();
+/** Minimum length for SUPER_ADMIN_SETUP_KEY — a short key is guessable even behind a rate limit. */
+const MIN_SETUP_KEY_LENGTH = 24;
 
-  // Security gate:
-  // If at least one Super Admin account already exists in the system:
-  // Allow creation/reset if:
-  // 1. Requester is already authenticated as a SUPER_ADMIN, OR
-  // 2. Setup key provided matches env.SUPER_ADMIN_SETUP_KEY or env.JWT_ACCESS_SECRET, OR
-  // 3. Running in non-production mode (development/test)
-  const superAdminCount = await User.countDocuments({ tenantId: null });
-  const providedKey = input.setupKey || headerSetupKey;
-  const isSuperAdminUser = requesterUser?.roleSlug === "SUPER_ADMIN";
-  const expectedKey = env.SUPER_ADMIN_SETUP_KEY || env.JWT_ACCESS_SECRET;
+function setupKeyMatches(provided: string | undefined): boolean {
+  const expected = env.SUPER_ADMIN_SETUP_KEY;
+  if (!expected || expected.length < MIN_SETUP_KEY_LENGTH || !provided) return false;
+  // Hash both sides so the comparison is constant-time regardless of input length.
+  const a = createHash("sha256").update(provided).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
 
-  if (superAdminCount > 0 && !isSuperAdminUser && env.NODE_ENV === "production") {
-    if (!providedKey || providedKey !== expectedKey) {
-      throw AppError.forbidden(
-        "Super Admin already exists. Provide valid setupKey or authenticate as Super Admin to manage credentials.",
-        "SETUP_KEY_REQUIRED",
-      );
-    }
+/**
+ * Creates or resets a Super Admin account. Always gated by a dedicated SUPER_ADMIN_SETUP_KEY — it is
+ * never derived from another secret, and the route is disabled outright when the key isn't configured.
+ * The first Super Admin is normally bootstrapped from SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD at startup;
+ * this exists only for recovery.
+ */
+export async function createSuperAdminCredentials(input: CreateSuperAdminCredentialsInput, setupKey: string | undefined) {
+  if (!env.SUPER_ADMIN_SETUP_KEY || env.SUPER_ADMIN_SETUP_KEY.length < MIN_SETUP_KEY_LENGTH) {
+    throw AppError.forbidden("Super Admin recovery is disabled on this server", "SETUP_DISABLED");
+  }
+  if (!setupKeyMatches(setupKey)) {
+    throw AppError.forbidden("A valid setup key is required", "SETUP_KEY_REQUIRED");
   }
 
+  const email = input.email.trim().toLowerCase();
+  const role = await ensureSuperAdminRole();
   const passwordHash = await hashPassword(input.password);
   let user = await User.findOne({ tenantId: null, email }).select("+passwordHash");
   let action: "CREATED" | "UPDATED" = "CREATED";
@@ -103,13 +104,6 @@ export async function createSuperAdminCredentials(
     });
   }
 
-  let authResult: AuthResult | undefined;
-  if (input.autoLogin) {
-    user.lastLoginAt = new Date();
-    await user.save();
-    authResult = await issueAuthResult(user, deviceContext);
-  }
-
   return {
     message: action === "CREATED" ? "Super Admin credentials created successfully" : "Super Admin credentials updated successfully",
     action,
@@ -121,11 +115,8 @@ export async function createSuperAdminCredentials(
       status: user.status,
       role: "SUPER_ADMIN",
     },
-    auth: authResult,
   };
 }
-
-
 
 export async function changeSuperAdminPassword(
   userId: string,

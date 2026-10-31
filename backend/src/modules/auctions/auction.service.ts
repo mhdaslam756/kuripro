@@ -37,7 +37,12 @@ import {
   restoreDividendOnCycleInstallments,
 } from "../payments/payment.repository.js";
 import { Payment } from "../payments/payment.model.js";
-import { createPayout, deletePayoutByCycle, findPayoutByCycle } from "../payouts/payout.repository.js";
+import {
+  createPayout,
+  deletePayoutByCycle,
+  findPayoutByCycle,
+  listPayoutsByCycleIds,
+} from "../payouts/payout.repository.js";
 import { findTenantById } from "../tenants/tenant.repository.js";
 import { AppError } from "../../utils/app-error.js";
 import { formatPaiseAsINR, rupeesToPaise } from "../../utils/money.js";
@@ -447,8 +452,7 @@ export async function repickWinner(
   const { cycle, chitGroup } = await loadCycleContext(tenantId, cycleId);
   if (cycle.status !== "SETTLED") throw AppError.conflict("Only a settled cycle can be re-picked");
 
-  const payout = await findPayoutByCycle(tenantId, cycleId);
-  if (payout && payout.amountPaid > 0) {
+  if ((await listPayoutsByCycleIds(tenantId, [cycleId])).some((p) => p.amountPaid > 0)) {
     throw AppError.conflict("Prize money has already been disbursed — this cycle can no longer be re-picked");
   }
   if (await hasSettledCycleAfter(tenantId, chitGroup._id.toString(), cycle.cycleNumber)) {
@@ -597,6 +601,8 @@ export interface AuctionState {
     dividendPerMember: number;
     prizeAmount: number;
     payoutStatus: string;
+    /** One per prize recipient (two for a shared 50/50 ticket) — used to confirm payout from the settlement card. */
+    payouts: { id: string; chitMembershipId: string; amount: number; amountPaid: number; remaining: number; status: string }[];
   };
   eligibleMembers: EligibleMember[];
   canRepick: boolean;
@@ -649,8 +655,17 @@ export async function getAuctionState(tenantId: string, cycleId: string, request
     const winnerMembership = await findChitMembershipById(cycle.winnerMembershipId.toString(), tenantId);
     const winnerMember = winnerMembership ? await findMemberById(winnerMembership.memberId.toString(), tenantId) : null;
     const payout = await findPayoutByCycle(tenantId, cycleId);
+    const cyclePayouts = await listPayoutsByCycleIds(tenantId, [cycleId]);
     const laterSettled = await hasSettledCycleAfter(tenantId, chitGroup._id.toString(), cycle.cycleNumber);
-    canRepick = !(payout && payout.amountPaid > 0) && !laterSettled;
+    canRepick = !cyclePayouts.some((p) => p.amountPaid > 0) && !laterSettled;
+    const payoutStatus =
+      cyclePayouts.length === 0
+        ? (payout?.status ?? "PENDING")
+        : cyclePayouts.every((p) => p.status === "PAID")
+          ? "PAID"
+          : cyclePayouts.some((p) => p.amountPaid > 0)
+            ? "PARTIALLY_PAID"
+            : "PENDING";
 
     let coWinner: WinnerSummaryDetail | undefined;
     const isHalf = winnerMembership?.shareType === "HALF" || (winnerMembership?.share !== undefined && winnerMembership.share < 1);
@@ -701,7 +716,15 @@ export async function getAuctionState(tenantId: string, cycleId: string, request
       commissionAmount: cycle.commissionAmount ?? 0,
       dividendPerMember: cycle.dividendPerMember ?? 0,
       prizeAmount: cycle.prizeAmount ?? 0,
-      payoutStatus: payout?.status ?? "PENDING",
+      payoutStatus,
+      payouts: cyclePayouts.map((p) => ({
+        id: p._id.toString(),
+        chitMembershipId: p.chitMembershipId.toString(),
+        amount: p.amount,
+        amountPaid: p.amountPaid,
+        remaining: Math.max(0, p.amount - p.amountPaid),
+        status: p.status,
+      })),
     };
   }
 

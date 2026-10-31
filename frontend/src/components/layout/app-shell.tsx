@@ -243,7 +243,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex select-text">
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-lg font-bold text-white shadow-md shadow-[#6D28D9]/25">K</div>
+          <div className="flex size-10 items-center justify-center rounded-sm bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] font-display text-lg font-bold text-white shadow-md shadow-[#6D28D9]/25">K</div>
           <div>
             <p className="font-display text-xl font-bold leading-none text-text-primary">KuriPro</p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">Chit Management</p>
@@ -256,7 +256,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               to={to}
               className={({ isActive }: { isActive: boolean }) =>
                 cn(
-                  "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-secondary transition-all",
+                  "flex items-center gap-2.5 rounded-sm px-3.5 py-2.5 text-sm font-medium text-text-secondary transition-all",
                   "hover:bg-bg-raised hover:text-text-primary",
                   isActive && "bg-[#6D28D9]/15 text-accent-primary font-semibold shadow-xs border border-[#8B5CF6]/30",
                 )

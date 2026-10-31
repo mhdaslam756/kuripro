@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 
-import { env } from "../../config/env.js";
 import { setRefreshCookie } from "../auth/cookie.helper.js";
 import {
   approveOrganization,
@@ -12,6 +11,7 @@ import {
   setOrganizationStatus,
   superAdminLogin,
 } from "./super-admin.service.js";
+import type { CreateSuperAdminCredentialsInput } from "./super-admin.validators.js";
 
 export async function changeSuperAdminPasswordHandler(req: Request, res: Response): Promise<void> {
   const userId = req.auth?.userId;
@@ -42,57 +42,17 @@ export async function superAdminLoginHandler(req: Request, res: Response): Promi
 }
 
 export async function createSuperAdminCredentialsHandler(req: Request, res: Response): Promise<void> {
-  const deviceContext = {
-    userAgent: req.headers["user-agent"],
-    ipAddress: req.ip,
-  };
-  const headerSetupKey = req.headers["x-setup-key"] as string | undefined;
-
-  // Extract from query (for GET) or body (for POST), with fallback to .env
-  const query = req.query as Record<string, string | undefined>;
-  const body = (req.body || {}) as Record<string, any>;
-
-  const email = (query["email"] || body["email"] || env.SUPER_ADMIN_EMAIL || "admin@kuripro.com").trim().toLowerCase();
-  const password = query["password"] || body["password"] || env.SUPER_ADMIN_PASSWORD || "SuperAdmin123!";
-  const name = (query["name"] || body["name"] || env.SUPER_ADMIN_NAME || "Super Admin").trim();
-  const phone = (query["phone"] || body["phone"] || env.SUPER_ADMIN_PHONE || "+919999999999").trim();
-  const setupKey = query["setupKey"] || body["setupKey"];
-  const autoLogin = query["autoLogin"] === "true" || body["autoLogin"] === true;
-
+  // The setup key comes from a header only — never a URL or body — so it can't land in access logs.
+  const setupKey = req.headers["x-setup-key"];
   const result = await createSuperAdminCredentials(
-    {
-      email,
-      password,
-      name,
-      phone,
-      setupKey,
-      autoLogin,
-    },
-    deviceContext,
-    req.auth,
-    headerSetupKey,
+    req.body as CreateSuperAdminCredentialsInput,
+    typeof setupKey === "string" ? setupKey : undefined,
   );
-
-  const loginUrl = "/super-admin/login";
-
-  if (result.auth) {
-    setRefreshCookie(res, result.auth.refreshToken);
-    res.status(result.action === "CREATED" ? 201 : 200).json({
-      message: result.message,
-      action: result.action,
-      user: result.user,
-      loginUrl,
-      accessToken: result.auth.accessToken,
-      deviceId: result.auth.deviceId,
-    });
-    return;
-  }
-
   res.status(result.action === "CREATED" ? 201 : 200).json({
     message: result.message,
     action: result.action,
     user: result.user,
-    loginUrl,
+    loginUrl: "/super-admin/login",
   });
 }
 

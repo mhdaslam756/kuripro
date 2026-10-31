@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart } from "@/features/reports/charts/area-chart";
@@ -34,15 +35,33 @@ function monthLabel(month: string): string {
 // Desktop-only building blocks (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function KpiTile({ icon, label, value, sub }: { icon: ReactNode; label: string; value: string; sub?: string }) {
+function KpiTile({ icon, label, value, sub, tone }: { icon: ReactNode; label: string; value: string; sub?: string; tone?: "pos" | "neg" }) {
   return (
-    <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-border-strong">
+    <div className="rounded-xl border border-border-default bg-bg-surface p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-text-secondary">
         <span className="flex size-7 items-center justify-center rounded-lg bg-[#6D28D9]/15 text-[#8B5CF6]">{icon}</span>
         <span className="text-xs uppercase tracking-wide font-medium">{label}</span>
       </div>
-      <p className="font-display text-2xl font-bold tabular-nums text-text-primary">{value}</p>
+      <p className={cn("font-display text-2xl font-bold tabular-nums", tone === "pos" ? "text-good-strong" : tone === "neg" ? "text-bad-fg" : "text-text-primary")}>{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-text-secondary">{sub}</p> : null}
+    </div>
+  );
+}
+
+/** Shown when a dashboard request fails, so a failed load never looks like an endless skeleton. */
+function LoadError({ what, onRetry, className }: { what: string; onRetry: () => void; className?: string }) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-bad-border bg-bad-bg p-4 text-sm text-text-primary",
+        className,
+      )}
+    >
+      <span>Couldn't load {what}. Check your connection and try again.</span>
+      <Button size="sm" variant="outline" onClick={onRetry}>
+        Try again
+      </Button>
     </div>
   );
 }
@@ -66,8 +85,12 @@ function ChartCard({ title, action, children }: { title: string; action?: ReactN
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MobileHeroCard() {
-  const { data, isLoading } = useDashboardSummary();
+  const { data, isLoading, isError, refetch } = useDashboardSummary();
   const [hidden, setHidden] = useState(false);
+
+  if (isError && !data) {
+    return <LoadError what="today's collection" onRetry={() => void refetch()} className="sm:hidden" />;
+  }
 
   if (isLoading || !data) {
     return (
@@ -97,18 +120,18 @@ function MobileHeroCard() {
     <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-[#2A2340]">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#A1A1AA]">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/90">
           <Shield size={12} className="text-[#22C55E]" />
           <span>Today's Collection</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#6D28D9]/20 px-2.5 py-0.5 text-[10px] text-[#A855F7] font-bold border border-[#8B5CF6]/30">
+          <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs text-white font-bold border border-white/25">
             Real-time
           </span>
           <button
             type="button"
             onClick={() => setHidden((h) => !h)}
-            className="flex size-7 items-center justify-center rounded-full bg-white/10 text-white/70 hover:text-white transition-colors active-bounce"
+            className="relative flex size-7 items-center justify-center rounded-full bg-white/10 text-white/90 hover:text-white transition-colors active-bounce after:absolute after:-inset-2 after:content-['']"
             aria-label={hidden ? "Show balance" : "Hide balance"}
           >
             {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -120,28 +143,28 @@ function MobileHeroCard() {
       <p className="mt-3 font-display text-4xl font-bold tabular-nums tracking-tight text-white leading-none">
         {hidden ? "₹ ••••••" : formatPaise(data.today.total)}
       </p>
-      <p className="mt-1.5 text-xs text-[#A1A1AA]">
+      <p className="mt-1.5 text-xs text-white/90">
         {data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today
       </p>
 
       {/* Sub-row */}
       <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[#F59E0B] font-semibold">Pending Dues</p>
+          <p className="text-xs uppercase tracking-wider text-white/90 font-semibold">Pending Dues</p>
           <p className="font-display text-sm font-bold text-white">
             {hidden ? "₹ •••" : formatPaise(data.pending.pendingAmount)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-wider text-[#EF4444] font-semibold">Overdue</p>
-          <p className="font-display text-sm font-bold text-[#EF4444]">
+          <p className="text-xs uppercase tracking-wider text-[#FEE2E2] font-semibold">Overdue</p>
+          <p className="font-display text-sm font-bold text-[#FEE2E2]">
             {hidden ? "₹ •••" : formatPaise(data.pending.overdueAmount)}
           </p>
         </div>
         {next && (
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-[#A855F7] font-semibold">Next Auction</p>
-            <p className="font-display text-xs font-bold text-white truncate max-w-[80px]">{next.chitGroupName}</p>
+            <p className="text-xs uppercase tracking-wider text-white/90 font-semibold">Next Auction</p>
+            <p className="font-display text-sm font-bold text-white truncate max-w-[96px]">{next.chitGroupName}</p>
           </div>
         )}
       </div>
@@ -150,17 +173,17 @@ function MobileHeroCard() {
       <div className="mt-4 flex items-center gap-3">
         <Link
           to="/collections"
-          className="active-bounce flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white py-2.5 text-xs font-bold shadow-md shadow-[#6D28D9]/25 border border-[#8B5CF6]/30"
+          className="active-bounce flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white/20 text-white px-3 text-sm font-bold border border-white/30"
         >
           <Banknote size={15} /> Collect Dues
         </Link>
-        <Link to="/members" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Members">
+        <Link to="/members" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Members">
           <Users size={16} />
         </Link>
-        <Link to="/auctions" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Auction">
+        <Link to="/auctions" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Auction">
           <Gavel size={16} />
         </Link>
-        <Link to="/reports" className="active-bounce flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md text-white p-2.5 border border-white/15" aria-label="Reports">
+        <Link to="/reports" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Reports">
           <BarChart3 size={16} />
         </Link>
       </div>
@@ -173,7 +196,11 @@ function MobileHeroCard() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function HighlightCards() {
-  const { data, isLoading } = useDashboardSummary();
+  const { data, isLoading, isError, refetch } = useDashboardSummary();
+
+  if (isError && !data) {
+    return <LoadError what="the summary" onRetry={() => void refetch()} className="hidden sm:flex" />;
+  }
 
   if (isLoading || !data) {
     return (
@@ -186,17 +213,17 @@ function HighlightCards() {
   const next = data.upcomingAuctions[0];
   return (
     <div className="hidden sm:grid sm:grid-cols-3 gap-4">
-      <div className="rounded-xl border border-[#8B5CF6]/30 bg-[#6D28D9]/10 p-4 shadow-sm sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-[#A855F7]">
+      <div className="mobile-hero-card rounded-xl p-4 sm:p-5">
+        <div className="mb-1 flex items-center gap-2 text-white/90">
           <Banknote className="size-4" />
           <span className="text-sm font-medium">Today's collection</span>
         </div>
-        <p className="font-display text-3xl font-bold tabular-nums text-text-primary">{formatPaise(data.today.total)}</p>
-        <p className="mt-1 text-sm text-text-secondary">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
+        <p className="font-display text-4xl font-bold tabular-nums tracking-tight text-white">{formatPaise(data.today.total)}</p>
+        <p className="mt-1 text-sm text-white/90">{data.today.count} payment{data.today.count === 1 ? "" : "s"} recorded today</p>
       </div>
 
       <div className="rounded-xl border border-warn-border bg-warn-bg p-4 shadow-sm sm:p-5">
-        <div className="mb-1 flex items-center gap-2 text-warn-fg">
+        <div className="mb-1 flex items-center gap-2 text-warn-strong">
           <Wallet className="size-4" />
           <span className="text-sm font-medium">Pending collection</span>
         </div>
@@ -240,7 +267,7 @@ function KpiRow() {
     { icon: <Users size={16} />, label: "Active Members", value: data ? String(data.kpis.activeMembers) : "—", iconBg: "bg-brand-50", iconFg: "text-accent-primary" },
     { icon: <Gavel size={16} />, label: "Active Chit Groups", value: data ? String(data.kpis.activeGroups) : "—", iconBg: "bg-info-bg", iconFg: "text-info-fg" },
     { icon: <Banknote size={16} />, label: "Collection this month", value: data ? formatPaise(data.kpis.collectionThisMonth) : "—", iconBg: "bg-good-bg", iconFg: "text-good-fg" },
-    { icon: <TrendingUp size={16} />, label: "Net profit (MTD)", value: data ? formatPaise(data.monthToDate.profit) : "—", sub: data ? `${formatPaise(data.kpis.outstanding)} outstanding` : undefined, iconBg: "bg-warn-bg", iconFg: "text-warn-fg" },
+    { icon: <TrendingUp size={16} />, label: "Net profit (MTD)", value: data ? formatPaise(data.monthToDate.profit) : "—", sub: data ? `${formatPaise(data.kpis.outstanding)} outstanding` : undefined, iconBg: "bg-warn-bg", iconFg: "text-warn-fg", tone: data ? (data.monthToDate.profit > 0 ? "pos" : data.monthToDate.profit < 0 ? "neg" : undefined) : undefined },
   ];
 
   return (
@@ -249,7 +276,7 @@ function KpiRow() {
       <div className="sm:hidden flex flex-col gap-1.5">
         <p className="native-section-label">Key Metrics</p>
         <div className="native-section">
-          {kpis.map(({ icon, label, value, sub, iconBg, iconFg }) => (
+          {kpis.map(({ icon, label, value, sub, iconBg, iconFg, tone }) => (
             <div key={label} className="native-kpi-row">
               <div className="flex items-center gap-3">
                 <span className={cn("flex size-8 items-center justify-center rounded-xl shrink-0", iconBg, iconFg)}>
@@ -257,10 +284,10 @@ function KpiRow() {
                 </span>
                 <div>
                   <p className="text-xs text-text-secondary font-medium">{label}</p>
-                  {sub && <p className="text-[10px] text-text-secondary">{sub}</p>}
+                  {sub && <p className="text-xs text-text-secondary">{sub}</p>}
                 </div>
               </div>
-              <p className="font-display text-lg font-bold tabular-nums text-text-primary">{value}</p>
+              <p className={cn("font-display text-lg font-bold tabular-nums", tone === "pos" ? "text-good-strong" : tone === "neg" ? "text-bad-fg" : "text-text-primary")}>{value}</p>
             </div>
           ))}
         </div>
@@ -275,6 +302,7 @@ function KpiRow() {
           icon={<TrendingUp className="size-4" />}
           label="Net profit (MTD)"
           value={data ? formatPaise(data.monthToDate.profit) : "—"}
+          tone={data ? (data.monthToDate.profit > 0 ? "pos" : data.monthToDate.profit < 0 ? "neg" : undefined) : undefined}
           sub={data ? `${formatPaise(data.kpis.outstanding)} outstanding` : undefined}
         />
       </div>
@@ -296,7 +324,7 @@ function MobileChartSection({ title, action, children }: { title: string; action
     <div className="sm:hidden flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <p className="native-section-label">{title}</p>
-        {action && <div className="text-[10px] text-text-secondary">{action}</div>}
+        {action && <div className="text-xs text-text-secondary">{action}</div>}
       </div>
       <div className="native-section px-4 py-4">
         {children}
@@ -329,7 +357,7 @@ function ChartsSection({ trends }: { trends: DashboardTrends }) {
           title="Cash Flow"
           action={
             <span>
-              In <span className="font-bold text-good-fg">{formatPaise(totalInflow)}</span> · Out{" "}
+              In <span className="font-bold text-good-strong">{formatPaise(totalInflow)}</span> · Out{" "}
               <span className="font-bold text-bad-fg">{formatPaise(totalOutflow)}</span>
             </span>
           }
@@ -358,7 +386,7 @@ function ChartsSection({ trends }: { trends: DashboardTrends }) {
             title="Cash flow"
             action={
               <span className="text-xs text-text-secondary">
-                In <span className="font-medium text-good-fg">{formatPaise(totalInflow)}</span> · Out{" "}
+                In <span className="font-medium text-good-strong">{formatPaise(totalInflow)}</span> · Out{" "}
                 <span className="font-medium text-bad-fg">{formatPaise(totalOutflow)}</span>
               </span>
             }
@@ -435,7 +463,7 @@ function RecentActivity() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-text-primary">{item.message}</p>
-                  <p className="mt-0.5 text-[11px] text-text-secondary">{humanize(item.action)} · {formatDateTime(item.createdAt)}</p>
+                  <p className="mt-0.5 text-xs text-text-secondary">{humanize(item.action)} · {formatDateTime(item.createdAt)}</p>
                 </div>
               </div>
             ))
@@ -458,7 +486,7 @@ function RecentActivity() {
               {data.map((item) => (
                 <li key={item.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <span className="mr-2 rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">
+                    <span className="mr-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs font-medium text-text-secondary">
                       {humanize(item.action)}
                     </span>
                     <span className="text-sm text-text-primary">{item.message}</span>
@@ -483,7 +511,7 @@ const RANGES = [6, 12] as const;
 export function DashboardPage() {
   const { user } = useAuth();
   const [months, setMonths] = useState<number>(6);
-  const { data: trends, isLoading: trendsLoading } = useDashboardTrends(months);
+  const { data: trends, isLoading: trendsLoading, isError: trendsError, refetch: refetchTrends } = useDashboardTrends(months);
 
   if (user?.role?.slug === "MEMBER") {
     return <MemberDashboardView />;
@@ -500,11 +528,12 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 self-start">
-          <div className="inline-flex rounded-lg border border-border-default bg-bg-surface p-1 shadow-xs">
+          <div role="group" aria-label="Chart range" className="inline-flex rounded-lg border border-border-default bg-bg-surface p-1 shadow-xs">
             {RANGES.map((r) => (
               <button
                 key={r}
                 type="button"
+                aria-pressed={months === r}
                 onClick={() => setMonths(r)}
                 className={cn(
                   "rounded-md px-3 py-1 text-xs sm:text-sm font-semibold transition-colors active-bounce",
@@ -522,7 +551,9 @@ export function DashboardPage() {
       <div className="flex flex-col gap-4 sm:hidden">
         <MobileHeroCard />
         <KpiRow />
-        {trendsLoading || !trends ? (
+        {trendsError && !trends ? (
+          <LoadError what="the analytics" onRetry={() => void refetchTrends()} />
+        ) : trendsLoading || !trends ? (
           <>
             <div className="flex flex-col gap-1.5">
               <p className="native-section-label">Analytics</p>
@@ -541,7 +572,9 @@ export function DashboardPage() {
       <div className="hidden sm:flex flex-col gap-6">
         <HighlightCards />
         <KpiRow />
-        {trendsLoading || !trends ? (
+        {trendsError && !trends ? (
+          <LoadError what="the analytics" onRetry={() => void refetchTrends()} />
+        ) : trendsLoading || !trends ? (
           <div className="grid gap-4 lg:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-64 w-full" />)}</div>
         ) : (
           <ChartsSection trends={trends} />

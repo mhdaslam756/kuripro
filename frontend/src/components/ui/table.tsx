@@ -4,13 +4,21 @@ import { cn } from "@/lib/utils";
 
 export function TableContainer({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("-mx-1 overflow-x-auto rounded-xl border border-border-default bg-bg-surface shadow-sm [scrollbar-width:thin]", className)} {...props} />
+    <div
+      tabIndex={0}
+      className={cn(
+        "-mx-1 overflow-x-auto rounded-sm border border-border-default bg-bg-surface shadow-sm [scrollbar-width:thin]",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <table ref={ref} className={cn("w-full min-w-[540px] border-collapse text-sm", className)} {...props} />
+    <table ref={ref} className={cn("w-full min-w-[540px] border-collapse text-sm tabular-nums", className)} {...props} />
   ),
 );
 Table.displayName = "Table";
@@ -35,8 +43,9 @@ export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowEle
 export function TableHeaderCell({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
+      scope="col"
       className={cn(
-        "px-4 py-2.5 text-left font-mono text-xs uppercase tracking-wide text-text-secondary",
+        "px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary",
         className,
       )}
       {...props}

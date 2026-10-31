@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { requireAuth } from "../../middleware/jwt-auth.js";
+import { requireAuth, requireAuthSSE } from "../../middleware/jwt-auth.js";
 import { requirePermission } from "../../middleware/rbac.js";
 import { validate } from "../../middleware/validate.js";
 import { mongoIdParamSchema } from "../../utils/common-validators.js";
@@ -74,4 +74,6 @@ notificationRouter.get(
 
 notificationRouter.get("/meta", requirePermission("notification.view"), notificationController.meta);
 
-notificationRouter.get("/stream", notificationController.notificationStream);
+// SSE stream — uses requireAuthSSE which allows ?token= because EventSource cannot set headers.
+notificationRouter.get("/stream", requireAuthSSE, notificationController.notificationStream);
+
