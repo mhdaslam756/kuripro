@@ -63,6 +63,14 @@ export interface AuctionSettlement {
   dividendPerMember: number;
   prizeAmount: number;
   payoutStatus: string;
+  payouts: {
+    id: string;
+    chitMembershipId: string;
+    amount: number;
+    amountPaid: number;
+    remaining: number;
+    status: string;
+  }[];
 }
 
 export interface AuctionState {
