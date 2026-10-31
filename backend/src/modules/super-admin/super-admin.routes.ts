@@ -1,4 +1,7 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
+
+import { env } from "../../config/env.js";
 
 import { requireAuth } from "../../middleware/jwt-auth.js";
 import { requireSuperAdmin } from "../../middleware/rbac.js";
@@ -13,15 +16,25 @@ import {
   setOrganizationStatusHandler,
   superAdminLoginHandler,
 } from "./super-admin.controller.js";
-import {
-  createSuperAdminQuerySchema,
-} from "./super-admin.validators.js";
+import { createSuperAdminCredentialsSchema } from "./super-admin.validators.js";
 
 const router = Router();
 
-// Public Super Admin routes
-router.post("/login", superAdminLoginHandler);
-router.get("/create-credentials", validate({ query: createSuperAdminQuerySchema }), createSuperAdminCredentialsHandler);
+// Public Super Admin routes — the highest-privilege account, so both are rate limited per IP.
+const superAdminRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: env.AUTH_RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/login", superAdminRateLimiter, superAdminLoginHandler);
+router.post(
+  "/create-credentials",
+  superAdminRateLimiter,
+  validate({ body: createSuperAdminCredentialsSchema }),
+  createSuperAdminCredentialsHandler,
+);
 
 // Authenticated Super Admin routes
 router.use(requireAuth, requireSuperAdmin);
