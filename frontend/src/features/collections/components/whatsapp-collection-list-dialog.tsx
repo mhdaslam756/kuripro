@@ -160,11 +160,14 @@ export function WhatsAppCollectionListDialog({
   ]);
 
   const [message, setMessage] = useState(defaultMessage);
+  const [lastDefaultMessage, setLastDefaultMessage] = useState(defaultMessage);
 
-  // Update text when filters change
-  useMemo(() => {
+  // When the filters change the generated text, reset the editable message to it. Done during render
+  // (React's "adjust state when a prop changes" pattern) rather than as a side effect inside useMemo.
+  if (defaultMessage !== lastDefaultMessage) {
+    setLastDefaultMessage(defaultMessage);
     setMessage(defaultMessage);
-  }, [defaultMessage]);
+  }
 
   function handleCopy() {
     void navigator.clipboard.writeText(message);

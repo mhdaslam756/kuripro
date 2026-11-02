@@ -112,7 +112,8 @@ export function MemberNotificationsView() {
 
   const { data, isLoading, isError, refetch } = useHistory({ page: 1 });
 
-  const notifications = data?.items ?? [];
+  // Stable reference: a bare `?? []` made a new array every render and defeated the memos below.
+  const notifications = useMemo(() => data?.items ?? [], [data?.items]);
 
   // Filter notifications by category & search
   const filteredNotifications = useMemo(() => {

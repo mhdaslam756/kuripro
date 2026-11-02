@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api-client";
 import { EmailVerificationDialog } from "@/features/auth/components/email-verification-dialog";
+import { RegisterIllustration } from "@/features/auth/components/register-illustration";
 import { PublicPortalLayout } from "./public-portal-layout";
 import { usePublicMemberRegister, usePublicOrg } from "./use-public-portal";
 
@@ -103,9 +104,10 @@ export function MemberRegisterPage() {
 
   return (
     <PublicPortalLayout>
-      <Card className="border-border-default/80 shadow-lg bg-bg-surface rounded-3xl overflow-hidden">
-        <CardHeader className="bg-brand-50/60 pb-6 pt-7 px-6 border-b border-border-default/60">
-          <div className="flex items-center gap-2 text-accent-primary font-semibold text-xs tracking-wider uppercase mb-1">
+      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden">
+        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default">
+          <RegisterIllustration className="mb-3" />
+          <div className="flex items-center gap-2 text-accent-primary font-semibold text-xs tracking-wider uppercase mb-2">
             <UserPlus size={15} /> Member Self-Registration
           </div>
           <CardTitle className="font-display text-2xl font-bold text-text-primary">
@@ -116,10 +118,10 @@ export function MemberRegisterPage() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className="p-5 sm:p-6">
           {error ? (
-            <div className="mb-5 rounded-2xl border border-bad-border/60 bg-bad-bg/15 p-3.5 text-xs text-bad-fg flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0" />
+            <div role="alert" className="mb-5 rounded-sm border border-bad-border bg-bad-bg/15 p-3.5 text-sm text-bad-fg flex items-start gap-2">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           ) : null}
@@ -131,6 +133,7 @@ export function MemberRegisterPage() {
                 <Input
                   id="reg-name"
                   placeholder="e.g. Rahul Sharma"
+                  autoComplete="name"
                   value={form.name}
                   onChange={(e) => handleChange("name", e.target.value)}
                   required
@@ -142,6 +145,8 @@ export function MemberRegisterPage() {
                   id="reg-phone"
                   type="tel"
                   placeholder="10-digit mobile number"
+                  autoComplete="tel"
+                  inputMode="numeric"
                   value={form.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
                   required
@@ -155,6 +160,7 @@ export function MemberRegisterPage() {
                   id="reg-email"
                   type="email"
                   placeholder="name@example.com"
+                  autoComplete="email"
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
                 />
@@ -165,6 +171,8 @@ export function MemberRegisterPage() {
                   id="reg-password"
                   type="password"
                   placeholder="At least 6 characters"
+                  autoComplete="new-password"
+                  minLength={6}
                   value={form.password}
                   onChange={(e) => handleChange("password", e.target.value)}
                   required
@@ -173,7 +181,7 @@ export function MemberRegisterPage() {
             </div>
 
             {/* Address */}
-            <div className="border-t border-border-default/60 pt-4 mt-1">
+            <div className="border-t border-border-default pt-4 mt-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">
                 Residential Address
               </p>
@@ -182,6 +190,7 @@ export function MemberRegisterPage() {
                   <Input
                     id="reg-line1"
                     placeholder="Address Line 1"
+                    autoComplete="address-line1"
                     value={form.line1}
                     onChange={(e) => handleChange("line1", e.target.value)}
                     required
@@ -193,6 +202,7 @@ export function MemberRegisterPage() {
                     <Input
                       id="reg-city"
                       placeholder="City"
+                      autoComplete="address-level2"
                       value={form.city}
                       onChange={(e) => handleChange("city", e.target.value)}
                       required
@@ -203,6 +213,7 @@ export function MemberRegisterPage() {
                     <Input
                       id="reg-state"
                       placeholder="State"
+                      autoComplete="address-level1"
                       value={form.state}
                       onChange={(e) => handleChange("state", e.target.value)}
                       required
@@ -213,6 +224,9 @@ export function MemberRegisterPage() {
                     <Input
                       id="reg-pincode"
                       placeholder="Pincode"
+                      autoComplete="postal-code"
+                      inputMode="numeric"
+                      maxLength={6}
                       value={form.pincode}
                       onChange={(e) => handleChange("pincode", e.target.value)}
                       required
@@ -223,7 +237,7 @@ export function MemberRegisterPage() {
             </div>
 
             {/* Occupation */}
-            <div className="border-t border-border-default/60 pt-4 mt-1">
+            <div className="border-t border-border-default pt-4 mt-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">
                 Occupation & Employment
               </p>
@@ -260,7 +274,7 @@ export function MemberRegisterPage() {
             <Button
               type="submit"
               size="lg"
-              className="mt-4 w-full h-11 rounded-2xl font-semibold gap-2 shadow-sm text-base"
+              className="mt-4 w-full h-12 font-semibold gap-2 text-base"
               disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? "Creating Account…" : "Register as Member"}
@@ -268,10 +282,10 @@ export function MemberRegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t border-border-default/60 pt-4 text-center">
-            <p className="text-xs text-text-secondary">
+          <div className="mt-6 border-t border-border-default pt-4 text-center">
+            <p className="text-sm text-text-secondary">
               Already a registered member of {org?.name}?{" "}
-              <Link to={`/portal/${slug}/login`} className="font-semibold text-accent-primary hover:underline">
+              <Link to={`/portal/${slug}/login`} className="font-semibold text-accent-link hover:underline">
                 Log in here
               </Link>
             </p>
