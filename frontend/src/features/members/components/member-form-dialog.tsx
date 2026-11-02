@@ -3,9 +3,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBranches } from "@/features/branches/use-branches";
@@ -133,15 +132,25 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit member" : "Register member"}</DialogTitle>
-          <DialogDescription>Capture the member's identity, occupation, and address.</DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      title={isEditing ? "Edit member" : "Register member"}
+      description="Capture the member's identity, occupation, and address."
+      footer={
+        <FormDrawerActions
+          formId="member-form"
+          onCancel={() => onOpenChange(false)}
+          pending={mutation.isPending}
+          pendingLabel={isEditing ? "Saving…" : "Registering…"}
+          submitLabel={isEditing ? "Save changes" : "Register member"}
+          error={mutation.isError ? (mutation.error instanceof ApiError ? mutation.error.message : "Something went wrong") : null}
+        />
+      }
+    >
+        <form id="member-form" onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Full name" htmlFor="name" error={errors.name?.message}>
               <Input id="name" {...register("name")} />
             </Field>
@@ -150,7 +159,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Email (optional)" htmlFor="email" error={errors.email?.message}>
               <Input id="email" type="email" {...register("email")} />
             </Field>
@@ -159,7 +168,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Gender (optional)" htmlFor="gender">
               <Select value={gender ?? ""} onValueChange={(value: string) => setValue("gender", value as FormValues["gender"])}>
                 <SelectTrigger id="gender">
@@ -190,7 +199,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Occupation" htmlFor="occupationType" error={errors.occupationType?.message}>
               <Select
                 value={occupationType}
@@ -245,29 +254,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
               <Input id="pincode" {...register("pincode")} />
             </Field>
           </div>
-
-          {mutation.isError ? (
-            <p className="text-sm text-bad-fg">
-              {mutation.error instanceof ApiError ? mutation.error.message : "Something went wrong"}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending
-                ? isEditing
-                  ? "Saving…"
-                  : "Registering…"
-                : isEditing
-                  ? "Save changes"
-                  : "Register member"}
-            </Button>
-          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

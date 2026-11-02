@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,22 +84,35 @@ export function TemplateDialog({ open, onOpenChange, template }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit template" : "New template"}</DialogTitle>
-          <DialogDescription>
-            Write a reusable message. Insert <span className="font-mono text-xs">{"{{variables}}"}</span> that
-            get filled in per recipient when you send.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      title={isEdit ? "Edit template" : "New template"}
+      description="Write a reusable message. Insert {{variables}} that get filled in per recipient when you send."
+      footer={
+        <FormDrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={() => void handleSave()}
+          disabled={!canSave}
+          pending={mutation.isPending}
+          submitLabel={isEdit ? "Save changes" : "Create template"}
+          error={
+            mutation.isError
+              ? mutation.error instanceof ApiError
+                ? mutation.error.message
+                : "Couldn't save. Please try again."
+              : null
+          }
+        />
+      }
+    >
+        <div className="flex flex-col gap-4">
           <Field label="Name" htmlFor="tpl-name">
             <Input id="tpl-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Payment reminder (SMS)" />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type" htmlFor="tpl-type">
               <Select value={type} onValueChange={(v: string) => setType(v as NotificationType)}>
                 <SelectTrigger id="tpl-type">
@@ -179,21 +191,7 @@ export function TemplateDialog({ open, onOpenChange, template }: Props) {
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
           ) : null}
-
-          {mutation.isError ? (
-            <p className="text-sm text-bad-fg">{mutation.error instanceof ApiError ? mutation.error.message : "Couldn't save. Please try again."}</p>
-          ) : null}
         </div>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button disabled={!canSave} onClick={() => void handleSave()}>
-            {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Create template"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

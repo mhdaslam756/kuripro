@@ -2,7 +2,7 @@ import { Plus, Trash2, UserCog } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,16 +87,28 @@ export function NomineesTab({ memberId }: { memberId: string }) {
         </ul>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add nominee</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        size="md"
+        title="Add nominee"
+        footer={
+          <FormDrawerActions
+            onCancel={() => setOpen(false)}
+            onSubmit={() => void handleAdd()}
+            disabled={!name}
+            pending={addNominee.isPending}
+            pendingLabel="Adding…"
+            submitLabel="Add nominee"
+            error={addNominee.isError ? (addNominee.error instanceof ApiError ? addNominee.error.message : "Something went wrong") : null}
+          />
+        }
+      >
+        <div className="flex flex-col gap-4">
             <Field label="Full name" htmlFor="nominee-name">
               <Input id="nominee-name" value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Relation" htmlFor="nominee-relation">
                 <Select value={relation} onValueChange={(v: string) => setRelation(v as NomineeRelation)}>
                   <SelectTrigger id="nominee-relation">
@@ -125,22 +137,8 @@ export function NomineesTab({ memberId }: { memberId: string }) {
             <Field label="Phone (optional)" htmlFor="nominee-phone">
               <Input id="nominee-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
-            {addNominee.isError ? (
-              <p className="text-sm text-bad-fg">
-                {addNominee.error instanceof ApiError ? addNominee.error.message : "Something went wrong"}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!name || addNominee.isPending} onClick={() => void handleAdd()}>
-              {addNominee.isPending ? "Adding…" : "Add nominee"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormDrawer>
     </div>
   );
 }

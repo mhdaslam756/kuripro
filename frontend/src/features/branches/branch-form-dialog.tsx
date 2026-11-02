@@ -2,8 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
@@ -72,17 +71,24 @@ export function BranchFormDialog({ open, onOpenChange, branch }: BranchFormDialo
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit branch" : "Add branch"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update this branch's details." : "Create a new branch office for your organization."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      size="md"
+      title={isEditing ? "Edit branch" : "Add branch"}
+      description={isEditing ? "Update this branch's details." : "Create a new branch office for your organization."}
+      footer={
+        <FormDrawerActions
+          formId="branch-form"
+          onCancel={() => onOpenChange(false)}
+          pending={isPending}
+          submitLabel={isEditing ? "Save changes" : "Create branch"}
+          error={mutationError ? (mutationError instanceof ApiError ? mutationError.message : "Something went wrong") : null}
+        />
+      }
+    >
+        <form id="branch-form" onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Branch name" htmlFor="name" error={errors.name?.message}>
               <Input id="name" {...register("name")} />
             </Field>
@@ -98,7 +104,7 @@ export function BranchFormDialog({ open, onOpenChange, branch }: BranchFormDialo
           <Field label="Address line 1" htmlFor="line1" error={errors.line1?.message}>
             <Input id="line1" {...register("line1")} />
           </Field>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="City" htmlFor="city" error={errors.city?.message}>
               <Input id="city" {...register("city")} />
             </Field>
@@ -109,23 +115,7 @@ export function BranchFormDialog({ open, onOpenChange, branch }: BranchFormDialo
               <Input id="pincode" {...register("pincode")} />
             </Field>
           </div>
-
-          {mutationError ? (
-            <p className="text-sm text-bad-fg">
-              {mutationError instanceof ApiError ? mutationError.message : "Something went wrong"}
-            </p>
-          ) : null}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : isEditing ? "Save changes" : "Create branch"}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

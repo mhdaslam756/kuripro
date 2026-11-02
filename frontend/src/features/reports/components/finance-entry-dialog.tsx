@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,19 +50,32 @@ export function FinanceEntryDialog({ open, onOpenChange, type }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next: boolean) => { if (!next) reset(); onOpenChange(next); }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Record {type === "INCOME" ? "income" : "expense"}</DialogTitle>
-          <DialogDescription>
-            {type === "INCOME"
-              ? "Money received that isn't a chit installment — interest, fees, etc."
-              : "Operational spending — salaries, rent, office costs, etc."}
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={(next: boolean) => {
+        if (!next) reset();
+        onOpenChange(next);
+      }}
+      size="md"
+      title={`Record ${type === "INCOME" ? "income" : "expense"}`}
+      description={
+        type === "INCOME"
+          ? "Money received that isn't a chit installment — interest, fees, etc."
+          : "Operational spending — salaries, rent, office costs, etc."
+      }
+      footer={
+        <FormDrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={() => void handleSave()}
+          disabled={!amount || Number(amount) <= 0}
+          pending={create.isPending}
+          submitLabel={`Record ${type === "INCOME" ? "income" : "expense"}`}
+          error={create.isError ? (create.error instanceof ApiError ? create.error.message : "Something went wrong") : null}
+        />
+      }
+    >
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Category" htmlFor="fe-category">
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger id="fe-category">
@@ -82,7 +94,7 @@ export function FinanceEntryDialog({ open, onOpenChange, type }: Props) {
               <Input id="fe-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Channel" htmlFor="fe-channel">
               <Select value={channel} onValueChange={setChannel}>
                 <SelectTrigger id="fe-channel">
@@ -101,23 +113,7 @@ export function FinanceEntryDialog({ open, onOpenChange, type }: Props) {
           <Field label="Description (optional)" htmlFor="fe-desc">
             <Input id="fe-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
           </Field>
-
-          {create.isError ? (
-            <p className="text-sm text-bad-fg">
-              {create.error instanceof ApiError ? create.error.message : "Something went wrong"}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!amount || Number(amount) <= 0 || create.isPending} onClick={() => void handleSave()}>
-              {create.isPending ? "Saving…" : `Record ${type === "INCOME" ? "income" : "expense"}`}
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }
