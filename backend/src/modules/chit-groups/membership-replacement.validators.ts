@@ -63,6 +63,11 @@ export const groupReplacementSettingsSchema = z
 
 export type GroupReplacementSettingsInput = z.infer<typeof groupReplacementSettingsSchema>;
 
+export const refundListQuerySchema = z.object({
+  status: z.enum(["UNPAID", "PARTIAL", "PAID"]).optional(),
+  chitGroupId: objectIdSchema.optional(),
+});
+
 export const updateReplacementSettlementSchema = z
   .object({
     refundAmountRupees: z.number().min(0).optional(),

@@ -1,3 +1,4 @@
+import { issueStreamTicket } from "../../middleware/jwt-auth.js";
 import type { Request, Response } from "express";
 
 import { requireTenantContext } from "../../middleware/rbac.js";
@@ -92,6 +93,11 @@ export async function meta(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const [channels, stats] = await Promise.all([service.getChannelAvailability(), service.getStats(tenantId)]);
   res.status(200).json({ channels, stats });
+}
+
+export async function streamTicket(req: Request, res: Response): Promise<void> {
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).json(issueStreamTicket({ userId: req.auth!.userId, tenantId: req.auth!.tenantId }));
 }
 
 export async function notificationStream(req: Request, res: Response): Promise<void> {

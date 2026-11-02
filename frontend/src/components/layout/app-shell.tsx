@@ -1,4 +1,4 @@
-import { ArrowLeft, Banknote, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
+import { ArrowLeft, Banknote, Undo2, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/collections", label: "Collections", icon: HandCoins, permission: "collection.view" },
   { to: "/auctions", label: "Auctions", icon: Gavel, permission: "auction.view" },
   { to: "/payouts", label: "Prize Payouts", icon: Banknote, permission: "payout.view" },
+  { to: "/refunds", label: "Refunds", icon: Undo2, permission: "chit_group.enroll_member" },
   { to: "/reports", label: "Reports", icon: BarChart3, permission: "report.view" },
   { to: "/notifications", label: "Notifications", icon: Bell, permission: "notification.view" },
   { to: "/members", label: "Members", icon: Users, permission: "members.view" },

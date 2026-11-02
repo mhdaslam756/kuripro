@@ -183,6 +183,12 @@ export async function memberChitGroups(req: Request, res: Response): Promise<voi
   res.status(200).json(await listMemberChitGroups(tenantId, id));
 }
 
+export async function listRefunds(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const q = req.query as { status?: "UNPAID" | "PARTIAL" | "PAID"; chitGroupId?: string };
+  res.status(200).json(await replacementService.listRefunds(tenantId, { status: q.status, chitGroupId: q.chitGroupId }));
+}
+
 export async function getReplacementSettings(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { id } = req.params as unknown as MongoIdParam;

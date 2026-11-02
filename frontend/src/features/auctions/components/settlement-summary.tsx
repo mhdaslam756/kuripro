@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -113,8 +114,22 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
     0,
   );
   const hasDeduction = (settlement.winner.refundDeducted ?? 0) > 0;
+  // Recipients left unticked in the settlement dialog stay pending, to be paid later.
+  const [skipPayoutIds, setSkipPayoutIds] = useState<string[]>([]);
+  const [skipRefundIds, setSkipRefundIds] = useState<string[]>([]);
+  const toggle = (list: string[], id: string, on: boolean) =>
+    on ? list.filter((x) => x !== id) : [...list, id];
   const settleBoth =
     hasDeduction && deductedRefunds.length > 0 && outstanding.length > 0;
+  const selectedPayouts = outstanding.filter(
+    (p) => !skipPayoutIds.includes(p.id),
+  );
+  const selectedRefunds = settleBoth
+    ? deductedRefunds.filter((e) => !skipRefundIds.includes(e.replacementId))
+    : [];
+  const payingNow =
+    selectedPayouts.reduce((sum, p) => sum + p.remaining, 0) +
+    selectedRefunds.reduce((sum, e) => sum + (e.remainingPayable ?? 0), 0);
   const recipients = [
     settlement.winner,
     ...(settlement.coWinner ? [settlement.coWinner] : []),
@@ -486,7 +501,11 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
               <Button
                 size="lg"
                 className="w-full bg-[#15803d] text-white hover:bg-[#166534] bg-none border-0 shadow-sm"
-                onClick={() => setPayoutOpen(true)}
+                onClick={() => {
+                  setSkipPayoutIds([]);
+                  setSkipRefundIds([]);
+                  setPayoutOpen(true);
+                }}
               >
                 <CheckCircle2 size={18} />{" "}
                 {settleBoth
@@ -563,10 +582,13 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Winner Payout</DialogTitle>
+            <DialogTitle>
+              {settleBoth ? "Confirm Settlement" : "Confirm Winner Payout"}
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you have paid the prize amount to the selected
-              winner?
+              {settleBoth
+                ? "Tick who you are paying now. Anyone left unticked stays pending and can be paid later."
+                : "Are you sure you have paid the prize amount to the selected winner?"}
             </DialogDescription>
           </DialogHeader>
           <div className="divide-y divide-border-default rounded-md border border-border-default px-4">
@@ -575,7 +597,14 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
                 key={p.id}
                 className="flex items-center justify-between gap-3 py-3"
               >
-                <div>
+                <Checkbox
+                  aria-label={`Pay ${nameByMembership.get(p.chitMembershipId) ?? "winner"} now`}
+                  checked={!skipPayoutIds.includes(p.id)}
+                  onCheckedChange={(c) =>
+                    setSkipPayoutIds((l) => toggle(l, p.id, c === true))
+                  }
+                />
+                <div className="mr-auto">
                   <p className="text-xs text-text-secondary">Winner</p>
                   <p className="font-medium text-text-primary">
                     {nameByMembership.get(p.chitMembershipId) ?? "Winner"}
@@ -595,7 +624,16 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
                     key={e.replacementId}
                     className="flex items-center justify-between gap-3 py-3"
                   >
-                    <div>
+                    <Checkbox
+                      aria-label={`Pay ${e.previousMemberName}'s refund now`}
+                      checked={!skipRefundIds.includes(e.replacementId)}
+                      onCheckedChange={(c) =>
+                        setSkipRefundIds((l) =>
+                          toggle(l, e.replacementId, c === true),
+                        )
+                      }
+                    />
+                    <div className="mr-auto">
                       <p className="text-xs text-text-secondary">
                         Previous member refund
                       </p>
@@ -662,16 +700,22 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
             </Button>
             <Button
               className="bg-[#15803d] text-white hover:bg-[#166534] bg-none border-0"
-              disabled={confirmPayout.isPending}
+              disabled={
+                confirmPayout.isPending ||
+                completeExit.isPending ||
+                selectedPayouts.length + selectedRefunds.length === 0
+              }
               onClick={async () => {
-                await confirmPayout.mutateAsync({
-                  payoutIds: outstanding.map((p) => p.id),
-                  method,
-                  reference: reference.trim() || undefined,
-                });
+                if (selectedPayouts.length > 0) {
+                  await confirmPayout.mutateAsync({
+                    payoutIds: selectedPayouts.map((p) => p.id),
+                    method,
+                    reference: reference.trim() || undefined,
+                  });
+                }
                 // The refund is its own payment, recorded after the winner's. If it fails the refund stays pending.
                 if (settleBoth) {
-                  for (const e of deductedRefunds) {
+                  for (const e of selectedRefunds) {
                     await completeExit.mutateAsync({
                       replacementId: e.replacementId,
                       method,
@@ -686,7 +730,9 @@ export function SettlementSummary({ state }: { state: AuctionState }) {
                 setReference("");
               }}
             >
-              {confirmPayout.isPending ? "Recording…" : "Confirm Payment"}
+              {confirmPayout.isPending || completeExit.isPending
+                ? "Recording…"
+                : `Confirm Payment – ${formatPaise(payingNow)}`}
             </Button>
           </DialogFooter>
         </DialogContent>

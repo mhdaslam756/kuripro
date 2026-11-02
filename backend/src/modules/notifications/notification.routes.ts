@@ -16,6 +16,10 @@ import {
 
 export const notificationRouter: Router = Router();
 
+// SSE stream. Must be registered BEFORE the router-wide requireAuth below: EventSource cannot send an
+// Authorization header, so this route authenticates with a short-lived ?ticket= (see requireAuthSSE).
+notificationRouter.get("/stream", requireAuthSSE, notificationController.notificationStream);
+
 notificationRouter.use(requireAuth);
 
 // --- Templates ---
@@ -74,6 +78,5 @@ notificationRouter.get(
 
 notificationRouter.get("/meta", requirePermission("notification.view"), notificationController.meta);
 
-// SSE stream — uses requireAuthSSE which allows ?token= because EventSource cannot set headers.
-notificationRouter.get("/stream", requireAuthSSE, notificationController.notificationStream);
-
+// Short-lived ticket for the stream above (EventSource cannot send the Authorization header).
+notificationRouter.post("/stream-ticket", notificationController.streamTicket);

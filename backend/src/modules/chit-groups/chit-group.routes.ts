@@ -18,6 +18,7 @@ import {
   completeReplacementSettlementSchema,
   replaceMemberSchema,
   groupReplacementSettingsSchema,
+  refundListQuerySchema,
   replacementPreviewQuerySchema,
   updateReplacementSettlementSchema,
 } from "./membership-replacement.validators.js";
@@ -38,6 +39,14 @@ chitGroupRouter.get(
   requirePermission("chit_group.view"),
   validate({ query: listChitGroupsQuerySchema }),
   chitGroupController.list,
+);
+
+// Fixed paths must be declared before "/:id", otherwise "refunds" is read as a chit group id.
+chitGroupRouter.get(
+  "/refunds",
+  requirePermission("chit_group.enroll_member"),
+  validate({ query: refundListQuerySchema }),
+  chitGroupController.listRefunds,
 );
 
 chitGroupRouter.get(

@@ -13,6 +13,7 @@ import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { DevicePage } from "@/features/device/device-page";
 import { CollectionsPage } from "@/features/collections/collections-page";
 import { PayoutsPage } from "@/features/payouts/payouts-page";
+import { RefundsPage } from "@/features/refunds/refunds-page";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { MemberDetailPage } from "@/features/members/member-detail-page";
 import { MembersPage } from "@/features/members/members-page";
@@ -125,6 +126,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <PayoutsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/refunds"
+        element={
+          <ProtectedRoute>
+            <RefundsPage />
           </ProtectedRoute>
         }
       />

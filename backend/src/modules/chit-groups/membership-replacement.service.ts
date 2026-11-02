@@ -7,6 +7,8 @@ import { findTenantById } from "../tenants/tenant.repository.js";
 import { toMemberReplacementSettings } from "../tenants/tenant.service.js";
 import { ChitCycle, type ChitCycleDocument } from "../chit-cycles/chit-cycle.model.js";
 import { findMemberById } from "../members/member.repository.js";
+import { Member } from "../members/member.model.js";
+import { ChitGroup } from "./chit-group.model.js";
 import { Payment, type PaymentDocument } from "../payments/payment.model.js";
 import { insertInstallments } from "../payments/payment.repository.js";
 import { AppError } from "../../utils/app-error.js";
@@ -1007,6 +1009,64 @@ export async function listTicketExitSettlements(
       };
     }),
   );
+}
+
+// --- Refund list (every exit settlement, paid and unpaid) ---
+
+export type RefundListStatus = "UNPAID" | "PARTIAL" | "PAID";
+
+/** All previous-member settlements in the organisation, newest first, with what is paid and what is still due. */
+export async function listRefunds(tenantId: string, filter: { status?: RefundListStatus; chitGroupId?: string }) {
+  const replacements = await MembershipReplacement.find({ tenantId, ...(filter.chitGroupId ? { chitGroupId: filter.chitGroupId } : {}) })
+    .sort({ createdAt: -1 })
+    .limit(500);
+
+  const groupIds = [...new Set(replacements.map((r) => r.chitGroupId.toString()))];
+  const memberIds = [...new Set(replacements.flatMap((r) => [r.previousMemberId.toString(), r.newMemberId.toString()]))];
+  const [groups, members] = await Promise.all([
+    ChitGroup.find({ tenantId, _id: { $in: groupIds } }).select("name"),
+    Member.find({ tenantId, _id: { $in: memberIds } }).select("name memberCode"),
+  ]);
+  const groupName = new Map(groups.map((g) => [g._id.toString(), g.name]));
+  const memberById = new Map(members.map((m) => [m._id.toString(), m]));
+
+  const items = replacements
+    .map((r) => {
+      const owed = Math.abs(r.settlement.netAmount);
+      const paid = Math.min(owed, paidOf(r.settlement));
+      const status: RefundListStatus = owed > 0 && paid >= owed ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
+      const prev = memberById.get(r.previousMemberId.toString());
+      const next = memberById.get(r.newMemberId.toString());
+      return {
+        replacementId: r._id.toString(),
+        chitGroupId: r.chitGroupId.toString(),
+        groupName: groupName.get(r.chitGroupId.toString()) ?? "Chit group",
+        ticket: slotLabel(r),
+        previousMember: { name: prev?.name ?? "Previous member", memberCode: prev?.memberCode ?? "" },
+        replacedBy: next?.name ?? "",
+        effectiveCycleNumber: r.effectiveCycleNumber,
+        replacedOn: r.effectiveDate,
+        /** PAY = the organisation owes the previous member; COLLECT = the previous member owes the organisation. */
+        direction: r.settlement.netAmount >= 0 ? ("PAY" as const) : ("COLLECT" as const),
+        owed,
+        paid,
+        outstanding: Math.max(0, owed - paid),
+        status,
+        method: r.settlement.method ?? null,
+        settledAt: r.settlement.settledAt ?? null,
+      };
+    })
+    .filter((i) => i.owed > 0 && (!filter.status || i.status === filter.status));
+
+  const sum = (rows: typeof items, key: "owed" | "paid" | "outstanding") => rows.reduce((t, r) => t + r[key], 0);
+  return {
+    items,
+    totals: {
+      owed: sum(items, "owed"),
+      paid: sum(items, "paid"),
+      outstanding: sum(items, "outstanding"),
+    },
+  };
 }
 
 // --- Membership history ---
