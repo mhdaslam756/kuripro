@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessHoursTab } from "./business-hours-tab";
 import { CompanyProfileTab } from "./company-profile-tab";
 import { LogoTab } from "./logo-tab";
+import { ReplacementSettingsTab } from "./replacement-settings-tab";
 import { SettingsTab } from "./settings-tab";
 import { SubscriptionTab } from "./subscription-tab";
 import { useOrganization } from "./use-organization";
@@ -12,7 +13,9 @@ export function OrganizationPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Organization</h1>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">
+        Organization
+      </h1>
       <p className="mb-6 text-sm text-text-secondary">
         Company profile, business settings, hours, branding, and subscription.
       </p>
@@ -24,12 +27,15 @@ export function OrganizationPage() {
           <Skeleton className="h-10 w-1/2" />
         </div>
       ) : isError || !organization ? (
-        <p className="text-sm text-bad-fg">Couldn't load your organization. Please try again.</p>
+        <p className="text-sm text-bad-fg">
+          Couldn't load your organization. Please try again.
+        </p>
       ) : (
         <Tabs defaultValue="profile">
           <TabsList>
             <TabsTrigger value="profile">Company Profile</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="replacement">Member Replacement</TabsTrigger>
             <TabsTrigger value="hours">Business Hours</TabsTrigger>
             <TabsTrigger value="logo">Logo</TabsTrigger>
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
@@ -40,6 +46,9 @@ export function OrganizationPage() {
           </TabsContent>
           <TabsContent value="settings">
             <SettingsTab organization={organization} />
+          </TabsContent>
+          <TabsContent value="replacement">
+            <ReplacementSettingsTab organization={organization} />
           </TabsContent>
           <TabsContent value="hours">
             <BusinessHoursTab organization={organization} />

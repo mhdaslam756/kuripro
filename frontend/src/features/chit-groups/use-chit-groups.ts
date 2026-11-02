@@ -1,6 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api-client";
+import type { MemberReplacementSettings } from "@/features/organization/types";
+import type { MemberReplacementSettingsInput } from "@/features/organization/use-organization";
 import type {
   BulkAssignResult,
   ChitCycle,
@@ -162,11 +164,13 @@ function invalidateRoster(queryClient: ReturnType<typeof useQueryClient>, id: st
 export function useReplacementPreview(
   chitGroupId: string,
   membershipId: string | undefined,
-  params: { effectiveCycleNumber?: number; newMemberId?: string },
+  params: { effectiveCycleNumber?: number; newMemberId?: string; split?: boolean; secondMemberId?: string },
 ) {
   const query = new URLSearchParams();
   if (params.effectiveCycleNumber) query.set("effectiveCycleNumber", String(params.effectiveCycleNumber));
   if (params.newMemberId) query.set("newMemberId", params.newMemberId);
+  if (params.split) query.set("split", "true");
+  if (params.split && params.secondMemberId) query.set("secondMemberId", params.secondMemberId);
   return useQuery({
     queryKey: ["chit-group-replacement-preview", chitGroupId, membershipId, params],
     queryFn: () =>
@@ -177,6 +181,8 @@ export function useReplacementPreview(
         .then((r) => r.preview),
     enabled: Boolean(membershipId),
     retry: false,
+    // Keep the last preview on screen while a new member/cycle/mode refetches, so the drawer doesn't flash a skeleton.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -192,6 +198,34 @@ export function useReplaceMember(id: string) {
     onSuccess: () => {
       invalidateRoster(queryClient, id);
       invalidateHistory(queryClient, id);
+      void queryClient.invalidateQueries({ queryKey: ["chit-group-replacement-preview", id] });
+    },
+  });
+}
+
+export interface GroupReplacementSettings {
+  source: "GROUP" | "ORGANIZATION";
+  /** The organisation default, always returned so the group page can show what "default" means. */
+  organization: MemberReplacementSettings;
+  /** What actually applies to this group. */
+  settings: MemberReplacementSettings;
+}
+
+export function useGroupReplacementSettings(id: string | undefined) {
+  return useQuery({
+    queryKey: ["chit-group-replacement-settings", id],
+    queryFn: () => api.get<GroupReplacementSettings>(`/chit-groups/${id}/replacement-settings`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdateGroupReplacementSettings(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { useOrganizationDefault: boolean; confirmActiveChange?: boolean; memberReplacement?: MemberReplacementSettingsInput }) =>
+      api.put<GroupReplacementSettings>(`/chit-groups/${id}/replacement-settings`, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["chit-group-replacement-settings", id] });
       void queryClient.invalidateQueries({ queryKey: ["chit-group-replacement-preview", id] });
     },
   });
@@ -287,3 +321,35 @@ export function useChitReport(id: string | undefined) {
 
 // Re-export for convenience where a component only needs the cycle type.
 export type { ChitCycle };
+
+// --- A member's chit groups ---
+
+export interface MemberChitGroupEntry {
+  membershipId: string;
+  status: "ACTIVE" | "DEFAULTED" | "EXITED";
+  ticketNumber: number;
+  subTicket: string | null;
+  shareType: "FULL" | "HALF";
+  hasWon: boolean;
+  fromCycleNumber: number;
+  toCycleNumber: number | null;
+  joinedAt: string;
+  group: {
+    id: string;
+    name: string;
+    status: "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+    chitValue: number;
+    installmentAmount: number;
+    totalMembers: number;
+    currentCycleNumber: number;
+  };
+  account: { totalDue: number; totalPaid: number; balance: number; overdue: number; nextDueDate: string | null };
+}
+
+export function useMemberChitGroups(memberId: string | undefined) {
+  return useQuery({
+    queryKey: ["member-chit-groups", memberId],
+    queryFn: () => api.get<{ items: MemberChitGroupEntry[] }>(`/chit-groups/by-member/${memberId}`).then((r) => r.items),
+    enabled: Boolean(memberId),
+  });
+}

@@ -26,7 +26,12 @@ export function DonutChart({ data, size = 160, centerLabel, centerValue, formatV
     return <p className="py-8 text-center text-sm text-text-secondary">No data to chart.</p>;
   }
 
-  let offset = 0;
+  // Cumulative start of each slice, computed up front so rendering doesn't mutate a variable.
+  const offsets = slices.reduce<number[]>((acc, _slice, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1]! + (slices[i - 1]!.value / total) * circumference);
+    return acc;
+  }, []);
+
   return (
     <div className="flex flex-wrap items-center gap-6">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Donut chart">
@@ -34,7 +39,7 @@ export function DonutChart({ data, size = 160, centerLabel, centerValue, formatV
           {slices.map((slice, i) => {
             const fraction = slice.value / total;
             const dash = fraction * circumference;
-            const el = (
+            return (
               <circle
                 key={slice.label}
                 cx={radius}
@@ -44,11 +49,9 @@ export function DonutChart({ data, size = 160, centerLabel, centerValue, formatV
                 stroke={colorAt(i)}
                 strokeWidth={stroke}
                 strokeDasharray={`${dash} ${circumference - dash}`}
-                strokeDashoffset={-offset}
+                strokeDashoffset={-offsets[i]!}
               />
             );
-            offset += dash;
-            return el;
           })}
         </g>
         {centerValue ? (

@@ -53,6 +53,37 @@ export interface AuctionWinnerSummary {
   name: string;
   memberCode: string;
   payoutAmount?: number;
+  /** Prize before the previous member's refund was taken out of it. */
+  grossPayoutAmount?: number;
+  /** Refund to the previous member taken out of this prize (paise); 0 when paid separately. */
+  refundDeducted?: number;
+  joinedFromCycle?: number;
+}
+
+export interface ExitSettlement {
+  replacementId: string;
+  previousMemberName: string;
+  previousMemberCode: string;
+  slotLabel: string;
+  effectiveCycleNumber: number;
+  totalPaid: number;
+  refundAmount: number;
+  pendingDues: number;
+  deductionAmount: number;
+  netAmount: number;
+  /** What the previous member is owed in total. */
+  entitlement?: number;
+  /** Already paid out; counted as distributed and never paid again. */
+  previouslyPaid?: number;
+  /** The part of the prize set aside for this refund (0 if the ticket has not won since). */
+  prizeAllocation?: number;
+  /** What still has to be paid at settlement. */
+  remainingPayable?: number;
+  /** Entitlement the prize could not cover; stays outstanding and needs a financial review. */
+  shortfall?: number;
+  status: "PENDING" | "SETTLED";
+  settledAmount: number | null;
+  settledAt: string | null;
 }
 
 export interface AuctionSettlement {
@@ -63,6 +94,8 @@ export interface AuctionSettlement {
   dividendPerMember: number;
   prizeAmount: number;
   payoutStatus: string;
+  /** Refunds for members who held the winning ticket before the current holder. */
+  exitSettlements?: ExitSettlement[];
   payouts: {
     id: string;
     chitMembershipId: string;

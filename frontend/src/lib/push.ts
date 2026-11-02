@@ -3,8 +3,13 @@ import { api } from "./api-client";
 const PUSH_TOKEN_KEY = "kuripro_push_token";
 
 export function isPushSupported(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-  return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  if (typeof window === "undefined" || typeof navigator === "undefined")
+    return false;
+  return (
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
 }
 
 export function isPushConfigured(): boolean {
@@ -12,7 +17,8 @@ export function isPushConfigured(): boolean {
 }
 
 export function isIosDevice(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  if (typeof window === "undefined" || typeof navigator === "undefined")
+    return false;
   return (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
@@ -31,7 +37,8 @@ export function isIosStandalone(): boolean {
   );
 }
 
-export function notificationPermission(): NotificationPermission | "unsupported" {
+export function notificationPermission():
+  NotificationPermission | "unsupported" {
   return isPushSupported() ? Notification.permission : "unsupported";
 }
 
@@ -58,30 +65,75 @@ export type EnablePushResult =
  * 4. Subscribes with the server's VAPID public key.
  * 5. Saves the standard W3C PushSubscription on the server.
  */
+/** Resolves with the registration once its worker is active, or as-is after `timeoutMs`. */
+function waitForActiveWorker(
+  registration: ServiceWorkerRegistration,
+  timeoutMs: number,
+): Promise<ServiceWorkerRegistration> {
+  return new Promise((resolve) => {
+    if (registration.active) {
+      resolve(registration);
+      return;
+    }
+    const worker = registration.installing ?? registration.waiting;
+    const timer = setTimeout(done, timeoutMs);
+    function done() {
+      clearTimeout(timer);
+      worker?.removeEventListener("statechange", onChange);
+      resolve(registration);
+    }
+    function onChange() {
+      if (
+        registration.active ||
+        worker?.state === "activated" ||
+        worker?.state === "redundant"
+      )
+        done();
+    }
+    if (!worker) {
+      // Nothing installing yet: fall back to the browser's own readiness signal.
+      void navigator.serviceWorker.ready.then(
+        () => done(),
+        () => done(),
+      );
+      return;
+    }
+    worker.addEventListener("statechange", onChange);
+  });
+}
+
 export async function enablePush(): Promise<EnablePushResult> {
   // 1. Basic platform & service worker check
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
-    return { ok: false, error: "Service Workers are not supported on this browser." };
+    return {
+      ok: false,
+      error: "Service Workers are not supported on this browser.",
+    };
   }
 
   // 2. iOS Safari PWA restriction check
   if (isIosDevice() && !isIosStandalone()) {
     return {
       ok: false,
-      error: "On iPhone/iPad, Apple requires KuriPro to be added to your Home Screen first: Tap Share (rectangle with arrow) ➔ 'Add to Home Screen', then open KuriPro from your Home Screen to enable notifications.",
+      error:
+        "On iPhone/iPad, Apple requires KuriPro to be added to your Home Screen first: Tap Share (rectangle with arrow) ➔ 'Add to Home Screen', then open KuriPro from your Home Screen to enable notifications.",
     };
   }
 
   // 3. Push API availability check
   if (!("Notification" in window) || !("PushManager" in window)) {
-    return { ok: false, error: "This browser does not support the Web Push API." };
+    return {
+      ok: false,
+      error: "This browser does not support the Web Push API.",
+    };
   }
 
   // 4. Secure Context (HTTPS or localhost) check
   if (!window.isSecureContext) {
     return {
       ok: false,
-      error: "Web Push requires a Secure Context (HTTPS). Please connect over HTTPS.",
+      error:
+        "Web Push requires a Secure Context (HTTPS). Please connect over HTTPS.",
     };
   }
 
@@ -89,7 +141,8 @@ export async function enablePush(): Promise<EnablePushResult> {
   if (Notification.permission === "denied") {
     return {
       ok: false,
-      error: "Notifications are blocked in your browser settings. Please allow notifications for this site in your browser site settings.",
+      error:
+        "Notifications are blocked in your browser settings. Please allow notifications for this site in your browser site settings.",
     };
   }
 
@@ -114,7 +167,9 @@ export async function enablePush(): Promise<EnablePushResult> {
   // 6. Obtain server VAPID public key
   let activeVapidKey: string | null = null;
   try {
-    const res = await api.get<{ publicKey: string | null }>("/devices/vapid-public-key");
+    const res = await api.get<{ publicKey: string | null }>(
+      "/devices/vapid-public-key",
+    );
     if (res?.publicKey) {
       activeVapidKey = res.publicKey;
     }
@@ -123,13 +178,15 @@ export async function enablePush(): Promise<EnablePushResult> {
   }
 
   if (!activeVapidKey) {
-    activeVapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) || null;
+    activeVapidKey =
+      (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) || null;
   }
 
   if (!activeVapidKey) {
     return {
       ok: false,
-      error: "Push notifications are not configured on this server (missing VAPID public key).",
+      error:
+        "Push notifications are not configured on this server (missing VAPID public key).",
     };
   }
 
@@ -159,19 +216,10 @@ export async function enablePush(): Promise<EnablePushResult> {
       registration.waiting.postMessage({ type: "SKIP_WAITING" });
     }
 
-    // If not active yet, wait briefly for ready or activation
-    if (!registration?.active) {
-      try {
-        const readyReg = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-        ]);
-        if (readyReg) {
-          registration = readyReg;
-        }
-      } catch {
-        // ignore
-      }
+    // Subscribing needs an ACTIVE worker; a registration that is still installing or waiting makes
+    // pushManager.subscribe() fail with "no active Service Worker". Wait for it to activate.
+    if (registration && !registration.active) {
+      registration = await waitForActiveWorker(registration, 10_000);
     }
 
     // Final check for registration and pushManager
@@ -186,12 +234,24 @@ export async function enablePush(): Promise<EnablePushResult> {
     if (!registration || !registration.pushManager) {
       return {
         ok: false,
-        error: "PushManager is not available on this browser's Service Worker. Please reload the page.",
+        error:
+          "PushManager is not available on this browser's Service Worker. Please reload the page.",
+      };
+    }
+
+    if (!registration.active) {
+      return {
+        ok: false,
+        error:
+          "The app's background service isn't running yet. Reload the page once and try again. " +
+          "(In development this also happens when the browser doesn't trust the localhost certificate.)",
       };
     }
 
     const appServerKey = urlBase64ToUint8Array(activeVapidKey);
-    let subscription = await registration.pushManager.getSubscription().catch(() => null);
+    let subscription = await registration.pushManager
+      .getSubscription()
+      .catch(() => null);
 
     // If an existing subscription exists, verify whether it uses the current VAPID key
     if (subscription) {
@@ -200,7 +260,9 @@ export async function enablePush(): Promise<EnablePushResult> {
       if (rawKey) {
         const currentKeyArray = new Uint8Array(rawKey);
         if (currentKeyArray.length === appServerKey.length) {
-          keyMatches = currentKeyArray.every((byte, idx) => byte === appServerKey[idx]);
+          keyMatches = currentKeyArray.every(
+            (byte, idx) => byte === appServerKey[idx],
+          );
         }
       }
       if (!keyMatches) {
@@ -231,7 +293,9 @@ export async function enablePush(): Promise<EnablePushResult> {
     console.error("enablePush error:", err);
     return {
       ok: false,
-      error: err?.message ? `Failed to enable push: ${err.message}` : "Failed to enable push notifications.",
+      error: err?.message
+        ? `Failed to enable push: ${err.message}`
+        : "Failed to enable push notifications.",
     };
   }
 }
@@ -239,7 +303,8 @@ export async function enablePush(): Promise<EnablePushResult> {
 /** Synthesizes a crisp, gentle notification chime via Web Audio API */
 export function playNotificationChime(): void {
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
     const now = ctx.currentTime;
@@ -311,7 +376,9 @@ export async function disablePush(): Promise<void> {
       await api.delete("/devices/push-tokens", { token }).catch(() => null);
     }
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+      const reg = await navigator.serviceWorker
+        .getRegistration()
+        .catch(() => null);
       if (reg) {
         const sub = await reg.pushManager.getSubscription().catch(() => null);
         if (sub) {

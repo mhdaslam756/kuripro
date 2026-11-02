@@ -35,6 +35,35 @@ export function useUpdateSettings() {
   });
 }
 
+export interface MemberReplacementSettingsInput {
+  installmentSettlementMode: string;
+  commissionOwnershipMode: string;
+  fixedCommissionAmountRupees: number;
+  replacementFeeMode: string;
+  replacementFeeAmountRupees: number;
+  replacementFeePercentage: number;
+  commissionCalculationBase: string;
+  displacementCommission?: {
+    commissionAllocationEnabled: boolean;
+    displacementCommissionMode: string;
+    previousMemberPercentage: number;
+    replacementMemberPercentage: number;
+    previousMemberFixedAmountRupees: number;
+    replacementMemberFixedAmountRupees: number;
+    remainingCommissionPolicy: string;
+    effectiveFrom?: string;
+  };
+}
+
+export function useUpdateReplacementSettings() {
+  const invalidate = useInvalidateOrganization();
+  return useMutation({
+    mutationFn: (memberReplacement: MemberReplacementSettingsInput) =>
+      api.patch<{ organization: Organization }>("/organization/settings", { memberReplacement }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useUpdateBusinessHours() {
   const invalidate = useInvalidateOrganization();
   return useMutation({

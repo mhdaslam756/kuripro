@@ -19,10 +19,11 @@ export const logger = pino({
       "*.password",
       "*.passwordHash",
       "*.refreshToken",
-      // The SSE stream authenticates via ?token= (EventSource can't set headers), so tokens appear in
-      // the request URL and query. Strip them rather than log a live credential.
+      // The SSE stream authenticates via a short-lived ?ticket= (EventSource can't set headers). Strip it
+      // and any other credential from request URLs rather than log them.
       "req.url",
       "req.query.token",
+      "req.query.ticket",
       "req.query.setupKey",
       "req.query.password",
       "req.headers[\"x-setup-key\"]",
@@ -33,7 +34,7 @@ export const logger = pino({
     ],
     censor: (value: unknown, path: string[]) =>
       path.join(".") === "req.url" && typeof value === "string"
-        ? value.replace(/([?&](?:token|setupKey|password)=)[^&#]*/gi, "$1[REDACTED]")
+        ? value.replace(/([?&](?:token|ticket|setupKey|password)=)[^&#]*/gi, "$1[REDACTED]")
         : "[REDACTED]",
   },
 });

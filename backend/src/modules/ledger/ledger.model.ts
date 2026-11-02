@@ -7,6 +7,8 @@ export const LEDGER_ENTRY_TYPES = [
   "INSTALLMENT_COLLECTED",
   "PAYOUT_DISBURSED",
   "COMMISSION_EARNED",
+  "REPLACEMENT_SETTLEMENT",
+  "REPLACEMENT_FEE",
   "ADJUSTMENT",
 ] as const;
 export const LEDGER_DIRECTIONS = ["CREDIT", "DEBIT"] as const;
@@ -25,6 +27,8 @@ export interface LedgerDoc extends Timestamps {
   relatedCycleId?: Types.ObjectId;
   relatedPaymentId?: Types.ObjectId;
   relatedPayoutId?: Types.ObjectId;
+  relatedReplacementId?: Types.ObjectId;
+  memberId?: Types.ObjectId;
 
   description: string;
   createdBy: Types.ObjectId;
@@ -50,6 +54,8 @@ const ledgerSchema = new Schema<LedgerDoc>(
     relatedCycleId: { type: Schema.Types.ObjectId, ref: "ChitCycle" },
     relatedPaymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
     relatedPayoutId: { type: Schema.Types.ObjectId, ref: "Payout" },
+    relatedReplacementId: { type: Schema.Types.ObjectId, ref: "MembershipReplacement" },
+    memberId: { type: Schema.Types.ObjectId, ref: "Member" },
 
     description: { type: String, required: true, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

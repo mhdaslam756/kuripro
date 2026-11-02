@@ -223,6 +223,8 @@ export interface ReplacementSettlement {
   refundAmount: number;
   deductionAmount: number;
   deductionReason?: string;
+  /** Commission the previous member owes the chit company, netted off their settlement. */
+  commissionAmount?: number;
   netAmount: number;
   notes?: string;
   settledAmount?: number;
@@ -237,6 +239,31 @@ export interface RemainingInstalment {
   basis: "RAISED" | "NET_OF_DIVIDEND" | "ESTIMATE";
 }
 
+export interface ReplacementFinancials {
+  installmentSettlementMode: "PENDING" | "IMMEDIATE";
+  previousMemberTotalPaid: number;
+  commissionOwnershipMode: "ORGANIZATION" | "PREVIOUS_MEMBER" | "REPLACEMENT_MEMBER" | "EQUAL_SPLIT" | "BY_CYCLES" | "FIXED_AMOUNT";
+  commission: { total: number; previousMemberShare: number; replacementMemberShare: number; organizationShare: number };
+  /** Present when the organisation uses a displacement allocation method. */
+  allocation: {
+    mode: "CYCLE_BASED" | "CONTRIBUTION_BASED" | "CUSTOM_PERCENTAGE" | "FIXED_AMOUNT";
+    remainingCommission: number;
+    holders: { role: "PREVIOUS" | "REPLACEMENT"; eligibleCycles: number; eligibleContribution: number; amount: number; percentageBps: number }[];
+  } | null;
+  fee: { mode: "NONE" | "FIXED" | "PERCENTAGE"; base: string | null; baseAmount: number; percentage: number | null; amount: number };
+  /** The replacement member's remaining instalments plus the replacement fee. */
+  totalPayableByReplacement: number;
+  /** Set when the saved policy can't be applied to this ticket; the replacement is blocked. */
+  blockedReason: string | null;
+}
+
+export interface NewMemberPlan {
+  member: MemberRef | null;
+  remainingInstalments: number;
+  totalPayable: number;
+  schedule: RemainingInstalment[];
+}
+
 export interface ReplacementPreview {
   slot: { ticketNumber: number; subTicket: string | null; label: string; shareType: "FULL" | "HALF"; share: number };
   previous: {
@@ -249,12 +276,21 @@ export interface ReplacementPreview {
     payments: ReplacementPaymentRow[];
   };
   effective: { cycleNumber: number; scheduledDate: string | null; minCycleNumber: number; maxCycleNumber: number };
-  newMember: { member: MemberRef | null; remainingInstalments: number; totalPayable: number; schedule: RemainingInstalment[] };
+  newMember: NewMemberPlan;
+  /** Half B when a full ticket is being split; null otherwise. */
+  secondNewMember: NewMemberPlan | null;
+  split: boolean;
   settlement: ReplacementSettlement;
+  financials: ReplacementFinancials;
 }
 
 export interface ReplaceMemberInput {
   newMemberId: string;
+  /** Full ticket only: newMemberId takes half A, secondNewMemberId takes half B. */
+  splitIntoHalves?: boolean;
+  secondNewMemberId?: string;
+  paymentMethod?: string;
+  collectReplacementFee?: boolean;
   effectiveCycleNumber: number;
   reason?: string;
   settlement: {

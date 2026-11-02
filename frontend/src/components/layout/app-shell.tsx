@@ -1,12 +1,13 @@
-import { Banknote, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { ArrowLeft, Banknote, Undo2, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
 import { HeaderInstallAppButton, HeaderPushNotificationButton } from "@/components/pwa/install-notification-toasts";
 import { useLiveNotifications } from "@/features/notifications/use-live-notifications";
+import { PullToRefresh } from "@/components/mobile/pull-to-refresh";
 import { UserAccountMenu } from "./user-account-menu";
 
 interface NavItem {
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/collections", label: "Collections", icon: HandCoins, permission: "collection.view" },
   { to: "/auctions", label: "Auctions", icon: Gavel, permission: "auction.view" },
   { to: "/payouts", label: "Prize Payouts", icon: Banknote, permission: "payout.view" },
+  { to: "/refunds", label: "Refunds", icon: Undo2, permission: "chit_group.enroll_member" },
   { to: "/reports", label: "Reports", icon: BarChart3, permission: "report.view" },
   { to: "/notifications", label: "Notifications", icon: Bell, permission: "notification.view" },
   { to: "/members", label: "Members", icon: Users, permission: "members.view" },
@@ -207,6 +209,21 @@ function OrganizerBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   );
 }
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/device": "Devices & Security",
+  "/super-admin/dashboard": "Dashboard",
+};
+
+/** Title for the mobile top bar, and whether the route is a drill-down (shows a back button). */
+function useRouteChrome(items: NavItem[]): { title: string; isDetail: boolean } {
+  const { pathname } = useLocation();
+  const exact = items.find((i) => i.to === pathname);
+  if (exact || ROUTE_TITLES[pathname]) return { title: exact?.label ?? ROUTE_TITLES[pathname]!, isDetail: false };
+  const parent = items.find((i) => pathname.startsWith(`${i.to}/`));
+  const singular = parent?.label.replace(/s$/, "");
+  return { title: singular ?? "KuriPro", isDetail: Boolean(parent) };
+}
+
 // ── Main AppShell ─────────────────────────────────────────────────────────────
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -214,6 +231,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { pathname } = useLocation();
 
   let visibleItems = NAV_ITEMS.filter((item) => {
     if (user?.role?.slug === "MEMBER") {
@@ -233,6 +251,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     (i) => !["/dashboard", "/super-admin/dashboard", "/chit-groups", "/collections", "/auctions"].includes(i.to),
   );
 
+  const { title: routeTitle, isDetail } = useRouteChrome(visibleItems);
+
+  // A new screen always opens at the top, like a native navigation push.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [pathname]);
+
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
@@ -240,6 +265,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-bg-app lg:flex select-none">
+      <PullToRefresh />
+
       {/* Desktop Sidebar */}
       <aside className="hidden w-[272px] flex-none flex-col border-r border-border-default bg-bg-surface/90 p-4 backdrop-blur lg:flex select-text">
         <div className="mb-8 flex items-center gap-3 px-2">
@@ -272,21 +299,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Compact Top Header */}
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/50 bg-bg-surface/85 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          {/* Mobile Header Left: Minimal compact profile */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <div className="relative flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-primary to-[#8B5CF6] font-display text-sm font-bold text-white shadow-xs">
-              {user?.name?.trim().charAt(0).toUpperCase() || "K"}
-              {/* Online indicator */}
-              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-good-fg ring-2 ring-bg-surface" />
-            </div>
-            <div>
-              <p className="font-display text-sm font-bold leading-snug tracking-tight text-text-primary">
-                {user?.name || "User"}
-              </p>
-              <p className="text-[11px] font-medium text-text-secondary leading-none">
-                {user?.role?.name || "Member"}
-              </p>
-            </div>
+          {/* Mobile Header Left: back button on drill-down screens, screen title everywhere */}
+          <div className="flex min-w-0 items-center gap-1.5 lg:hidden">
+            {isDetail ? (
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                aria-label="Go back"
+                className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-full text-text-primary active-bounce"
+              >
+                <ArrowLeft size={22} />
+              </button>
+            ) : null}
+            <h1 className="truncate font-display text-lg font-bold tracking-tight text-text-primary">{routeTitle}</h1>
           </div>
 
           {/* Desktop Header Left */}
@@ -322,7 +347,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Main App Content Area */}
-        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
+        <main key={pathname} className="page-enter flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
           <div className="mx-auto w-full max-w-[1440px]">
             {children}
           </div>

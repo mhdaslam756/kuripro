@@ -17,6 +17,8 @@ import {
 import {
   completeReplacementSettlementSchema,
   replaceMemberSchema,
+  groupReplacementSettingsSchema,
+  refundListQuerySchema,
   replacementPreviewQuerySchema,
   updateReplacementSettlementSchema,
 } from "./membership-replacement.validators.js";
@@ -37,6 +39,14 @@ chitGroupRouter.get(
   requirePermission("chit_group.view"),
   validate({ query: listChitGroupsQuerySchema }),
   chitGroupController.list,
+);
+
+// Fixed paths must be declared before "/:id", otherwise "refunds" is read as a chit group id.
+chitGroupRouter.get(
+  "/refunds",
+  requirePermission("chit_group.enroll_member"),
+  validate({ query: refundListQuerySchema }),
+  chitGroupController.listRefunds,
 );
 
 chitGroupRouter.get(
@@ -97,6 +107,27 @@ chitGroupRouter.post(
   requirePermission("chit_group.enroll_member"),
   validate({ params: nestedMongoIdParamSchema, body: replaceMemberSchema }),
   chitGroupController.replaceMember,
+);
+
+chitGroupRouter.get(
+  "/by-member/:id",
+  requirePermission("chit_group.view"),
+  validate({ params: mongoIdParamSchema }),
+  chitGroupController.memberChitGroups,
+);
+
+chitGroupRouter.get(
+  "/:id/replacement-settings",
+  requirePermission("chit_group.view"),
+  validate({ params: mongoIdParamSchema }),
+  chitGroupController.getReplacementSettings,
+);
+
+chitGroupRouter.put(
+  "/:id/replacement-settings",
+  requirePermission("chit_group.update"),
+  validate({ params: mongoIdParamSchema, body: groupReplacementSettingsSchema }),
+  chitGroupController.updateReplacementSettings,
 );
 
 chitGroupRouter.get(

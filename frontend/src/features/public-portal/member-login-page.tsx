@@ -1,4 +1,4 @@
-import { AlertCircle, LogIn, UserCheck } from "lucide-react";
+import { AlertCircle, LogIn } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { EmailVerificationDialog } from "@/features/auth/components/email-verification-dialog";
 import { ForgotPasswordDialog } from "@/features/auth/components/forgot-password-dialog";
+import { LoginIllustration } from "@/features/auth/components/login-illustration";
 import { PublicPortalLayout } from "./public-portal-layout";
 import { usePublicMemberLogin, usePublicOrg } from "./use-public-portal";
 
@@ -51,11 +52,9 @@ export function MemberLoginPage() {
 
   return (
     <PublicPortalLayout>
-      <Card className="border-border-default/80 shadow-lg bg-bg-surface rounded-3xl overflow-hidden">
-        <CardHeader className="bg-brand-50/60 pb-6 pt-7 px-6 border-b border-border-default/60 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-brand-100 text-accent-primary mb-2 shadow-xs">
-            <UserCheck size={24} />
-          </div>
+      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden">
+        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default text-left">
+          <LoginIllustration className="mb-3" />
           <CardTitle className="font-display text-2xl font-bold text-text-primary">
             Member Portal Login
           </CardTitle>
@@ -64,10 +63,10 @@ export function MemberLoginPage() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className="p-5 sm:p-6">
           {error ? (
-            <div className="mb-5 rounded-2xl border border-bad-border/60 bg-bad-bg/15 p-3.5 text-xs text-bad-fg flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0" />
+            <div role="alert" className="mb-5 rounded-sm border border-bad-border bg-bad-bg/15 p-3.5 text-sm text-bad-fg flex items-start gap-2">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           ) : null}
@@ -77,6 +76,9 @@ export function MemberLoginPage() {
               <Input
                 id="identifier"
                 placeholder="Enter your registered phone or email"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
@@ -88,17 +90,18 @@ export function MemberLoginPage() {
                 id="password"
                 type="password"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </Field>
 
-            <div className="flex justify-end text-xs">
+            <div className="flex justify-end text-sm">
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="font-semibold text-accent-primary hover:underline cursor-pointer"
+                className="min-h-8 font-semibold text-accent-link hover:underline cursor-pointer"
               >
                 Forgot password?
               </button>
@@ -107,7 +110,7 @@ export function MemberLoginPage() {
             <Button
               type="submit"
               size="lg"
-              className="mt-1 w-full h-11 rounded-2xl font-semibold gap-2 shadow-sm text-base"
+              className="mt-1 w-full h-12 font-semibold gap-2 text-base"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Logging in…" : "Sign In to Member Portal"}
@@ -115,10 +118,10 @@ export function MemberLoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t border-border-default/60 pt-4 text-center flex flex-col gap-2">
-            <p className="text-xs text-text-secondary">
+          <div className="mt-6 border-t border-border-default pt-4 text-center">
+            <p className="text-sm text-text-secondary">
               Don't have a member account with {org?.name}?{" "}
-              <Link to={`/portal/${slug}/register`} className="font-semibold text-accent-primary hover:underline">
+              <Link to={`/portal/${slug}/register`} className="font-semibold text-accent-link hover:underline">
                 Register as a Member
               </Link>
             </p>

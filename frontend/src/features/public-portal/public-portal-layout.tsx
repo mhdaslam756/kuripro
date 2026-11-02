@@ -12,8 +12,8 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-bg-surface p-4">
-        <Skeleton className="h-16 w-80 rounded-2xl" />
-        <Skeleton className="mt-6 h-96 w-full max-w-lg rounded-3xl" />
+        <Skeleton className="h-16 w-80 rounded-md" />
+        <Skeleton className="mt-6 h-96 w-full max-w-lg rounded-lg" />
       </div>
     );
   }
@@ -21,7 +21,7 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
   if (isError || !org) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-bg-surface p-4 text-center">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-bad-bg/15 text-bad-fg mb-4">
+        <div className="flex size-14 items-center justify-center rounded-md bg-bad-bg/15 text-bad-fg mb-4">
           <Building2 size={28} />
         </div>
         <h1 className="font-display text-2xl font-bold text-text-primary">Organization Not Found</h1>
@@ -33,15 +33,15 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50/50 via-bg-surface to-bg-surface flex flex-col font-sans">
+    <div className="min-h-screen bg-bg-app flex flex-col font-sans">
       {/* Header */}
       <header className="border-b border-border-default/80 bg-bg-surface/80 backdrop-blur-md sticky top-0 z-20">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             {org.logoUrl ? (
-              <img src={org.logoUrl} alt={org.name} className="size-10 rounded-xl object-cover shadow-xs" />
+              <img src={org.logoUrl} alt={org.name} className="size-10 rounded-sm object-cover" />
             ) : (
-              <div className="flex size-10 items-center justify-center rounded-xl bg-brand-100 font-display text-lg font-bold text-accent-primary shadow-xs">
+              <div className="flex size-10 items-center justify-center rounded-sm bg-brand-100 font-display text-lg font-bold text-accent-primary">
                 {org.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -69,7 +69,7 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-center py-8 px-4 sm:px-6">
+      <main className="flex-1 flex flex-col justify-center py-6 px-4 sm:py-10 sm:px-6">
         <div className="mx-auto w-full max-w-xl">
           {children}
         </div>
