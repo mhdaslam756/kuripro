@@ -239,7 +239,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           </Button>
                         </Link>
                       ) : null}
-                      {canReplace ? (
+                      {canReplace && !membership.hasWon ? (
                         <Button
                           type="button"
                           variant="outline"
@@ -357,7 +357,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                                   </Button>
                                 </Link>
                               ) : null}
-                              {canReplace ? (
+                              {canReplace && !membership.hasWon ? (
                                 <Button
                                   type="button"
                                   size="sm"

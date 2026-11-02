@@ -31,6 +31,7 @@ import {
 } from "../chit-cycles/chit-cycle.repository.js";
 import type { ChitCycleDocument } from "../chit-cycles/chit-cycle.model.js";
 import { findMemberById, listMembersByIds } from "../members/member.repository.js";
+import { computePrizeRefundDeduction, listTicketExitSettlements } from "../chit-groups/membership-replacement.service.js";
 import {
   applyDividendToCycleInstallments,
   findInstallmentByCycleAndMembership,
@@ -39,6 +40,7 @@ import {
 import { Payment } from "../payments/payment.model.js";
 import {
   createPayout,
+  listPayoutsWithRefundDeductions,
   deletePayoutByCycle,
   findPayoutByCycle,
   listPayoutsByCycleIds,
@@ -344,8 +346,12 @@ export async function settleCycle(
         partner.wonInCycleId = cycle._id;
         await saveChitMembership(partner, session);
 
-        const payout1 = Math.round(result.prizeAmount * (membership.share ?? 0.5));
-        const payout2 = result.prizeAmount - payout1;
+        const gross1 = Math.round(result.prizeAmount * (membership.share ?? 0.5));
+        const gross2 = result.prizeAmount - gross1;
+        const refund1 = await computePrizeRefundDeduction(tenantId, chitGroup, membership, gross1);
+        const refund2 = await computePrizeRefundDeduction(tenantId, chitGroup, partner, gross2);
+        const payout1 = gross1 - refund1.amount;
+        const payout2 = gross2 - refund2.amount;
 
         await createPayout(
           {
@@ -355,6 +361,7 @@ export async function settleCycle(
             chitMembershipId: membership._id.toString(),
             memberId: membership.memberId.toString(),
             amount: payout1,
+            ...(refund1.amount > 0 ? { grossAmount: gross1, refundDeductions: refund1.items } : {}),
           },
           session,
         );
@@ -367,6 +374,7 @@ export async function settleCycle(
             chitMembershipId: partner._id.toString(),
             memberId: partner.memberId.toString(),
             amount: payout2,
+            ...(refund2.amount > 0 ? { grossAmount: gross2, refundDeductions: refund2.items } : {}),
           },
           session,
         );
@@ -375,9 +383,12 @@ export async function settleCycle(
         membership.wonInCycleId = cycle._id;
         await saveChitMembership(membership, session);
 
-        const memberPayout = isHalfShare
+        const grossPayout = isHalfShare
           ? Math.round(result.prizeAmount * (membership.share ?? 0.5))
           : result.prizeAmount;
+        // If the organisation takes the previous member's refund out of the prize, the winner receives the rest.
+        const refund = await computePrizeRefundDeduction(tenantId, chitGroup, membership, grossPayout);
+        const memberPayout = grossPayout - refund.amount;
 
         await createPayout(
           {
@@ -387,6 +398,7 @@ export async function settleCycle(
             chitMembershipId: membership._id.toString(),
             memberId: membership.memberId.toString(),
             amount: memberPayout,
+            ...(refund.amount > 0 ? { grossAmount: grossPayout, refundDeductions: refund.items } : {}),
           },
           session,
         );
@@ -570,6 +582,12 @@ export interface WinnerSummaryDetail {
   name: string;
   memberCode: string;
   payoutAmount?: number;
+  /** Prize before the previous member's refund was taken out of it. */
+  grossPayoutAmount?: number;
+  /** Refund to the previous member taken out of this prize (paise); 0 when paid separately. */
+  refundDeducted?: number;
+  /** First cycle this member is responsible for; above 1 means they took the slot over from someone else. */
+  joinedFromCycle?: number;
 }
 
 export interface AuctionState {
@@ -603,6 +621,8 @@ export interface AuctionState {
     payoutStatus: string;
     /** One per prize recipient (two for a shared 50/50 ticket) — used to confirm payout from the settlement card. */
     payouts: { id: string; chitMembershipId: string; amount: number; amountPaid: number; remaining: number; status: string }[];
+    /** Refunds owed to / by members who previously held the winning ticket. */
+    exitSettlements: Awaited<ReturnType<typeof listTicketExitSettlements>>;
   };
   eligibleMembers: EligibleMember[];
   canRepick: boolean;
@@ -700,18 +720,42 @@ export async function getAuctionState(tenantId: string, cycleId: string, request
     const prizeAmt = cycle.prizeAmount ?? 0;
     const winnerPayoutAmount = isHalf ? Math.round(prizeAmt * (winnerMembership?.share ?? 0.5)) : prizeAmt;
 
+    // Refunds set aside from this ticket's prizes (across every prize it has won), so the card can show
+    // what is allocated, what was already paid and what is still payable.
+    const prizeAllocation = new Map<string, number>();
+    for (const p of await listPayoutsWithRefundDeductions(tenantId, chitGroup._id.toString())) {
+      for (const d of p.refundDeductions ?? []) {
+        prizeAllocation.set(d.replacementId.toString(), (prizeAllocation.get(d.replacementId.toString()) ?? 0) + d.amount);
+      }
+    }
+    // Members (requestingMemberId set) must not see other members' identities or exit financials, the same
+    // rule that anonymises eligibleMembers above. Only staff get the previous members' refund details.
+    const isMemberView = requestingMemberId !== undefined;
+    const exitSettlements = winnerMembership && !isMemberView
+      ? await listTicketExitSettlements(tenantId, chitGroup._id.toString(), winnerMembership.ticketNumber, prizeAllocation)
+      : [];
+    const payoutFor = (membershipId?: string) => cyclePayouts.find((p) => p.chitMembershipId.toString() === membershipId);
+    const winnerPayoutRow = payoutFor(winnerMembership?._id.toString());
+    const refundDeducted = isMemberView ? 0 : (winnerPayoutRow?.refundDeductions ?? []).reduce((s, d) => s + d.amount, 0);
+
     settlement = {
+      exitSettlements,
       winner: {
         membershipId: winnerMembership?._id.toString() ?? "",
         ticketNumber: winnerMembership?.ticketNumber ?? 0,
         subTicket: winnerMembership?.subTicket,
         shareType: winnerMembership?.shareType,
         share: winnerMembership?.share,
+        joinedFromCycle: winnerMembership?.effectiveFromCycleNumber ?? 1,
         name: winnerMember?.name ?? "Unknown",
         memberCode: winnerMember?.memberCode ?? "",
-        payoutAmount: winnerPayoutAmount,
+        payoutAmount: winnerPayoutRow?.amount ?? winnerPayoutAmount,
+        grossPayoutAmount: winnerPayoutRow?.grossAmount ?? winnerPayoutAmount,
+        refundDeducted,
       },
-      coWinner,
+      coWinner: coWinner
+        ? { ...coWinner, payoutAmount: payoutFor(coWinner.membershipId)?.amount ?? coWinner.payoutAmount }
+        : undefined,
       discountAmount: cycle.discountAmount ?? 0,
       commissionAmount: cycle.commissionAmount ?? 0,
       dividendPerMember: cycle.dividendPerMember ?? 0,

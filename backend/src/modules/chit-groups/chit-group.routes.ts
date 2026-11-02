@@ -17,6 +17,7 @@ import {
 import {
   completeReplacementSettlementSchema,
   replaceMemberSchema,
+  groupReplacementSettingsSchema,
   replacementPreviewQuerySchema,
   updateReplacementSettlementSchema,
 } from "./membership-replacement.validators.js";
@@ -97,6 +98,27 @@ chitGroupRouter.post(
   requirePermission("chit_group.enroll_member"),
   validate({ params: nestedMongoIdParamSchema, body: replaceMemberSchema }),
   chitGroupController.replaceMember,
+);
+
+chitGroupRouter.get(
+  "/by-member/:id",
+  requirePermission("chit_group.view"),
+  validate({ params: mongoIdParamSchema }),
+  chitGroupController.memberChitGroups,
+);
+
+chitGroupRouter.get(
+  "/:id/replacement-settings",
+  requirePermission("chit_group.view"),
+  validate({ params: mongoIdParamSchema }),
+  chitGroupController.getReplacementSettings,
+);
+
+chitGroupRouter.put(
+  "/:id/replacement-settings",
+  requirePermission("chit_group.update"),
+  validate({ params: mongoIdParamSchema, body: groupReplacementSettingsSchema }),
+  chitGroupController.updateReplacementSettings,
 );
 
 chitGroupRouter.get(

@@ -1,9 +1,10 @@
 import { cloudinary, isCloudinaryConfigured } from "../../config/cloudinary.js";
 import { logger } from "../../config/logger.js";
 import { AppError } from "../../utils/app-error.js";
+import { rupeesToPaise } from "../../utils/money.js";
 import { findTenantById, saveTenant } from "./tenant.repository.js";
-import type { BusinessHoursEntry, TenantDocument, TenantSubscription } from "./tenant.model.js";
-import type { UpdateCompanyProfileInput, UpdateSettingsInput } from "./tenant.validators.js";
+import type { BusinessHoursEntry, MemberReplacementSettings, TenantDocument, TenantSubscription } from "./tenant.model.js";
+import type { MemberReplacementSettingsInput, UpdateCompanyProfileInput, UpdateSettingsInput } from "./tenant.validators.js";
 
 export async function getOrganization(tenantId: string): Promise<TenantDocument> {
   const tenant = await findTenantById(tenantId);
@@ -28,9 +29,34 @@ export async function updateCompanyProfile(
   return saveTenant(tenant);
 }
 
+/** Rupees-in request → paise-stored settings. Shared by the organisation default and per-group overrides. */
+export function toMemberReplacementSettings(input: MemberReplacementSettingsInput): MemberReplacementSettings {
+  const { fixedCommissionAmountRupees, replacementFeeAmountRupees, displacementCommission, ...modes } = input;
+  return {
+    ...modes,
+    fixedCommissionAmount: modes.commissionOwnershipMode === "FIXED_AMOUNT" ? rupeesToPaise(fixedCommissionAmountRupees) : 0,
+    replacementFeeAmount: modes.replacementFeeMode === "FIXED" ? rupeesToPaise(replacementFeeAmountRupees) : 0,
+    replacementFeePercentage: modes.replacementFeeMode === "PERCENTAGE" ? modes.replacementFeePercentage : 0,
+    ...(displacementCommission
+      ? {
+          displacementCommission: (() => {
+            const { previousMemberFixedAmountRupees, replacementMemberFixedAmountRupees, ...rest } = displacementCommission;
+            return {
+              ...rest,
+              previousMemberFixedAmount: rupeesToPaise(previousMemberFixedAmountRupees),
+              replacementMemberFixedAmount: rupeesToPaise(replacementMemberFixedAmountRupees),
+            };
+          })(),
+        }
+      : {}),
+  };
+}
+
 export async function updateSettings(tenantId: string, updates: UpdateSettingsInput): Promise<TenantDocument> {
   const tenant = await getOrganization(tenantId);
-  Object.assign(tenant.settings, updates);
+  const { memberReplacement, ...rest } = updates;
+  Object.assign(tenant.settings, rest);
+  if (memberReplacement) tenant.settings.memberReplacement = toMemberReplacementSettings(memberReplacement);
   return saveTenant(tenant);
 }
 

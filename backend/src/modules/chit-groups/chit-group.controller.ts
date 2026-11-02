@@ -4,14 +4,17 @@ import { requireTenantContext } from "../../middleware/rbac.js";
 import type { MongoIdParam, NestedMongoIdParam } from "../../utils/common-validators.js";
 import type { PaginationQuery } from "../../utils/pagination.js";
 import { resolveMemberForUser } from "../members/member.service.js";
+import { AppError } from "../../utils/app-error.js";
 import * as chitGroupService from "./chit-group.service.js";
 import * as replacementService from "./membership-replacement.service.js";
+import { listMemberChitGroups } from "./member-chit-groups.service.js";
 import { listChitMembershipsByMemberId } from "./chit-membership.repository.js";
-import type {
-  CompleteReplacementSettlementInput,
-  ReplaceMemberInput,
-  ReplacementPreviewQuery,
-  UpdateReplacementSettlementInput,
+import {
+  replacementPreviewQuerySchema,
+  type CompleteReplacementSettlementInput,
+  type GroupReplacementSettingsInput,
+  type ReplaceMemberInput,
+  type UpdateReplacementSettlementInput,
 } from "./membership-replacement.validators.js";
 import type {
   AddChitDocumentInput,
@@ -155,7 +158,9 @@ export async function replacementPreview(req: Request, res: Response): Promise<v
     tenantId,
     id,
     childId,
-    req.query as unknown as ReplacementPreviewQuery,
+    // Parse here rather than trusting req.query: Express 5 re-derives it on every read, so the validate
+    // middleware cannot write coerced values back and `split` would stay the string "true".
+    replacementPreviewQuerySchema.parse(req.query),
   );
   res.status(200).json({ preview });
 }
@@ -165,6 +170,29 @@ export async function replaceMember(req: Request, res: Response): Promise<void> 
   const { id, childId } = req.params as unknown as NestedMongoIdParam;
   const result = await replacementService.replaceMember(tenantId, id, childId, req.auth!.userId, req.body as ReplaceMemberInput);
   res.status(201).json(result);
+}
+
+export async function memberChitGroups(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  // A member may only look at their own groups; staff can look at any member in their organisation.
+  if (req.auth?.roleSlug === "MEMBER") {
+    const own = await resolveMemberForUser(req.auth.userId, tenantId);
+    if (!own || own._id.toString() !== id) throw AppError.forbidden("You can only view your own chit groups");
+  }
+  res.status(200).json(await listMemberChitGroups(tenantId, id));
+}
+
+export async function getReplacementSettings(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  res.status(200).json(await replacementService.getGroupReplacementSettings(tenantId, id));
+}
+
+export async function updateReplacementSettings(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const { id } = req.params as unknown as MongoIdParam;
+  res.status(200).json(await replacementService.updateGroupReplacementSettings(tenantId, id, req.body as GroupReplacementSettingsInput));
 }
 
 export async function membershipHistory(req: Request, res: Response): Promise<void> {

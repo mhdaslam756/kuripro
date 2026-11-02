@@ -3,6 +3,7 @@ import { Schema, model, Types, type HydratedDocument } from "mongoose";
 import { tenantScopedPlugin } from "../../middleware/tenant-scope.plugin.js";
 import { attachmentSchema, type AttachmentEntry } from "../../utils/attachment.js";
 import { baseSchemaOptions, type Timestamps } from "../../utils/mongoose-helpers.js";
+import { memberReplacementSchema, type MemberReplacementSettings } from "../tenants/tenant.model.js";
 
 export const CHIT_GROUP_FREQUENCIES = ["WEEKLY", "MONTHLY", "TWICE_MONTHLY", "THREE_TIMES_MONTHLY", "CUSTOM"] as const;
 export const CHIT_GROUP_STATUSES = ["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"] as const;
@@ -34,6 +35,8 @@ export interface AuctionRules {
 }
 
 export interface ChitGroupDoc extends Timestamps {
+  /** Replacement terms for this group alone. Absent = use the organisation default. */
+  memberReplacement?: MemberReplacementSettings;
   tenantId: Types.ObjectId;
   name: string;
   registrationNumber: string;
@@ -94,6 +97,7 @@ const chitGroupSchema = new Schema<ChitGroupDoc>(
     endDate: { type: Date, required: true },
 
     auctionRules: { type: auctionRulesSchema, required: true },
+    memberReplacement: { type: memberReplacementSchema },
 
     documents: { type: [attachmentSchema], required: true, default: [] },
     termsAndConditions: { type: String, trim: true },

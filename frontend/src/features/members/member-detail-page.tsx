@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KycStatusBadge, MemberStatusBadge, RiskBandBadge } from "./components/status-badges";
 import { KycTab } from "./tabs/kyc-tab";
 import { FamilyTab } from "./tabs/family-tab";
+import { ChitGroupsTab } from "./tabs/chit-groups-tab";
 import { GuarantorsTab } from "./tabs/guarantors-tab";
 import { NomineesTab } from "./tabs/nominees-tab";
 import { PaymentsTab } from "./tabs/payments-tab";
@@ -23,6 +24,7 @@ const TAB_ITEMS = [
   "Family",
   "Guarantors",
   "Risk",
+  "Chit Groups",
   "Payments",
   "Prizes",
   "Timeline",
@@ -94,6 +96,9 @@ export function MemberDetailPage() {
             </TabsContent>
             <TabsContent value="Risk">
               <RiskTab member={member} />
+            </TabsContent>
+            <TabsContent value="Chit Groups">
+              <ChitGroupsTab memberId={member.id} />
             </TabsContent>
             <TabsContent value="Payments">
               <PaymentsTab memberId={member.id} />

@@ -13,11 +13,12 @@ import { MembersTab } from "./tabs/members-tab";
 import { OverviewTab } from "./tabs/overview-tab";
 import { ReportsTab } from "./tabs/reports-tab";
 import { ScheduleTab } from "./tabs/schedule-tab";
+import { ReplacementTermsTab } from "./tabs/replacement-terms-tab";
 import { TermsTab } from "./tabs/terms-tab";
 import { FREQUENCY_LABELS } from "./types";
 import { useChitGroup } from "./use-chit-groups";
 
-const ALL_TABS = ["Overview", "Collections", "Schedule", "Members", "Auction Rules", "Documents", "Terms", "Reports"] as const;
+const ALL_TABS = ["Overview", "Collections", "Schedule", "Members", "Auction Rules", "Documents", "Terms", "Reports", "Replacement"] as const;
 type TabName = (typeof ALL_TABS)[number];
 
 export function ChitGroupDetailPage() {
@@ -26,7 +27,7 @@ export function ChitGroupDetailPage() {
   const { data: chit, isLoading, isError } = useChitGroup(id);
 
   const isMemberRole = user?.role?.slug === "MEMBER";
-  const TABS: TabName[] = ALL_TABS.filter((t) => !(isMemberRole && t === "Members"));
+  const TABS: TabName[] = ALL_TABS.filter((t) => !(isMemberRole && (t === "Members" || t === "Replacement")));
 
   return (
     <div>
@@ -76,6 +77,9 @@ export function ChitGroupDetailPage() {
             </TabsContent>
             <TabsContent value="Schedule">
               <ScheduleTab chitGroup={chit} />
+            </TabsContent>
+            <TabsContent value="Replacement">
+              <ReplacementTermsTab chitGroup={chit} />
             </TabsContent>
             <TabsContent value="Members">
               <MembersTab chitGroup={chit} />

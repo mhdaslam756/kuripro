@@ -21,12 +21,48 @@ export interface TenantAddress {
   country: string;
 }
 
+export const INSTALLMENT_SETTLEMENT_MODES = ["PENDING", "IMMEDIATE"] as const;
+export const COMMISSION_OWNERSHIP_MODES = ["ORGANIZATION", "PREVIOUS_MEMBER", "REPLACEMENT_MEMBER", "EQUAL_SPLIT", "BY_CYCLES", "FIXED_AMOUNT"] as const;
+export const REPLACEMENT_FEE_MODES = ["NONE", "FIXED", "PERCENTAGE"] as const;
+export const COMMISSION_CALCULATION_BASES = ["TOTAL_COMMISSION", "REMAINING_INSTALMENTS", "PREVIOUS_MEMBER_PAID"] as const;
+
+export const DISPLACEMENT_COMMISSION_MODES = ["CYCLE_BASED", "CONTRIBUTION_BASED", "CUSTOM_PERCENTAGE", "FIXED_AMOUNT"] as const;
+export const REMAINING_COMMISSION_POLICIES = ["ORGANIZATION", "PREVIOUS_MEMBER", "REPLACEMENT_MEMBER"] as const;
+
+/** How a ticket's commission is divided between its successive holders. Amounts are paise; percentages have 2 decimals. */
+export interface DisplacementCommissionSettings {
+  commissionAllocationEnabled: boolean;
+  displacementCommissionMode: (typeof DISPLACEMENT_COMMISSION_MODES)[number];
+  previousMemberPercentage: number;
+  replacementMemberPercentage: number;
+  previousMemberFixedAmount: number;
+  replacementMemberFixedAmount: number;
+  remainingCommissionPolicy: (typeof REMAINING_COMMISSION_POLICIES)[number];
+  /** The policy only applies to replacements made at or after this moment; earlier ones use the simple ownership mode. */
+  effectiveFrom?: Date;
+}
+
+/** How a member replacement is settled, who owns the ticket's commission, and any fee the new member pays. Amounts are paise. */
+export interface MemberReplacementSettings {
+  installmentSettlementMode: (typeof INSTALLMENT_SETTLEMENT_MODES)[number];
+  commissionOwnershipMode: (typeof COMMISSION_OWNERSHIP_MODES)[number];
+  fixedCommissionAmount: number;
+  replacementFeeMode: (typeof REPLACEMENT_FEE_MODES)[number];
+  replacementFeeAmount: number;
+  replacementFeePercentage: number;
+  commissionCalculationBase: (typeof COMMISSION_CALCULATION_BASES)[number];
+  /** When enabled (and effective) this replaces `commissionOwnershipMode` for the commission split. */
+  displacementCommission?: DisplacementCommissionSettings;
+}
+
 export interface TenantSettings {
   defaultForemanCommissionPercent: number;
   defaultMaxBidDiscountPercent: number;
   currency: string;
   /** 1–12 — the calendar month the organization's financial year starts in (4 = April, the Indian FY convention). */
   financialYearStartMonth: number;
+  /** Absent on organisations created before replacement settings existed — resolve with the defaults. */
+  memberReplacement?: MemberReplacementSettings;
 }
 
 export interface TenantSubscription {
@@ -72,12 +108,41 @@ const addressSchema = new Schema<TenantAddress>(
   { _id: false },
 );
 
+const displacementCommissionSchema = new Schema<DisplacementCommissionSettings>(
+  {
+    commissionAllocationEnabled: { type: Boolean, required: true, default: false },
+    displacementCommissionMode: { type: String, enum: DISPLACEMENT_COMMISSION_MODES, required: true, default: "CYCLE_BASED" },
+    previousMemberPercentage: { type: Number, required: true, default: 50, min: 0, max: 100 },
+    replacementMemberPercentage: { type: Number, required: true, default: 50, min: 0, max: 100 },
+    previousMemberFixedAmount: { type: Number, required: true, default: 0, min: 0 },
+    replacementMemberFixedAmount: { type: Number, required: true, default: 0, min: 0 },
+    remainingCommissionPolicy: { type: String, enum: REMAINING_COMMISSION_POLICIES, required: true, default: "ORGANIZATION" },
+    effectiveFrom: { type: Date },
+  },
+  { _id: false },
+);
+
+export const memberReplacementSchema = new Schema<MemberReplacementSettings>(
+  {
+    installmentSettlementMode: { type: String, enum: INSTALLMENT_SETTLEMENT_MODES, required: true, default: "PENDING" },
+    commissionOwnershipMode: { type: String, enum: COMMISSION_OWNERSHIP_MODES, required: true, default: "ORGANIZATION" },
+    fixedCommissionAmount: { type: Number, required: true, default: 0, min: 0 },
+    replacementFeeMode: { type: String, enum: REPLACEMENT_FEE_MODES, required: true, default: "NONE" },
+    replacementFeeAmount: { type: Number, required: true, default: 0, min: 0 },
+    replacementFeePercentage: { type: Number, required: true, default: 0, min: 0, max: 100 },
+    commissionCalculationBase: { type: String, enum: COMMISSION_CALCULATION_BASES, required: true, default: "TOTAL_COMMISSION" },
+    displacementCommission: { type: displacementCommissionSchema },
+  },
+  { _id: false },
+);
+
 const tenantSettingsSchema = new Schema<TenantSettings>(
   {
     defaultForemanCommissionPercent: { type: Number, required: true, default: 5, min: 0, max: 100 },
     defaultMaxBidDiscountPercent: { type: Number, required: true, default: 40, min: 0, max: 100 },
     currency: { type: String, required: true, default: "INR" },
     financialYearStartMonth: { type: Number, required: true, default: 4, min: 1, max: 12 },
+    memberReplacement: { type: memberReplacementSchema },
   },
   { _id: false },
 );

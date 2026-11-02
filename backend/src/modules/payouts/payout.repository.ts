@@ -107,3 +107,8 @@ export async function sumDisbursedPayouts(tenantId: string, chitGroupId: string)
   ]);
   return rows[0]?.total ?? 0;
 }
+
+/** Every payout of a group that had a previous member's refund taken out of it. */
+export async function listPayoutsWithRefundDeductions(tenantId: string, chitGroupId: string): Promise<PayoutDocument[]> {
+  return Payout.find({ tenantId, chitGroupId, "refundDeductions.0": { $exists: true } });
+}

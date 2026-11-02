@@ -25,6 +25,11 @@ export interface PayoutDoc extends Timestamps {
   amountPaid: number;
   status: PayoutStatus;
 
+  /** Prize before any previous-member refund was taken out of it (equals `amount` when nothing was deducted). */
+  grossAmount?: number;
+  /** Refund to previous holders of this ticket that was taken out of this prize. The refund itself is its own payment, settled separately. */
+  refundDeductions?: { replacementId: Types.ObjectId; amount: number }[];
+
   lastDisbursedAt?: Date;
   notes?: string;
 }
@@ -42,6 +47,11 @@ const payoutSchema = new Schema<PayoutDoc>(
     amount: { type: Number, required: true, min: 1 },
     amountPaid: { type: Number, required: true, default: 0, min: 0 },
     status: { type: String, enum: PAYOUT_STATUSES, required: true, default: "PENDING" },
+    grossAmount: { type: Number, min: 1 },
+    refundDeductions: {
+      type: [{ replacementId: { type: Schema.Types.ObjectId, ref: "MembershipReplacement", required: true }, amount: { type: Number, required: true, min: 1 }, _id: false }],
+      default: undefined,
+    },
 
     lastDisbursedAt: { type: Date },
     notes: { type: String, trim: true },

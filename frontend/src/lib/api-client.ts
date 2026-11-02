@@ -218,6 +218,7 @@ export const api = {
   get: <T>(path: string): Promise<T> => request<T>(path),
   post: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "PATCH", body }),
+  put: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string, body?: unknown): Promise<T> => request<T>(path, { method: "DELETE", body }),
   postForm: <T>(path: string, body: FormData): Promise<T> => request<T>(path, { method: "POST", body }),
   download: (path: string): Promise<Blob> => downloadBlob(path),
