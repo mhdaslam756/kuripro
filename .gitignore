@@ -38,3 +38,6 @@ coverage/
 
 # Local MongoDB data
 .mongo-data/
+
+# local dev certificates
+frontend/certs/*.pem

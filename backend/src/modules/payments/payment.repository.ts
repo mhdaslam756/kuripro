@@ -129,6 +129,33 @@ export async function listInstallments(
   return buildPaginatedResult(items, total, query);
 }
 
+export interface DuesOverview {
+  byStatus: Record<PaymentStatus, number>;
+  totalDue: number;
+  totalPaid: number;
+  totalOutstanding: number;
+}
+
+/** Counts and amounts across every installment matching the filter (any group, any cycle). */
+export async function getDuesOverview(filter: ListInstallmentsFilter): Promise<DuesOverview> {
+  const rows = await Payment.aggregate<{ _id: PaymentStatus; count: number; due: number; paid: number }>([
+    { $match: buildInstallmentFilter(filter) },
+    { $group: { _id: "$status", count: { $sum: 1 }, due: { $sum: "$amountDue" }, paid: { $sum: "$amountPaid" } } },
+  ]);
+  const byStatus = { PENDING: 0, PARTIAL: 0, PAID: 0, OVERDUE: 0, WAIVED: 0 } as Record<PaymentStatus, number>;
+  let totalDue = 0;
+  let totalPaid = 0;
+  for (const row of rows) {
+    byStatus[row._id] = row.count;
+    // A waived instalment is not owed, so it adds to neither side.
+    if (row._id !== "WAIVED") {
+      totalDue += row.due;
+      totalPaid += row.paid;
+    }
+  }
+  return { byStatus, totalDue, totalPaid, totalOutstanding: Math.max(0, totalDue - totalPaid) };
+}
+
 export async function countInstallmentsByStatus(
   tenantId: string,
   chitCycleId: string,

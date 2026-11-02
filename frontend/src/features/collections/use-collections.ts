@@ -5,6 +5,7 @@ import type {
   BulkCollectionResult,
   Collection,
   CycleSummary,
+  DuesOverview,
   Installment,
   PaginatedCollections,
   PaginatedDues,
@@ -16,17 +17,29 @@ import type { QueuedCollection } from "./offline-queue";
 
 // --- Dues (installments for a cycle) ---
 
-export function useDues(chitGroupId: string | undefined, chitCycleId: string | undefined, status?: string) {
+export function useDues(chitGroupId: string | undefined, chitCycleId: string | undefined, status?: string, page = 1) {
   return useQuery({
-    queryKey: ["dues", chitGroupId, chitCycleId, status],
+    queryKey: ["dues", chitGroupId, chitCycleId, status, page],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: "100" });
+      const params = new URLSearchParams({ limit: "100", page: String(page) });
       if (chitGroupId) params.set("chitGroupId", chitGroupId);
       if (chitCycleId && chitCycleId !== "ALL") params.set("chitCycleId", chitCycleId);
       if (status) params.set("status", status);
       return api.get<PaginatedDues>(`/collections/dues?${params.toString()}`);
     },
-    enabled: Boolean(chitGroupId || (chitCycleId && chitCycleId !== "ALL")),
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** Totals across every cycle of a group, or across all groups when none is selected. */
+export function useDuesOverview(chitGroupId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["cycle-summary", "overview", chitGroupId],
+    queryFn: () =>
+      api
+        .get<{ overview: DuesOverview }>(`/collections/dues/summary${chitGroupId ? `?chitGroupId=${chitGroupId}` : ""}`)
+        .then((r) => r.overview),
+    enabled,
   });
 }
 

@@ -43,6 +43,9 @@ export interface Installment {
   amountDue: number;
   amountPaid: number;
   dueDate: string;
+  /** Filled in by the dues list so rows spanning several groups or cycles can be labelled. */
+  chitGroupName?: string;
+  cycleNumber?: number;
   paidAt?: string;
   status: DueStatus;
   method?: PaymentMethod;
@@ -84,6 +87,14 @@ export interface CycleSummary {
   byStatus: Record<DueStatus, number>;
   collectedAmount: number;
   collectedCount: number;
+}
+
+/** Totals across every group and cycle (or the member's own), used when no group is picked. */
+export interface DuesOverview {
+  byStatus: Record<DueStatus, number>;
+  totalDue: number;
+  totalPaid: number;
+  totalOutstanding: number;
 }
 
 export interface Receipt {
