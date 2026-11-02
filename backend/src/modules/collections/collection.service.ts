@@ -8,6 +8,8 @@ import {
   listActiveMembershipsByGroup,
 } from "../chit-groups/chit-membership.repository.js";
 import { findChitCycleById, findChitCycleByNumber } from "../chit-cycles/chit-cycle.repository.js";
+import { ChitCycle } from "../chit-cycles/chit-cycle.model.js";
+import { ChitGroup } from "../chit-groups/chit-group.model.js";
 import type { ChitCycleDocument } from "../chit-cycles/chit-cycle.model.js";
 import type { ChitMembershipDocument } from "../chit-groups/chit-membership.model.js";
 import { getNextSequence } from "../counters/counter.repository.js";
@@ -16,6 +18,7 @@ import {
   countInstallmentsByStatus,
   findInstallmentById,
   findInstallmentByCycleAndMembership,
+  getDuesOverview,
   insertInstallments,
   listInstallments,
   listMembershipIdsWithInstallment,
@@ -420,7 +423,7 @@ export async function bounceCollection(
 // --- Listing ---
 
 export async function listDues(tenantId: string, query: ListDuesQuery & { chitMembershipIds?: string[] }) {
-  return listInstallments(
+  const page = await listInstallments(
     {
       tenantId,
       chitGroupId: query.chitGroupId,
@@ -431,6 +434,33 @@ export async function listDues(tenantId: string, query: ListDuesQuery & { chitMe
     },
     query,
   );
+
+  // Group name and cycle number let a list that spans several groups or cycles label each row.
+  const groupIds = [...new Set(page.items.map((p) => p.chitGroupId.toString()))];
+  const cycleIds = [...new Set(page.items.map((p) => p.chitCycleId.toString()))];
+  const [groups, cycles] = await Promise.all([
+    ChitGroup.find({ tenantId, _id: { $in: groupIds } }).select("name"),
+    ChitCycle.find({ tenantId, _id: { $in: cycleIds } }).select("cycleNumber"),
+  ]);
+  const groupName = new Map(groups.map((g) => [g._id.toString(), g.name]));
+  const cycleNumber = new Map(cycles.map((c) => [c._id.toString(), c.cycleNumber]));
+
+  return {
+    ...page,
+    items: page.items.map((p) => ({
+      ...(p.toJSON() as object),
+      chitGroupName: groupName.get(p.chitGroupId.toString()),
+      cycleNumber: cycleNumber.get(p.chitCycleId.toString()),
+    })),
+  };
+}
+
+/** Dues totals for any mix of group / cycle (none = everything), optionally limited to some memberships. */
+export async function getDuesSummary(
+  tenantId: string,
+  filter: { chitGroupId?: string; chitCycleId?: string; chitMembershipIds?: string[] },
+) {
+  return getDuesOverview({ tenantId, ...filter });
 }
 
 export async function listCollections(

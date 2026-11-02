@@ -55,9 +55,20 @@ export async function listDues(req: Request, res: Response): Promise<void> {
 export async function cycleSummary(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
   const { chitGroupId, chitCycleId } = req.query as { chitGroupId?: string; chitCycleId?: string };
+
+  // Not both picked: totals across everything that matches (a member only ever sees their own memberships).
   if (!chitGroupId || !chitCycleId) {
-    throw AppError.badRequest("chitGroupId and chitCycleId query params are required");
+    let chitMembershipIds: string[] | undefined;
+    if (req.auth?.roleSlug === "MEMBER") {
+      const member = await resolveMemberForUser(req.auth.userId, tenantId);
+      const memberships = member ? await listChitMembershipsByMemberId(tenantId, member._id.toString()) : [];
+      chitMembershipIds = memberships.map((m) => m._id.toString());
+    }
+    const overview = await collectionService.getDuesSummary(tenantId, { chitGroupId, chitCycleId, chitMembershipIds });
+    res.status(200).json({ overview });
+    return;
   }
+
   const summary = await collectionService.getCycleCollectionSummary(tenantId, chitGroupId, chitCycleId);
   res.status(200).json({ summary });
 }

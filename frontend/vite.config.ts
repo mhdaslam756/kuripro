@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import basicSsl from "@vitejs/plugin-basic-ssl";
@@ -6,10 +7,16 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Optional locally-trusted certificate (see certs/README.md). Chrome refuses to run a service worker,
+// and so push, on the self-signed fallback certificate.
+const certKey = fileURLToPath(new URL("./certs/localhost-key.pem", import.meta.url));
+const certFile = fileURLToPath(new URL("./certs/localhost.pem", import.meta.url));
+const trustedCert = existsSync(certKey) && existsSync(certFile) ? { key: readFileSync(certKey), cert: readFileSync(certFile) } : null;
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    basicSsl(), // Enables HTTPS in dev — required for Web Push (PushManager) on mobile/local network
+    ...(trustedCert ? [] : [basicSsl()]), // Enables HTTPS in dev — required for Web Push (PushManager) on mobile/local network
     react(),
     tailwindcss(),
     VitePWA({
@@ -52,6 +59,7 @@ export default defineConfig({
     // Combined with basicSsl() above, this gives https://192.168.x.x:5173 — a secure context
     // that unlocks the Web Push API (PushManager) on Android Chrome.
     host: true,
+    ...(trustedCert ? { https: trustedCert } : {}),
     proxy: {
       "/api": {
         target: "http://localhost:4000",

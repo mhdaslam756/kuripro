@@ -31,6 +31,7 @@ import {
   useBulkCollect,
   useCycleSummary,
   useDues,
+  useDuesOverview,
   useFlagOverdue,
   useRaiseDues,
   useSyncOffline,
@@ -62,13 +63,17 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
     }
   }, [initialGroupId, groupId]);
 
-  useEffect(() => {
-    if (groupId === "ALL" && groups?.items?.length === 1 && groups.items[0]?.id) {
-      setGroupId(groups.items[0].id);
-    }
-  }, [groups, groupId]);
-
-  const { data: dues, isLoading: duesLoading } = useDues(groupId && groupId !== "ALL" ? groupId : undefined, cycleId && cycleId !== "ALL" ? cycleId : undefined);
+  const [page, setPage] = useState(1);
+  const { data: dues, isLoading: duesLoading } = useDues(
+    groupId && groupId !== "ALL" ? groupId : undefined,
+    cycleId && cycleId !== "ALL" ? cycleId : undefined,
+    undefined,
+    page,
+  );
+  const specificCycle = Boolean(groupId && groupId !== "ALL" && cycleId && cycleId !== "ALL");
+  const { data: overview } = useDuesOverview(groupId && groupId !== "ALL" ? groupId : undefined, !specificCycle);
+  const showGroupColumn = groupId === "ALL";
+  const showCycleColumn = cycleId === "ALL";
   const { data: summary } = useCycleSummary(groupId && groupId !== "ALL" ? groupId : undefined, cycleId && cycleId !== "ALL" ? cycleId : undefined);
 
   const raiseDues = useRaiseDues();
@@ -93,6 +98,7 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
   }, []);
 
   const groupName = groups?.items.find((g) => g.id === groupId)?.name ?? "";
+  const groupNameFor = (due: Installment) => due.chitGroupName ?? groupName;
   const activeCycle = cycles?.items?.find((c) => c.id === cycleId);
   const unpaid = useMemo(() => (dues?.items ?? []).filter((d) => d.status !== "PAID" && d.status !== "WAIVED"), [dues]);
   const paidCount = useMemo(() => (dues?.items ?? []).filter((d) => d.status === "PAID" || d.amountPaid >= d.amountDue).length, [dues]);
@@ -112,7 +118,7 @@ export function CollectTab({ initialGroupId }: { initialGroupId?: string } = {})
 ━━━━━━━━━━━━━━━━━━━━
 Dear *${memberName}*,
 
-Your installment payment of *${amount}* for *${groupName || "Kuri Scheme"}* (Ticket ${ticketLabel}) has been successfully received!
+Your installment payment of *${amount}* for *${groupNameFor(due) || "Kuri Scheme"}* (Ticket ${ticketLabel}) has been successfully received!
 
 📅 *Status:* Paid
 ✅ *Payment Recorded*
@@ -134,11 +140,13 @@ _KuriPro_`;
   function selectGroup(next: string) {
     setGroupId(next);
     setCycleId("ALL");
+    setPage(1);
     setSelected(new Set());
   }
 
   function selectCycle(next: string) {
     setCycleId(next);
+    setPage(1);
     setSelected(new Set());
   }
 
@@ -263,6 +271,21 @@ _KuriPro_`;
             tone={myOutstanding > 0 ? "text-bad-fg" : "text-text-secondary"}
           />
         </div>
+      ) : !specificCycle && overview ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryChip label="Collected" value={`${overview.byStatus.PAID} dues`} tone="text-good-fg" />
+          <SummaryChip
+            label="Pending"
+            value={`${overview.byStatus.PENDING + overview.byStatus.PARTIAL + overview.byStatus.OVERDUE} dues`}
+            tone="text-bad-fg"
+          />
+          <SummaryChip label="Total paid" value={formatPaise(overview.totalPaid)} tone="text-accent-primary" />
+          <SummaryChip
+            label="Outstanding"
+            value={formatPaise(overview.totalOutstanding)}
+            tone={overview.totalOutstanding > 0 ? "text-bad-fg" : "text-text-secondary"}
+          />
+        </div>
       ) : summary ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryChip label="Collected Persons" value={`${summary.byStatus.PAID} members`} tone="text-good-fg" />
@@ -331,13 +354,7 @@ _KuriPro_`;
         </div>
       ) : null}
 
-      {!groupId ? (
-        <div className="rounded-md border border-dashed border-border-default py-16 text-center">
-          <p className="text-sm text-text-secondary">
-            {isMemberUser ? "Select a chit group to view your installment dues." : "Select a chit group to begin collecting."}
-          </p>
-        </div>
-      ) : duesLoading ? (
+      {duesLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : noDuesRaised ? (
         <div className="rounded-md border border-dashed border-border-default py-16 text-center">
@@ -352,6 +369,12 @@ _KuriPro_`;
               {raiseDues.isPending ? "Raising…" : "Raise dues for all members"}
             </Button>
           ) : null}
+        </div>
+      ) : (dues?.items.length ?? 0) === 0 ? (
+        <div className="rounded-md border border-dashed border-border-default py-16 text-center">
+          <p className="text-sm text-text-secondary">
+            {isMemberUser ? "You have no installment dues yet." : "No dues have been raised yet. Pick a chit group and cycle to raise them."}
+          </p>
         </div>
       ) : (
         <>
@@ -454,6 +477,13 @@ _KuriPro_`;
                             {memberCode}
                           </p>
                         ) : null}
+                        {showGroupColumn || showCycleColumn ? (
+                          <p className="mt-0.5 text-xs text-text-secondary">
+                            {[showGroupColumn ? due.chitGroupName : null, showCycleColumn && due.cycleNumber ? `Cycle #${due.cycleNumber}` : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                     <DueStatusBadge status={due.status} />
@@ -532,6 +562,8 @@ _KuriPro_`;
                     {canRecord ? <TableHeaderCell /> : null}
                     <TableHeaderCell>Ticket</TableHeaderCell>
                     <TableHeaderCell>Member</TableHeaderCell>
+                    {showGroupColumn ? <TableHeaderCell>Chit group</TableHeaderCell> : null}
+                    {showCycleColumn ? <TableHeaderCell>Cycle</TableHeaderCell> : null}
                     <TableHeaderCell>Due</TableHeaderCell>
                     <TableHeaderCell>Paid</TableHeaderCell>
                     <TableHeaderCell>Outstanding</TableHeaderCell>
@@ -586,6 +618,8 @@ _KuriPro_`;
                             </span>
                           ) : null}
                         </TableCell>
+                        {showGroupColumn ? <TableCell>{due.chitGroupName ?? "—"}</TableCell> : null}
+                        {showCycleColumn ? <TableCell className="tabular-nums">{due.cycleNumber ? `#${due.cycleNumber}` : "—"}</TableCell> : null}
                         <TableCell>{formatPaise(due.amountDue)}</TableCell>
                         <TableCell>{formatPaise(due.amountPaid)}</TableCell>
                         <TableCell className={outstanding > 0 ? "font-medium text-text-primary" : "text-text-secondary"}>
@@ -652,7 +686,25 @@ _KuriPro_`;
               </Table>
             </TableContainer>
           </div>
-          <p className="text-xs text-text-secondary">{unpaid.length} of {dues?.items.length} members still owe this cycle.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-text-secondary">
+              {unpaid.length} of {dues?.items.length} shown still owe
+              {dues && dues.total > dues.items.length ? ` · ${dues.total} dues in total` : ""}.
+            </p>
+            {dues && dues.totalPages > 1 ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  Previous
+                </Button>
+                <span className="text-xs tabular-nums text-text-secondary">
+                  Page {dues.page} of {dues.totalPages}
+                </span>
+                <Button size="sm" variant="outline" disabled={page >= dues.totalPages} onClick={() => setPage((p) => p + 1)}>
+                  Next
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </>
       )}
 
@@ -661,7 +713,7 @@ _KuriPro_`;
           open={Boolean(collectTarget)}
           onOpenChange={(o) => !o && setCollectTarget(null)}
           installment={collectTarget}
-          chitGroupName={groupName}
+          chitGroupName={groupNameFor(collectTarget)}
           onCollected={(id) => {
             setCollectTarget(null);
             setReceiptId(id);
@@ -679,7 +731,7 @@ _KuriPro_`;
           open={Boolean(reminderTarget)}
           onOpenChange={(o) => !o && setReminderTarget(null)}
           installment={reminderTarget}
-          chitGroupName={groupName}
+          chitGroupName={groupNameFor(reminderTarget)}
         />
       ) : null}
 
