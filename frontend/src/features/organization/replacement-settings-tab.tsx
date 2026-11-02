@@ -472,12 +472,16 @@ export function ReplacementSettingsForm({
                     description="Divided by how many cycles each member held the ticket. For example 6 of 20 cycles and 14 of 20 gives 30% and 70%."
                   />
                 ) : null}
-                <OptionCard
-                  group="dc"
-                  value="CONTRIBUTION_BASED"
-                  title="By money paid"
-                  description="Divided by the instalments each member has actually paid. Scheduled and unpaid amounts are ignored."
-                />
+                {/* The replacement has paid nothing at replacement time, so this always charges the
+                    previous member in full; shown only if it was saved earlier. */}
+                {dcMode === "CONTRIBUTION_BASED" ? (
+                  <OptionCard
+                    group="dc"
+                    value="CONTRIBUTION_BASED"
+                    title="By money paid (not recommended)"
+                    description="The new member has paid nothing yet, so the previous member is charged the whole commission. Choose Percentages you set or Shared by cycles held instead."
+                  />
+                ) : null}
                 <OptionCard
                   group="dc"
                   value="CUSTOM_PERCENTAGE"
