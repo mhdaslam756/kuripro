@@ -2,14 +2,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -91,16 +84,20 @@ export function MembershipHistoryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Membership history</DialogTitle>
-          <DialogDescription>
-            Every member who has held each slot, with their own payment totals
-            and exit settlement.
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      title="Membership history"
+      description="Every member who has held each slot, with their own payment totals and exit settlement."
+      footer={
+        <div className="flex sm:justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11 w-full sm:w-auto">
+            Close
+          </Button>
+        </div>
+      }
+    >
         {isLoading ? (
           <Skeleton className="h-40 w-full rounded-md" />
         ) : isError || !slots ? (
@@ -282,13 +279,6 @@ export function MembershipHistoryDialog({
             </div>
           </div>
         ) : null}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

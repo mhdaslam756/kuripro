@@ -1,8 +1,7 @@
 import { WifiOff, Zap } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
@@ -83,17 +82,35 @@ export function CollectDialog({ open, onOpenChange, installment, chitGroupName, 
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Collect payment</DialogTitle>
-          <DialogDescription>
-            {member.name} · {member.memberCode} · Ticket #{installment.chitMembershipId.ticketNumber}
-            {installment.chitMembershipId.subTicket || ""}
-            {installment.chitMembershipId.shareType === "HALF" ? " (50% Shared Slot)" : ""}
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={handleClose}
+      size="md"
+      title="Collect payment"
+      description={`${member.name} · ${member.memberCode} · Ticket #${installment.chitMembershipId.ticketNumber}${installment.chitMembershipId.subTicket || ""}${installment.chitMembershipId.shareType === "HALF" ? " (50% Shared Slot)" : ""}`}
+      footer={
+        <div className="flex flex-col gap-2">
+          <FormDrawerActions
+            onCancel={() => handleClose(false)}
+            onSubmit={() => void handleCollect()}
+            disabled={!amountValid}
+            pending={record.isPending}
+            pendingLabel="Recording…"
+            submitLabel={
+              <>
+                <Zap size={15} /> Collect {formatPaise(amountPaise || 0)}
+              </>
+            }
+            error={record.isError ? (record.error instanceof ApiError ? record.error.message : "Something went wrong") : null}
+          />
+          {typeof navigator !== "undefined" && !navigator.onLine ? (
+            <p className="flex items-center gap-1.5 text-xs text-warn-fg">
+              <WifiOff size={13} /> You're offline — this will be queued and synced later.
+            </p>
+          ) : null}
+        </div>
+      }
+    >
         <div className="flex flex-col gap-4">
           <div className="rounded-md border border-border-default bg-bg-raised px-4 py-3">
             <p className="text-xs uppercase tracking-wide text-text-secondary">Outstanding</p>
@@ -105,16 +122,16 @@ export function CollectDialog({ open, onOpenChange, installment, chitGroupName, 
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-text-primary">Method</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {COLLECTION_METHODS.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMethod(m)}
                   className={cn(
-                    "rounded-md border px-2 py-2 text-xs font-medium transition-colors",
+                    "min-h-11 rounded-md border px-2 py-2 text-xs font-medium transition-colors",
                     method === m
-                      ? "border-accent-primary bg-brand-50 text-accent-primary"
+                      ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
                       : "border-border-default text-text-secondary hover:bg-bg-raised",
                   )}
                 >
@@ -154,35 +171,7 @@ export function CollectDialog({ open, onOpenChange, installment, chitGroupName, 
           <Field label="Notes (optional)" htmlFor="notes">
             <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
-
-          {record.isError ? (
-            <p className="text-sm text-bad-fg">
-              {record.error instanceof ApiError ? record.error.message : "Something went wrong"}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => handleClose(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!amountValid || record.isPending} onClick={() => void handleCollect()}>
-              {record.isPending ? (
-                "Recording…"
-              ) : (
-                <>
-                  <Zap size={15} /> Collect {formatPaise(amountPaise || 0)}
-                </>
-              )}
-            </Button>
-          </div>
-
-          {typeof navigator !== "undefined" && !navigator.onLine ? (
-            <p className="flex items-center gap-1.5 text-xs text-warn-fg">
-              <WifiOff size={13} /> You're offline — this will be queued and synced later.
-            </p>
-          ) : null}
         </div>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

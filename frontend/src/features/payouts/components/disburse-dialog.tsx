@@ -2,7 +2,7 @@ import { Check, Paperclip, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
@@ -74,16 +74,24 @@ export function DisburseDialog({ open, onOpenChange, payout }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Disburse prize money</DialogTitle>
-          <DialogDescription>
-            {payout.member.name} · {payout.member.memberCode}
-            {payout.cycleNumber ? ` · Cycle #${payout.cycleNumber}` : ""}
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={handleClose}
+      size="md"
+      title="Disburse prize money"
+      description={`${payout.member.name} · ${payout.member.memberCode}${payout.cycleNumber ? ` · Cycle #${payout.cycleNumber}` : ""}`}
+      footer={
+        <FormDrawerActions
+          onCancel={() => handleClose(false)}
+          onSubmit={() => void handleDisburse()}
+          disabled={!amountValid || payout.remaining <= 0}
+          pending={disburse.isPending}
+          pendingLabel="Recording…"
+          submitLabel={`Disburse ${formatPaise(amountPaise || 0)}`}
+          error={disburse.isError ? (disburse.error instanceof ApiError ? disburse.error.message : "Something went wrong") : null}
+        />
+      }
+    >
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-2 rounded-md border border-border-default bg-bg-raised px-4 py-3 text-center">
             <div>
@@ -102,16 +110,16 @@ export function DisburseDialog({ open, onOpenChange, payout }: Props) {
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-text-primary">Method</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {DISBURSE_METHODS.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMethod(m)}
                   className={cn(
-                    "rounded-md border px-2 py-2 text-xs font-medium transition-colors",
+                    "min-h-11 rounded-md border px-2 py-2 text-xs font-medium transition-colors",
                     method === m
-                      ? "border-accent-primary bg-brand-50 text-accent-primary"
+                      ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
                       : "border-border-default text-text-secondary hover:bg-bg-raised",
                   )}
                 >
@@ -176,23 +184,7 @@ export function DisburseDialog({ open, onOpenChange, payout }: Props) {
               <p className="mt-1 text-xs text-bad-fg">Upload failed — requires Cloudinary to be configured.</p>
             ) : null}
           </div>
-
-          {disburse.isError ? (
-            <p className="text-sm text-bad-fg">
-              {disburse.error instanceof ApiError ? disburse.error.message : "Something went wrong"}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => handleClose(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!amountValid || disburse.isPending || payout.remaining <= 0} onClick={() => void handleDisburse()}>
-              {disburse.isPending ? "Recording…" : `Disburse ${formatPaise(amountPaise || 0)}`}
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

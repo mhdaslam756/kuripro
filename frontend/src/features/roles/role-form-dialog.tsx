@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
@@ -64,18 +63,27 @@ export function RoleFormDialog({ open, onOpenChange, role }: RoleFormDialogProps
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? `Edit ${role?.name}` : "Create role"}</DialogTitle>
-          <DialogDescription>
-            {isEditing && role?.isSystemRole
-              ? "Built-in role — permissions can be customized, the name can't."
-              : "Choose a name and the permissions this role grants."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title={isEditing ? `Edit ${role?.name}` : "Create role"}
+      description={
+        isEditing && role?.isSystemRole
+          ? "Built-in role — permissions can be customized, the name can't."
+          : "Choose a name and the permissions this role grants."
+      }
+      footer={
+        <FormDrawerActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={() => void handleSubmit()}
+          pending={isPending}
+          submitLabel={isEditing ? "Save changes" : "Create role"}
+          error={mutationError ? (mutationError instanceof ApiError ? mutationError.message : "Something went wrong") : null}
+        />
+      }
+    >
+        <div className="flex flex-col gap-4">
           <Field label="Role name" htmlFor="roleName" error={nameError ?? undefined}>
             <Input
               id="roleName"
@@ -106,22 +114,6 @@ export function RoleFormDialog({ open, onOpenChange, role }: RoleFormDialogProps
             ))}
           </div>
         </div>
-
-        {mutationError ? (
-          <p className="text-sm text-bad-fg">
-            {mutationError instanceof ApiError ? mutationError.message : "Something went wrong"}
-          </p>
-        ) : null}
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={() => void handleSubmit()} disabled={isPending}>
-            {isPending ? "Saving…" : isEditing ? "Save changes" : "Create role"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

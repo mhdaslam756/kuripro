@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -219,15 +220,13 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[88vh] max-w-xl overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Assign & Manage Members</DialogTitle>
-          <DialogDescription>
-            {seatsRemaining} ticket capacity remaining out of {roster?.total ? roster.total + seatsRemaining : seatsRemaining}.
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={handleClose}
+      size="lg"
+      title="Assign & Manage Members"
+      description={`${seatsRemaining} ticket capacity remaining out of ${roster?.total ? roster.total + seatsRemaining : seatsRemaining}.`}
+    >
         {memberToRemove ? (
           <div className="my-2 rounded-lg border border-bad-fg/30 bg-bad-bg/10 p-4 text-sm flex flex-col gap-3">
             <div className="flex items-center gap-2 font-medium text-bad-fg">
@@ -343,7 +342,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               </div>
             ) : null}
 
-            <TabsContent value="assign" className="flex-1 overflow-y-auto min-h-[220px] max-h-[300px] mt-2 border border-border-default rounded-md p-0">
+            <TabsContent value="assign" className="mt-2 border border-border-default rounded-md p-0">
               {isLoadingMembers ? (
                 <div className="flex flex-col gap-2 p-3">
                   <Skeleton className="h-9 w-full" />
@@ -462,7 +461,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               )}
             </TabsContent>
 
-            <TabsContent value="enrolled" className="flex-1 overflow-y-auto min-h-[220px] max-h-[320px] mt-2 border border-border-default rounded-md p-0">
+            <TabsContent value="enrolled" className="mt-2 border border-border-default rounded-md p-0">
               {isLoadingRoster ? (
                 <div className="flex flex-col gap-2 p-3">
                   <Skeleton className="h-9 w-full" />
@@ -527,7 +526,7 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
               )}
             </TabsContent>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-border-default bg-bg-surface px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
               <Button variant="outline" onClick={() => handleClose(false)}>
                 Close
               </Button>
@@ -550,7 +549,6 @@ export function AssignMembersDialog({ open, onOpenChange, chitGroupId, seatsRema
             </DialogFooter>
           </Tabs>
         )}
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

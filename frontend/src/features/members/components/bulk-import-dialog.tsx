@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle2, FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   Table,
   TableBody,
@@ -130,16 +130,13 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
   const error = previewImport.error ?? commitImport.error;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Bulk import members</DialogTitle>
-          <DialogDescription>
-            Upload a CSV to register many members at once. Valid rows are imported; invalid rows are skipped and
-            reported so you can fix and re-upload just those.
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormDrawer
+      open={open}
+      onOpenChange={handleClose}
+      size="xl"
+      title="Bulk import members"
+      description="Upload a CSV to register many members at once. Valid rows are imported; invalid rows are skipped and reported so you can fix and re-upload just those."
+    >
         <div className="flex flex-col gap-4">
           <button
             type="button"
@@ -214,7 +211,6 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
             ) : null}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </FormDrawer>
   );
 }

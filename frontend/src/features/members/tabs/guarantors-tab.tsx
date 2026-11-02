@@ -2,7 +2,7 @@ import { Plus, ShieldQuestion, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -99,12 +99,24 @@ export function GuarantorsTab({ memberId }: { memberId: string }) {
         </ul>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add guarantor</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        size="md"
+        title="Add guarantor"
+        footer={
+          <FormDrawerActions
+            onCancel={() => setOpen(false)}
+            onSubmit={() => void handleAdd()}
+            disabled={type === "EXTERNAL" ? !name || !phone : !guarantorMemberId}
+            pending={addGuarantor.isPending}
+            pendingLabel="Adding…"
+            submitLabel="Add guarantor"
+            error={addGuarantor.isError ? (addGuarantor.error instanceof ApiError ? addGuarantor.error.message : "Something went wrong") : null}
+          />
+        }
+      >
+        <div className="flex flex-col gap-4">
             <Field label="Guarantor type" htmlFor="guarantor-type">
               <Select value={type} onValueChange={(v: string) => setType(v as GuarantorType)}>
                 <SelectTrigger id="guarantor-type">
@@ -118,7 +130,7 @@ export function GuarantorsTab({ memberId }: { memberId: string }) {
             </Field>
 
             {type === "EXTERNAL" ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Name" htmlFor="guarantor-name">
                   <Input id="guarantor-name" value={name} onChange={(e) => setName(e.target.value)} />
                 </Field>
@@ -144,25 +156,8 @@ export function GuarantorsTab({ memberId }: { memberId: string }) {
               <Input id="guarantor-relation" value={relation} onChange={(e) => setRelation(e.target.value)} />
             </Field>
 
-            {addGuarantor.isError ? (
-              <p className="text-sm text-bad-fg">
-                {addGuarantor.error instanceof ApiError ? addGuarantor.error.message : "Something went wrong"}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={addGuarantor.isPending || (type === "EXTERNAL" ? !name || !phone : !guarantorMemberId)}
-              onClick={() => void handleAdd()}
-            >
-              {addGuarantor.isPending ? "Adding…" : "Add guarantor"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormDrawer>
     </div>
   );
 }

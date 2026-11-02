@@ -2,7 +2,7 @@ import { Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,16 +85,28 @@ export function FamilyTab({ memberId }: { memberId: string }) {
         </ul>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add family member</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        size="md"
+        title="Add family member"
+        footer={
+          <FormDrawerActions
+            onCancel={() => setOpen(false)}
+            onSubmit={() => void handleAdd()}
+            disabled={!name}
+            pending={addFamily.isPending}
+            pendingLabel="Adding…"
+            submitLabel="Add"
+            error={addFamily.isError ? (addFamily.error instanceof ApiError ? addFamily.error.message : "Something went wrong") : null}
+          />
+        }
+      >
+        <div className="flex flex-col gap-4">
             <Field label="Full name" htmlFor="family-name">
               <Input id="family-name" value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Relation" htmlFor="family-relation">
                 <Select value={relation} onValueChange={(v: string) => setRelation(v as FamilyRelation)}>
                   <SelectTrigger id="family-relation">
@@ -117,22 +129,8 @@ export function FamilyTab({ memberId }: { memberId: string }) {
               <Switch checked={isDependent} onCheckedChange={(checked: boolean) => setIsDependent(checked)} />
               Financially dependent on the member
             </label>
-            {addFamily.isError ? (
-              <p className="text-sm text-bad-fg">
-                {addFamily.error instanceof ApiError ? addFamily.error.message : "Something went wrong"}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!name || addFamily.isPending} onClick={() => void handleAdd()}>
-              {addFamily.isPending ? "Adding…" : "Add"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormDrawer>
     </div>
   );
 }
