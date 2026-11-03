@@ -40,7 +40,7 @@ export function ReportsPage() {
     <div className="flex flex-col gap-4">
       {/* Page Header */}
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Reports & Analytics</h1>
+        <h1 className="max-lg:hidden font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Reports & Analytics</h1>
         <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
           Operational and financial reports with charts — export any of them to PDF, Excel or CSV.
         </p>

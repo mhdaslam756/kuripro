@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { IconTile, type IconTone } from "@/components/ui/icon-tile";
 import { cn } from "@/lib/utils";
 import { HeaderInstallAppButton, HeaderPushNotificationButton } from "@/components/pwa/install-notification-toasts";
 import { useLiveNotifications } from "@/features/notifications/use-live-notifications";
@@ -32,6 +33,19 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/roles", label: "Roles & Permissions", icon: ShieldCheck, permission: "role.manage" },
   { to: "/device", label: "Device & Security", icon: Smartphone },
 ];
+
+/** One colour per destination in the More menu, so each row is recognisable at a glance. */
+const MENU_TONES: Record<string, IconTone> = {
+  "/payouts": "rose",
+  "/refunds": "orange",
+  "/reports": "indigo",
+  "/notifications": "amber",
+  "/members": "sky",
+  "/organization": "violet",
+  "/branches": "teal",
+  "/roles": "emerald",
+  "/device": "indigo",
+};
 
 function ThemeToggle() {
   const { mode, setMode } = useTheme();
@@ -92,15 +106,14 @@ function MobileTabItem({ to, label, icon: Icon, primary = false }: MobileTabItem
       {({ isActive }: { isActive: boolean }) => (
         <>
           {primary ? (
-            /* Primary center action pill */
+            /* Raised centre action */
             <div
               className={cn(
-                "flex h-11 w-14 items-center justify-center rounded-2xl shadow-lg transition-all",
-                "bg-gradient-to-r from-accent-primary to-[#8B5CF6] text-white",
-                isActive && "ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-surface shadow-accent-primary/30",
+                "-mt-9 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-accent-primary text-white shadow-lg shadow-accent-primary/40 ring-[5px] ring-bg-app transition-all",
+                isActive && "from-brand-800 to-brand-600",
               )}
             >
-              <Icon size={20} strokeWidth={2.2} />
+              <Icon size={22} strokeWidth={2.2} />
             </div>
           ) : (
             /* Standard tab — minimal clean pill when active */
@@ -162,6 +175,10 @@ function MobileMoreButton({ onClick, active }: MobileMoreButtonProps) {
 
 // ── Bottom Nav bar variants by role ───────────────────────────────────────────
 
+/** Floating pill: lifted off the screen edge, with the centre action raised above it. */
+const FLOATING_NAV =
+  "fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex h-[68px] transform-gpu items-center justify-around rounded-[30px] border border-border-default/60 bg-bg-surface px-2 shadow-[0_14px_40px_-10px_rgba(76,29,149,0.4)] [backface-visibility:hidden] [html[data-keyboard=open]_&]:hidden lg:hidden";
+
 interface BottomNavProps {
   onMoreOpen: () => void;
   moreOpen: boolean;
@@ -170,7 +187,7 @@ interface BottomNavProps {
 function SuperAdminBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
+      className={FLOATING_NAV}
       aria-label="Super Admin Mobile Navigation"
     >
       <MobileTabItem to="/super-admin/dashboard" label="Dashboard" icon={LayoutDashboard} />
@@ -183,12 +200,13 @@ function SuperAdminBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
 function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
+      className={FLOATING_NAV}
       aria-label="Member Mobile Navigation"
     >
       <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
       <MobileTabItem to="/chit-groups" label="My Chits" icon={Landmark} />
-      <MobileTabItem to="/auctions" label="Auctions" icon={Gavel} />
+      <MobileTabItem to="/auctions" label="Auctions" icon={Gavel} primary />
+      <MobileTabItem to="/notifications" label="Alerts" icon={Bell} />
       <MobileMoreButton onClick={onMoreOpen} active={moreOpen} />
     </nav>
   );
@@ -197,7 +215,7 @@ function MemberBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
 function OrganizerBottomNav({ onMoreOpen, moreOpen }: BottomNavProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-border-default/60 bg-bg-surface/90 px-3 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
+      className={FLOATING_NAV}
       aria-label="App Navigation"
     >
       <MobileTabItem to="/dashboard" label="Home" icon={LayoutDashboard} />
@@ -232,6 +250,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const { pathname } = useLocation();
+  // On phones the dashboard draws its own hero (greeting, balance, actions) instead of the top bar.
+  const isHeroRoute = pathname === "/dashboard";
 
   let visibleItems = NAV_ITEMS.filter((item) => {
     if (user?.role?.slug === "MEMBER") {
@@ -253,9 +273,35 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const { title: routeTitle, isDetail } = useRouteChrome(visibleItems);
 
+  // While typing, the on-screen keyboard shrinks the page and would push the bottom bar up over the form.
+  useEffect(() => {
+    const isTextField = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      t.matches("textarea, select, [contenteditable='true'], input:not([type='checkbox'], [type='radio'], [type='button'], [type='submit'], [type='file'])");
+    let timer: number | undefined;
+    const onIn = (e: FocusEvent) => {
+      if (!isTextField(e.target)) return;
+      window.clearTimeout(timer);
+      document.documentElement.dataset.keyboard = "open";
+    };
+    const onOut = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => delete document.documentElement.dataset.keyboard, 80);
+    };
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("focusin", onIn);
+      document.removeEventListener("focusout", onOut);
+      delete document.documentElement.dataset.keyboard;
+    };
+  }, []);
+
   // A new screen always opens at the top, like a native navigation push.
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    document.getElementById("app-scroll")?.scrollTo({ top: 0 });
   }, [pathname]);
 
   async function handleLogout() {
@@ -264,7 +310,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-bg-app lg:flex select-none">
+    <div className="min-h-[100dvh] bg-bg-app select-none max-lg:h-dvh max-lg:overflow-hidden lg:flex">
       <PullToRefresh />
 
       {/* Desktop Sidebar */}
@@ -296,22 +342,29 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div id="app-scroll" className="flex min-w-0 flex-1 flex-col max-lg:h-full max-lg:overflow-x-hidden max-lg:overflow-y-auto max-lg:overscroll-none">
         {/* Compact Top Header */}
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border-default/50 bg-bg-surface/85 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-2xl lg:static lg:min-h-[72px] lg:px-8 lg:py-3">
-          {/* Mobile Header Left: back button on drill-down screens, screen title everywhere */}
-          <div className="flex min-w-0 items-center gap-1.5 lg:hidden">
+        <header
+          className={cn(
+            // Phones: no bar at all, just a large title on the page background.
+            "relative z-30 flex items-center justify-between gap-3 bg-bg-app px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-1",
+            "lg:sticky lg:top-0 lg:z-40 lg:min-h-[72px] lg:border-b lg:border-border-default/50 lg:bg-bg-surface/85 lg:px-8 lg:py-3 lg:backdrop-blur-2xl",
+            isHeroRoute && "max-sm:hidden",
+          )}
+        >
+          {/* Mobile Header Left: back button on drill-down screens, large screen title everywhere */}
+          <div className="flex min-w-0 items-center gap-2.5 lg:hidden">
             {isDetail ? (
               <button
                 type="button"
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
-                className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-full text-text-primary active-bounce"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-surface text-text-primary shadow-xs active-bounce"
               >
-                <ArrowLeft size={22} />
+                <ArrowLeft size={20} />
               </button>
             ) : null}
-            <h1 className="truncate font-display text-lg font-bold tracking-tight text-text-primary">{routeTitle}</h1>
+            <h1 className="truncate font-display text-[28px] font-extrabold leading-tight tracking-tight text-text-primary">{routeTitle}</h1>
           </div>
 
           {/* Desktop Header Left */}
@@ -329,7 +382,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Notification bell */}
             <NavLink
               to="/notifications"
-              className="relative flex size-9 items-center justify-center rounded-xl bg-bg-raised text-text-secondary transition-all hover:text-text-primary active-bounce"
+              className="relative flex size-10 items-center justify-center rounded-full border border-border-default bg-bg-surface text-text-secondary shadow-xs transition-all hover:text-text-primary active-bounce lg:size-9 lg:rounded-xl lg:border-0 lg:bg-bg-raised lg:shadow-none"
               aria-label="Notifications"
             >
               <Bell size={17} />
@@ -347,7 +400,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Main App Content Area */}
-        <main key={pathname} className="page-enter flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text">
+        <main
+          key={pathname}
+          className={cn(
+            "page-enter flex-1 overflow-y-auto max-lg:overflow-visible px-4 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text",
+            isHeroRoute && "max-sm:px-0 max-sm:pt-0",
+          )}
+        >
           <div className="mx-auto w-full max-w-[1440px]">
             {children}
           </div>
@@ -419,12 +478,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   {({ isActive }: { isActive: boolean }) => (
                     <>
-                      <span className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
-                        isActive ? "bg-brand-100 text-accent-primary" : "bg-bg-raised text-text-secondary",
-                      )}>
+                      <IconTile tone={MENU_TONES[to] ?? "violet"} className={cn(isActive && "ring-2 ring-accent-primary/40")}>
                         <Icon size={18} />
-                      </span>
+                      </IconTile>
                       <span className={cn("flex-1 text-sm font-semibold", isActive ? "text-accent-primary" : "text-text-primary")}>
                         {label}
                       </span>

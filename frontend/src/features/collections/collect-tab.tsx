@@ -1,4 +1,5 @@
-import { Bell, CloudUpload, MessageSquare, RefreshCw, Trophy, Zap } from "lucide-react";
+import { Bell, CloudUpload, RefreshCw, Trophy, Zap } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -231,7 +232,7 @@ _KuriPro_`;
               className="gap-1.5 active-bounce border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 font-semibold shadow-xs"
               title="Share WhatsApp Collection Done List"
             >
-              <MessageSquare size={15} className="text-[#25D366]" /> Share Done List
+              <WhatsAppIcon size={15} className="text-[#25D366]" /> Share Done List
             </Button>
             <Button
               variant="outline"
@@ -342,7 +343,7 @@ _KuriPro_`;
                 onClick={() => setWhatsAppListOpen(true)}
                 className="gap-1.5 font-semibold border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/10 text-xs shadow-xs"
               >
-                <MessageSquare size={14} className="text-[#25D366]" /> WhatsApp Done List ({paidCount})
+                <WhatsAppIcon size={14} className="text-[#25D366]" /> WhatsApp Done List ({paidCount})
               </Button>
             ) : null}
             {canRecord && unpaid.length > 0 ? (
@@ -543,7 +544,7 @@ _KuriPro_`;
                             title="Share WhatsApp Receipt"
                             onClick={() => handleShareRowReceipt(due)}
                           >
-                            <MessageSquare size={13} className="text-[#25D366]" /> Share
+                            <WhatsAppIcon size={13} className="text-[#25D366]" /> Share
                           </Button>
                         </div>
                       )
@@ -673,7 +674,7 @@ _KuriPro_`;
                                   title="Share WhatsApp Receipt"
                                   onClick={() => handleShareRowReceipt(due)}
                                 >
-                                  <MessageSquare size={13} className="text-[#25D366]" /> Share
+                                  <WhatsAppIcon size={13} className="text-[#25D366]" /> Share
                                 </Button>
                               </div>
                             )}

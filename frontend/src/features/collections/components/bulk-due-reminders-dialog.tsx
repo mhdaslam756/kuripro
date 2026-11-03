@@ -1,4 +1,5 @@
-import { Bell, CheckCircle2, Send, Smartphone, MessageSquare, Radio } from "lucide-react";
+import { Bell, CheckCircle2, Send, Smartphone, Radio } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -133,7 +134,7 @@ export function BulkDueRemindersDialog({
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: "PUSH" as const, label: "Push", icon: Smartphone, desc: "Instant mobile/web" },
-                  { id: "WHATSAPP" as const, label: "WhatsApp", icon: MessageSquare, desc: "WhatsApp queue" },
+                  { id: "WHATSAPP" as const, label: "WhatsApp", icon: WhatsAppIcon, desc: "WhatsApp queue" },
                   { id: "SMS" as const, label: "SMS", icon: Radio, desc: "Direct text" },
                 ].map((item) => (
                   <button

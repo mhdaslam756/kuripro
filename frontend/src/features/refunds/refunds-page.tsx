@@ -207,7 +207,7 @@ export function RefundsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+        <h1 className="max-lg:hidden font-display text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
           Refunds
         </h1>
         <p className="mt-0.5 text-sm text-text-secondary">

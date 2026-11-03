@@ -1,5 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { IconTile, type IconTone } from "@/components/ui/icon-tile";
 import { cn } from "@/lib/utils";
 
 // ── NativeSection ──────────────────────────────────────────────────────────────
@@ -46,6 +47,8 @@ export interface MobileListItemProps {
   title: ReactNode;
   subtitle?: ReactNode;
   icon?: ReactNode;
+  /** Colour of the icon tile. */
+  iconTone?: IconTone;
   badge?: ReactNode;
   action?: ReactNode;
   onClick?: () => void;
@@ -57,6 +60,7 @@ export function MobileListItem({
   title,
   subtitle,
   icon,
+  iconTone = "violet",
   badge,
   action,
   onClick,
@@ -78,9 +82,7 @@ export function MobileListItem({
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {icon ? (
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-accent-primary font-semibold">
-            {icon}
-          </div>
+          <IconTile tone={iconTone}>{icon}</IconTile>
         ) : null}
 
         <div className="min-w-0 flex-1">

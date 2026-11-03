@@ -33,9 +33,30 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-bg-app flex flex-col font-sans">
+    <div className="min-h-dvh bg-bg-app flex flex-col font-sans">
+      {/* Phone: app-style hero with the organization's identity; the form sheet slides up over it */}
+      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#3b1585_0%,#5b21b6_48%,#7c3aed_100%)] px-6 pb-20 pt-[max(2.5rem,env(safe-area-inset-top))] text-center text-white sm:hidden">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-white/10 blur-2xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -left-20 bottom-0 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
+        <div className="relative flex flex-col items-center gap-3">
+          {org.logoUrl ? (
+            <img src={org.logoUrl} alt={org.name} className="size-20 rounded-3xl border border-white/30 bg-white object-cover shadow-xl" />
+          ) : (
+            <div className="flex size-20 items-center justify-center rounded-3xl border border-white/30 bg-white/15 font-display text-3xl font-extrabold backdrop-blur">
+              {org.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight">{org.name}</h1>
+            <p className="mt-1 flex items-center justify-center gap-1.5 text-xs font-medium text-white/80">
+              <ShieldCheck size={14} /> Verified chit organization · {org.address.city}
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Header */}
-      <header className="border-b border-border-default/80 bg-bg-surface/80 backdrop-blur-md sticky top-0 z-20">
+      <header className="hidden border-b border-border-default/80 bg-bg-surface/80 backdrop-blur-md sticky top-0 z-20">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             {org.logoUrl ? (
@@ -69,14 +90,21 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-center py-6 px-4 sm:py-10 sm:px-6">
+      <main
+        className={[
+          "flex flex-1 flex-col justify-center px-4 py-6 sm:px-6 sm:py-10",
+          // Phone: a rounded sheet over the hero, with larger touch-friendly fields
+          "max-sm:relative max-sm:-mt-10 max-sm:justify-start max-sm:rounded-t-[32px] max-sm:bg-bg-app max-sm:px-5 max-sm:pb-8 max-sm:pt-7 max-sm:shadow-[0_-12px_30px_-12px_rgba(76,29,149,0.35)]",
+          "max-sm:[&_input]:h-12 max-sm:[&_input]:rounded-xl max-sm:[&_input]:text-base",
+        ].join(" ")}
+      >
         <div className="mx-auto w-full max-w-xl">
           {children}
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border-default/60 py-4 text-center text-xs text-text-secondary">
+      <footer className="border-t border-border-default/60 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-xs text-text-secondary max-sm:border-0 max-sm:bg-bg-app">
         <div className="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© {new Date().getFullYear()} {org.name}. All rights reserved.</p>
           <p className="flex items-center gap-1">

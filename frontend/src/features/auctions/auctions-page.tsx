@@ -47,7 +47,7 @@ export function AuctionsPage() {
     <div className="flex flex-col gap-5">
       {/* Page Header */}
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Auction Room</h1>
+        <h1 className="max-lg:hidden font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Auction Room</h1>
         <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">
           Run each cycle's auction — take bids, pick the winner, settle the prize, and archive the minutes.
         </p>

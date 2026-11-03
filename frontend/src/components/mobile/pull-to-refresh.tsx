@@ -27,7 +27,8 @@ export function PullToRefresh() {
     function onStart(e: TouchEvent) {
       // Ignore drags that begin inside an open dialog/sheet or while the page is scrolled.
       const target = e.target as HTMLElement | null;
-      if (window.scrollY > 0 || target?.closest("[role='dialog'], [data-no-ptr]")) return;
+      const scrolled = (document.getElementById("app-scroll")?.scrollTop ?? 0) > 0 || window.scrollY > 0;
+      if (scrolled || target?.closest("[role='dialog'], [data-no-ptr]")) return;
       startY.current = e.touches[0]!.clientY;
     }
 

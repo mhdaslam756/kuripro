@@ -1,4 +1,5 @@
-import { CheckCircle2, MessageSquare } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -91,7 +92,7 @@ _KuriPro_`;
                   openWhatsAppChat(receipt.member.phone ?? "", msg);
                 }}
               >
-                <MessageSquare size={14} /> WhatsApp Receipt
+                <WhatsAppIcon size={14} /> WhatsApp Receipt
               </Button>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => window.print()}>

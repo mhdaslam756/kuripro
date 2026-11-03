@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ArrowUpRight,
   BadgeCheck,
   Calendar,
   CheckCircle2,
@@ -22,6 +21,9 @@ import {
   Table, TableBody, TableCell, TableContainer,
   TableHead, TableHeaderCell, TableRow,
 } from "@/components/ui/table";
+import { AtmCard, AtmCardStat } from "@/components/mobile/atm-card";
+import { IconTile, type IconTone } from "@/components/ui/icon-tile";
+import { HeroAction, MobileHero, MobileSheet } from "@/components/mobile/mobile-hero";
 import { ReceiptDialog } from "@/features/collections/components/receipt-dialog";
 import { DueStatusBadge } from "@/features/collections/components/collection-badges";
 import { formatDateTime, formatPaise } from "@/lib/format";
@@ -34,9 +36,9 @@ import { cn } from "@/lib/utils";
 
 function MobileLoadingSkeleton() {
   return (
-    <div className="sm:hidden flex flex-col gap-4">
+    <div className="sm:hidden flex flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
       {/* Balance card skeleton */}
-      <div className="mobile-balance-card p-5">
+      <div className="glass-card bg-brand-700 p-5">
         <div className="flex items-center justify-between mb-1">
           <div className="skeleton-balance h-3 w-28 rounded" />
           <div className="skeleton-balance h-6 w-6 rounded-full" />
@@ -92,61 +94,35 @@ function MobileBalanceCard({ totalPaid, outstanding, memberName, memberCode }: B
   const [hidden, setHidden] = useState(false);
 
   return (
-    <div className="mobile-balance-card sm:hidden p-5">
-      {/* Header */}
-      <div className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Shield size={12} className="text-emerald-400" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-            Total Contributions
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setHidden((h) => !h)}
-          className="flex size-7 items-center justify-center rounded-full bg-white/10 text-white/70 hover:text-white transition-colors active-bounce"
-          aria-label={hidden ? "Show balance" : "Hide balance"}
-        >
-          {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
-        </button>
-      </div>
+    <div className="flex flex-col gap-7 sm:hidden">
+      <AtmCard
+        label="Total contributions"
+        amount={hidden ? "₹ ••••••" : formatPaise(totalPaid)}
+        caption={memberName}
+        action={
+          <button
+            type="button"
+            onClick={() => setHidden((h) => !h)}
+            className="relative flex size-8 items-center justify-center rounded-full bg-white/20 text-white transition-colors active-bounce after:absolute after:-inset-2 after:content-['']"
+            aria-label={hidden ? "Show balance" : "Hide balance"}
+          >
+            {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
+          </button>
+        }
+        footer={
+          <>
+            <AtmCardStat label="Member ID" value={memberCode} />
+            <AtmCardStat label="Outstanding" value={hidden ? "₹ •••" : formatPaise(outstanding)} align="right" />
+          </>
+        }
+      />
 
-      {/* Balance */}
-      <div className="relative z-10 mt-3">
-        <p className="font-display text-4xl font-bold tabular-nums tracking-tight text-white leading-none">
-          {hidden ? "₹ ••••••" : formatPaise(totalPaid)}
-        </p>
-        <p className="mt-1.5 text-xs text-white/60">
-          {memberName} · <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-amber-300/80">{memberCode}</span>
-        </p>
-      </div>
-
-      {/* Outstanding chip */}
-      <div className="relative z-10 mt-3 inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-500/15 px-3 py-1">
-        <ArrowUpRight size={11} className="text-red-300" />
-        <span className="text-[11px] font-semibold text-red-200">
-          {hidden ? "₹ •••" : formatPaise(outstanding)} outstanding
-        </span>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="relative z-10 mt-5 flex items-center justify-between border-t border-white/15 pt-4">
-        <Link to="/collections" className="mobile-quick-action">
-          <div className="mobile-quick-action-icon"><Wallet size={20} className="text-white" /></div>
-          <span className="mobile-quick-action-label">Pay Dues</span>
-        </Link>
-        <Link to="/auctions" className="mobile-quick-action">
-          <div className="mobile-quick-action-icon"><Gavel size={20} className="text-white" /></div>
-          <span className="mobile-quick-action-label">Auctions</span>
-        </Link>
-        <Link to="/chit-groups" className="mobile-quick-action">
-          <div className="mobile-quick-action-icon"><Shield size={20} className="text-white" /></div>
-          <span className="mobile-quick-action-label">My Chits</span>
-        </Link>
-        <Link to="/collections" className="mobile-quick-action">
-          <div className="mobile-quick-action-icon"><BadgeCheck size={20} className="text-white" /></div>
-          <span className="mobile-quick-action-label">Receipts</span>
-        </Link>
+      {/* Quick actions sit under the card */}
+      <div className="flex items-start gap-2">
+        <HeroAction to="/collections" label="Pay Dues" tone="emerald" icon={<Wallet size={22} />} />
+        <HeroAction to="/auctions" label="Auctions" tone="amber" icon={<Gavel size={22} />} />
+        <HeroAction to="/chit-groups" label="My Chits" tone="sky" icon={<Shield size={22} />} />
+        <HeroAction to="/collections" label="Receipts" tone="rose" icon={<BadgeCheck size={22} />} />
       </div>
     </div>
   );
@@ -166,23 +142,23 @@ interface KpiStripProps {
 
 function MobileKpiSection({ totalGroups, completedCycles, totalPaid, totalOutstanding, prizesWon }: KpiStripProps) {
   const items = [
-    { label: "Chit Groups Enrolled", value: String(totalGroups), icon: <Wallet size={16} />, iconBg: "bg-brand-50", iconFg: "text-accent-primary" },
-    { label: "Completed Cycles", value: String(completedCycles), icon: <CheckCircle2 size={16} />, iconBg: "bg-good-bg", iconFg: "text-good-fg" },
-    { label: "Total Contributed", value: formatPaise(totalPaid), icon: <Zap size={16} />, iconBg: "bg-brand-100", iconFg: "text-accent-primary" },
-    { label: "Outstanding Balance", value: formatPaise(totalOutstanding), icon: <Calendar size={16} />, iconBg: "bg-warn-bg", iconFg: "text-warn-fg" },
-    { label: "Auction Prizes Won", value: String(prizesWon), icon: <Trophy size={16} />, iconBg: "bg-info-bg", iconFg: "text-info-fg" },
+    { label: "Chit Groups Enrolled", value: String(totalGroups), icon: <Wallet size={16} />, tile: "violet" as IconTone },
+    { label: "Completed Cycles", value: String(completedCycles), icon: <CheckCircle2 size={16} />, tile: "emerald" as IconTone },
+    { label: "Total Contributed", value: formatPaise(totalPaid), icon: <Zap size={16} />, tile: "sky" as IconTone },
+    { label: "Outstanding Balance", value: formatPaise(totalOutstanding), icon: <Calendar size={16} />, tile: "rose" as IconTone },
+    { label: "Auction Prizes Won", value: String(prizesWon), icon: <Trophy size={16} />, tile: "amber" as IconTone },
   ];
 
   return (
     <div className="sm:hidden flex flex-col gap-1.5">
       <p className="native-section-label">My Summary</p>
       <div className="native-section">
-        {items.map(({ label, value, icon, iconBg, iconFg }) => (
+        {items.map(({ label, value, icon, tile }) => (
           <div key={label} className="native-kpi-row">
             <div className="flex items-center gap-3">
-              <span className={cn("flex size-8 items-center justify-center rounded-xl shrink-0", iconBg, iconFg)}>
+              <IconTile size="sm" tone={tile}>
                 {icon}
-              </span>
+              </IconTile>
               <p className="text-sm font-medium text-text-secondary">{label}</p>
             </div>
             <p className="font-display text-base font-bold tabular-nums text-text-primary">{value}</p>
@@ -302,14 +278,9 @@ function MobileWinnersSection({ winners }: MobileWinnersSectionProps) {
       <div className="native-section">
         {winners.map((w) => (
           <div key={`${w.chitGroupId}-${w.cycleNumber}`} className="native-row">
-            <div
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm",
-                w.isCurrentUserWinner ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#6D28D9]/20 text-[#A855F7]",
-              )}
-            >
+            <IconTile tone={w.isCurrentUserWinner ? "emerald" : "amber"}>
               <Trophy size={16} />
-            </div>
+            </IconTile>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-sm font-semibold text-text-primary leading-tight truncate max-w-[140px]">
@@ -445,7 +416,7 @@ export function MemberDashboardView() {
 
   if (!data || !data.isMember || !data.member) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-border-default bg-bg-surface p-12 text-center shadow-xs">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-border-default bg-bg-surface p-12 text-center shadow-xs max-sm:mx-4 max-sm:mt-6">
         <ShieldCheck className="mb-3 size-12 text-brand-strong" />
         <h2 className="font-display text-xl font-bold text-text-primary">Member Profile Not Found</h2>
         <p className="mt-1 max-w-md text-sm text-text-secondary">
@@ -462,40 +433,43 @@ export function MemberDashboardView() {
 
       {/* ══ MOBILE ═══════════════════════════════════════════════════════════ */}
 
-      {/* Balance card */}
-      <MobileBalanceCard
-        totalPaid={summary.totalPaid}
-        outstanding={summary.totalOutstanding}
-        memberName={member.name}
-        memberCode={member.memberCode}
-      />
+      <div className="flex flex-col sm:hidden">
+        <MobileHero name={member.name}>
+          <MobileBalanceCard
+            totalPaid={summary.totalPaid}
+            outstanding={summary.totalOutstanding}
+            memberName={member.name}
+            memberCode={member.memberCode}
+          />
+        </MobileHero>
+        <MobileSheet className="flex flex-col gap-5">
+          {/* KPI native section */}
+          <MobileKpiSection
+            totalGroups={summary.totalGroups}
+            completedCycles={summary.completedCycles}
+            totalPaid={summary.totalPaid}
+            totalOutstanding={summary.totalOutstanding}
+            prizesWon={summary.prizesWon}
+          />
 
+          {/* Swipeable chit group cards */}
+          <MobileChitCards groups={groups} />
 
+          {/* Cycle Winners Announcement — native section */}
+          {recentWinners && recentWinners.length > 0 && <MobileWinnersSection winners={recentWinners} />}
 
-      {/* KPI native section */}
-      <MobileKpiSection
-        totalGroups={summary.totalGroups}
-        completedCycles={summary.completedCycles}
-        totalPaid={summary.totalPaid}
-        totalOutstanding={summary.totalOutstanding}
-        prizesWon={summary.prizesWon}
-      />
-
-      {/* Swipeable chit group cards */}
-      <MobileChitCards groups={groups} />
-
-      {/* Cycle Winners Announcement — native section */}
-      {recentWinners && recentWinners.length > 0 && (
-        <MobileWinnersSection winners={recentWinners} />
-      )}
-
-      {/* Payment history — native section */}
-      {recentPayments.length > 0 && (
-        <MobilePaymentList
-          payments={recentPayments}
-          onViewReceipt={(id) => { setReceiptId(id); setReceiptOpen(true); }}
-        />
-      )}
+          {/* Payment history — native section */}
+          {recentPayments.length > 0 && (
+            <MobilePaymentList
+              payments={recentPayments}
+              onViewReceipt={(id) => {
+                setReceiptId(id);
+                setReceiptOpen(true);
+              }}
+            />
+          )}
+        </MobileSheet>
+      </div>
 
       {/* ══ DESKTOP (unchanged) ═══════════════════════════════════════════════ */}
 

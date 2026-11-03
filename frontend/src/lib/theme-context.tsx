@@ -20,6 +20,14 @@ function applyTheme(mode: ThemeMode): void {
   }
 }
 
+/** Browser/status-bar colour per theme; matches --bg-app so the bar blends into the page. */
+const THEME_COLORS = { light: "#f8f9fc", dark: "#090614" } as const;
+
+function syncStatusBarColor(mode: ThemeMode): void {
+  const effective = mode === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+  document.getElementById("theme-color")?.setAttribute("content", THEME_COLORS[effective]);
+}
+
 function readStoredMode(): ThemeMode {
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
@@ -30,6 +38,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     applyTheme(mode);
+    syncStatusBarColor(mode);
+    if (mode !== "system") return;
+    // Following the system: keep the status bar in step when the phone switches appearance.
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => syncStatusBarColor("system");
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
   }, [mode]);
 
   function setMode(next: ThemeMode): void {

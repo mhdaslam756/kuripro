@@ -1,4 +1,5 @@
-import { Check, Copy, ExternalLink, MessageSquare, Share2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -202,7 +203,7 @@ export function WhatsAppCollectionListDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <span className="flex size-7 items-center justify-center rounded-full bg-[#25D366]/15 text-[#25D366]">
-              <MessageSquare size={16} />
+              <WhatsAppIcon size={16} />
             </span>
             Share Collection Done List on WhatsApp
           </DialogTitle>

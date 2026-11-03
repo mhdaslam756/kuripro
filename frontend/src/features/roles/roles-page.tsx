@@ -47,7 +47,7 @@ export function RolesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Roles &amp; Permissions</h1>
+          <h1 className="max-lg:hidden mb-1 font-display text-2xl font-semibold text-text-primary">Roles &amp; Permissions</h1>
           <p className="text-sm text-text-secondary">
             Built-in roles cover most cases — create a custom role for anything more specific.
           </p>
