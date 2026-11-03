@@ -509,7 +509,7 @@ export function DashboardPage() {
 
       {/* Mobile: no padding wrapper — sections handle their own spacing */}
       <div className="flex flex-col sm:hidden">
-        <MobileHero name={user?.name ?? "Dashboard"}>
+        <MobileHero>
           <MobileHeroCard />
         </MobileHero>
         <MobileSheet className="flex flex-col gap-4">

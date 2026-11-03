@@ -6,26 +6,22 @@ import { IconTile, type IconTone } from "@/components/ui/icon-tile";
 import { cn } from "@/lib/utils";
 
 interface MobileHeroProps {
-  /** Small line above the name, e.g. "Welcome back". */
+  /** Greeting line at the top, e.g. "Welcome back". */
   greeting?: string;
-  name: string;
   /** Hero content under the greeting: a balance card, quick actions. */
   children?: ReactNode;
   className?: string;
 }
 
 /**
- * Phone home-screen top: the greeting and a bell on the plain page background, then a bank-card
+ * Phone home-screen top: a greeting and a bell on the plain page background, then a bank-card
  * summary and quick actions (passed as children). Pair it with MobileSheet for the content below.
  */
-export function MobileHero({ greeting = "Welcome back", name, children, className }: MobileHeroProps) {
+export function MobileHero({ greeting = "Welcome back", children, className }: MobileHeroProps) {
   return (
-    <section className={cn("px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))] text-text-primary", className)}>
+    <section className={cn("px-4 pb-8 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] text-text-primary", className)}>
       <div className="flex items-center justify-between gap-3 pb-4 pt-1">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-text-secondary">{greeting}</p>
-          <h1 className="truncate font-display text-lg font-bold leading-tight tracking-tight">{name}</h1>
-        </div>
+        <h1 className="min-w-0 truncate font-display text-lg font-bold leading-tight tracking-tight">{greeting}</h1>
         <Link
           to="/notifications"
           aria-label="Notifications"

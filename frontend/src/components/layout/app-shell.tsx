@@ -310,7 +310,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-bg-app select-none max-lg:h-dvh max-lg:overflow-hidden lg:flex">
+    <div className="min-h-[100dvh] bg-bg-app select-none max-lg:fixed max-lg:inset-0 max-lg:overflow-hidden lg:flex">
       <PullToRefresh />
 
       {/* Desktop Sidebar */}
@@ -347,7 +347,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header
           className={cn(
             // Phones: no bar at all, just a large title on the page background.
-            "relative z-30 flex items-center justify-between gap-3 bg-bg-app px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-1",
+            "relative z-30 flex items-center justify-between gap-3 bg-bg-app px-4 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-1",
             "lg:sticky lg:top-0 lg:z-40 lg:min-h-[72px] lg:border-b lg:border-border-default/50 lg:bg-bg-surface/85 lg:px-8 lg:py-3 lg:backdrop-blur-2xl",
             isHeroRoute && "max-sm:hidden",
           )}
@@ -403,7 +403,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main
           key={pathname}
           className={cn(
-            "page-enter flex-1 overflow-y-auto max-lg:overflow-visible px-4 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text",
+            "page-enter flex-1 overflow-y-auto max-lg:overflow-visible px-4 pt-3 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8 select-text",
             isHeroRoute && "max-sm:px-0 max-sm:pt-0",
           )}
         >
