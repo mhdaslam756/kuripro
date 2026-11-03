@@ -27,15 +27,15 @@ export default defineConfig({
       filename: "sw.ts",
       registerType: "prompt",
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
       manifest: {
         name: "KuriPro — Chit Fund Manager",
         short_name: "KuriPro",
         description: "Run your chit funds — collections, auctions, payouts and reports — on any device, even offline.",
-        theme_color: "#102d30",
-        background_color: "#f7f8f6",
+        theme_color: "#6d28d9",
+        background_color: "#f8f9fc",
         display: "standalone",
         display_override: ["standalone", "minimal-ui"],
         categories: ["finance", "business"],

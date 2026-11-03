@@ -1,11 +1,12 @@
-import { Mail, MessageCircle, MessageSquare, Smartphone } from "lucide-react";
+import { Mail, MessageSquare, Smartphone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "@/lib/format";
 import { CHANNEL_LABELS, type NotificationChannel, type NotificationStatus } from "../types";
 
-const CHANNEL_ICON: Record<NotificationChannel, typeof Mail> = {
-  WHATSAPP: MessageCircle,
+const CHANNEL_ICON: Record<NotificationChannel, typeof Mail | typeof WhatsAppIcon> = {
+  WHATSAPP: WhatsAppIcon,
   SMS: MessageSquare,
   PUSH: Smartphone,
   EMAIL: Mail,

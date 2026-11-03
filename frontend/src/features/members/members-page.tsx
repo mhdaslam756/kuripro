@@ -91,7 +91,7 @@ export function MembersPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Members Directory</h1>
+          <h1 className="max-lg:hidden font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Members Directory</h1>
           <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">Register, search, and manage member profiles in your organization.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

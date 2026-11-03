@@ -40,7 +40,7 @@ export function ChitGroupsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Chit Schemes</h1>
+          <h1 className="max-lg:hidden font-display text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">Chit Schemes</h1>
           <p className="mt-0.5 text-xs sm:text-sm text-text-secondary">Create and manage chit schemes of any cadence or group size.</p>
         </div>
         <div className="flex items-center gap-2.5 self-start sm:self-auto">

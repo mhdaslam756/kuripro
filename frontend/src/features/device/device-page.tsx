@@ -237,7 +237,7 @@ export function DevicePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">Device &amp; Security</h1>
+        <h1 className="max-lg:hidden mb-1 font-display text-2xl font-semibold text-text-primary">Device &amp; Security</h1>
         <p className="text-sm text-text-secondary">
           Install the app and manage notifications and offline data.
         </p>

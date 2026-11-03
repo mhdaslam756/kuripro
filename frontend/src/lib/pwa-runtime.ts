@@ -38,10 +38,34 @@ export function getPwaState(): PwaState {
   return state;
 }
 
+/** True when running as an installed app (Android/desktop display-mode, or iOS Home Screen). */
+function isInstalledApp(): boolean {
+  return window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
+
+/**
+ * Installed app only: no pinch-zoom in or out. CSS (touch-action) covers Android; the viewport meta and
+ * gesture events cover iOS, which ignores both. Browser tabs keep zoom for accessibility.
+ */
+function lockZoom(): void {
+  if (!isInstalledApp()) return;
+
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport && !viewport.getAttribute("content")?.includes("user-scalable")) {
+    viewport.setAttribute("content", `${viewport.getAttribute("content")}, minimum-scale=1, maximum-scale=1, user-scalable=no`);
+  }
+
+  const block = (e: Event) => e.preventDefault();
+  for (const type of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(type, block);
+  document.addEventListener("wheel", (e) => e.ctrlKey && e.preventDefault(), { passive: false });
+  document.addEventListener("touchmove", (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
+}
+
 /** Registers the SW and wires install/update signals. Safe to call once at app start. */
 export function initPwa(): void {
   if (started) return;
   started = true;
+  lockZoom();
 
   reloadSW = registerSW({
     immediate: true,

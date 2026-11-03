@@ -6,7 +6,6 @@ import {
   Eye,
   EyeOff,
   Gavel,
-  Shield,
   TrendingUp,
   Users,
   Wallet,
@@ -22,6 +21,9 @@ import { DonutChart } from "@/features/reports/charts/donut-chart";
 import { cn } from "@/lib/utils";
 import { formatDateTime, formatPaise, humanize } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
+import { AtmCard, AtmCardStat } from "@/components/mobile/atm-card";
+import { IconTile, toneFor, type IconTone } from "@/components/ui/icon-tile";
+import { HeroAction, MobileHero, MobileSheet } from "@/components/mobile/mobile-hero";
 import { MemberDashboardView } from "./components/member-dashboard-view";
 import { useDashboardActivity, useDashboardSummary, useDashboardTrends } from "./use-dashboard";
 import type { DashboardTrends } from "./types";
@@ -94,22 +96,19 @@ function MobileHeroCard() {
 
   if (isLoading || !data) {
     return (
-      <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-[#2A2340]">
-        <div className="flex items-center justify-between mb-2">
-          <div className="skeleton-balance h-3 w-32 rounded" />
-          <div className="skeleton-balance h-6 w-6 rounded-full" />
-        </div>
-        <div className="skeleton-balance mt-3 h-10 w-48 rounded-lg" />
-        <div className="skeleton-balance mt-2 h-3 w-24 rounded" />
-        <div className="mt-5 border-t border-white/10 pt-4 flex gap-3">
-          <div className="skeleton-balance h-3 w-20 rounded flex-1" />
-          <div className="skeleton-balance h-3 w-20 rounded flex-1" />
-        </div>
-        <div className="mt-4 flex gap-2">
-          <div className="skeleton-balance h-10 flex-1 rounded-2xl" />
-          <div className="skeleton-balance h-10 w-10 rounded-2xl" />
-          <div className="skeleton-balance h-10 w-10 rounded-2xl" />
-        </div>
+      <div className="sm:hidden">
+        <AtmCard
+          label="Today's collection"
+          amount={<span className="skeleton-balance inline-block h-10 w-44 rounded-lg align-middle" />}
+          caption={<span className="skeleton-balance inline-block h-3 w-32 rounded align-middle" />}
+          footer={
+            <>
+              <span className="skeleton-balance h-8 w-20 rounded" />
+              <span className="skeleton-balance h-8 w-20 rounded" />
+              <span className="skeleton-balance h-8 w-20 rounded" />
+            </>
+          }
+        />
       </div>
     );
   }
@@ -117,75 +116,36 @@ function MobileHeroCard() {
   const next = data.upcomingAuctions[0];
 
   return (
-    <div className="mobile-hero-card sm:hidden relative overflow-hidden rounded-3xl p-5 shadow-xl border border-[#2A2340]">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/90">
-          <Shield size={12} className="text-[#22C55E]" />
-          <span>Today's Collection</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs text-white font-bold border border-white/25">
-            Real-time
-          </span>
+    <div className="flex flex-col gap-7 sm:hidden">
+      <AtmCard
+        label="Today's collection"
+        amount={hidden ? "₹ ••••••" : formatPaise(data.today.total)}
+        caption={`${data.today.count} collection${data.today.count === 1 ? "" : "s"} recorded today`}
+        action={
           <button
             type="button"
             onClick={() => setHidden((h) => !h)}
-            className="relative flex size-7 items-center justify-center rounded-full bg-white/10 text-white/90 hover:text-white transition-colors active-bounce after:absolute after:-inset-2 after:content-['']"
+            className="relative flex size-8 items-center justify-center rounded-full bg-white/20 text-white transition-colors active-bounce after:absolute after:-inset-2 after:content-['']"
             aria-label={hidden ? "Show balance" : "Hide balance"}
           >
-            {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+            {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
           </button>
-        </div>
-      </div>
+        }
+        footer={
+          <>
+            <AtmCardStat label="Pending dues" value={hidden ? "₹ •••" : formatPaise(data.pending.pendingAmount)} />
+            <AtmCardStat label="Overdue" value={hidden ? "₹ •••" : formatPaise(data.pending.overdueAmount)} />
+            {next ? <AtmCardStat label="Next auction" value={next.chitGroupName} align="right" /> : null}
+          </>
+        }
+      />
 
-      {/* Balance */}
-      <p className="mt-3 font-display text-4xl font-bold tabular-nums tracking-tight text-white leading-none">
-        {hidden ? "₹ ••••••" : formatPaise(data.today.total)}
-      </p>
-      <p className="mt-1.5 text-xs text-white/90">
-        {data.today.count} collection{data.today.count === 1 ? "" : "s"} recorded today
-      </p>
-
-      {/* Sub-row */}
-      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3.5">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-white/90 font-semibold">Pending Dues</p>
-          <p className="font-display text-sm font-bold text-white">
-            {hidden ? "₹ •••" : formatPaise(data.pending.pendingAmount)}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-wider text-[#FEE2E2] font-semibold">Overdue</p>
-          <p className="font-display text-sm font-bold text-[#FEE2E2]">
-            {hidden ? "₹ •••" : formatPaise(data.pending.overdueAmount)}
-          </p>
-        </div>
-        {next && (
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wider text-white/90 font-semibold">Next Auction</p>
-            <p className="font-display text-sm font-bold text-white truncate max-w-[96px]">{next.chitGroupName}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Quick actions */}
-      <div className="mt-4 flex items-center gap-3">
-        <Link
-          to="/collections"
-          className="active-bounce flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white/20 text-white px-3 text-sm font-bold border border-white/30"
-        >
-          <Banknote size={15} /> Collect Dues
-        </Link>
-        <Link to="/members" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Members">
-          <Users size={16} />
-        </Link>
-        <Link to="/auctions" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Auction">
-          <Gavel size={16} />
-        </Link>
-        <Link to="/reports" className="active-bounce flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/20" aria-label="Reports">
-          <BarChart3 size={16} />
-        </Link>
+      {/* Quick actions sit under the card, like the action row in a banking app */}
+      <div className="flex items-start gap-2">
+        <HeroAction to="/collections" label="Collect" tone="emerald" icon={<Banknote size={22} />} />
+        <HeroAction to="/members" label="Members" tone="sky" icon={<Users size={22} />} />
+        <HeroAction to="/auctions" label="Auctions" tone="amber" icon={<Gavel size={22} />} />
+        <HeroAction to="/reports" label="Reports" tone="rose" icon={<BarChart3 size={22} />} />
       </div>
     </div>
   );
@@ -264,10 +224,10 @@ function KpiRow() {
   const { data } = useDashboardSummary();
 
   const kpis = [
-    { icon: <Users size={16} />, label: "Active Members", value: data ? String(data.kpis.activeMembers) : "—", iconBg: "bg-brand-50", iconFg: "text-accent-primary" },
-    { icon: <Gavel size={16} />, label: "Active Chit Groups", value: data ? String(data.kpis.activeGroups) : "—", iconBg: "bg-info-bg", iconFg: "text-info-fg" },
-    { icon: <Banknote size={16} />, label: "Collection this month", value: data ? formatPaise(data.kpis.collectionThisMonth) : "—", iconBg: "bg-good-bg", iconFg: "text-good-fg" },
-    { icon: <TrendingUp size={16} />, label: "Net profit (MTD)", value: data ? formatPaise(data.monthToDate.profit) : "—", sub: data ? `${formatPaise(data.kpis.outstanding)} outstanding` : undefined, iconBg: "bg-warn-bg", iconFg: "text-warn-fg", tone: data ? (data.monthToDate.profit > 0 ? "pos" : data.monthToDate.profit < 0 ? "neg" : undefined) : undefined },
+    { icon: <Users size={16} />, label: "Active Members", value: data ? String(data.kpis.activeMembers) : "—", tile: "sky" as IconTone },
+    { icon: <Gavel size={16} />, label: "Active Chit Groups", value: data ? String(data.kpis.activeGroups) : "—", tile: "violet" as IconTone },
+    { icon: <Banknote size={16} />, label: "Collection this month", value: data ? formatPaise(data.kpis.collectionThisMonth) : "—", tile: "emerald" as IconTone },
+    { icon: <TrendingUp size={16} />, label: "Net profit (MTD)", value: data ? formatPaise(data.monthToDate.profit) : "—", sub: data ? `${formatPaise(data.kpis.outstanding)} outstanding` : undefined, tile: "amber" as IconTone, tone: data ? (data.monthToDate.profit > 0 ? "pos" : data.monthToDate.profit < 0 ? "neg" : undefined) : undefined },
   ];
 
   return (
@@ -276,12 +236,12 @@ function KpiRow() {
       <div className="sm:hidden flex flex-col gap-1.5">
         <p className="native-section-label">Key Metrics</p>
         <div className="native-section">
-          {kpis.map(({ icon, label, value, sub, iconBg, iconFg, tone }) => (
+          {kpis.map(({ icon, label, value, sub, tile, tone }) => (
             <div key={label} className="native-kpi-row">
               <div className="flex items-center gap-3">
-                <span className={cn("flex size-8 items-center justify-center rounded-xl shrink-0", iconBg, iconFg)}>
+                <IconTile size="sm" tone={tile}>
                   {icon}
-                </span>
+                </IconTile>
                 <div>
                   <p className="text-xs text-text-secondary font-medium">{label}</p>
                   {sub && <p className="text-xs text-text-secondary">{sub}</p>}
@@ -458,9 +418,9 @@ function RecentActivity() {
             data.map((item) => (
               <div key={item.id} className="native-row">
                 {/* Activity type icon bubble */}
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-accent-primary font-bold text-xs">
+                <IconTile tone={toneFor(item.action)} className="text-xs">
                   {item.action.charAt(0).toUpperCase()}
-                </div>
+                </IconTile>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-text-primary">{item.message}</p>
                   <p className="mt-0.5 text-xs text-text-secondary">{humanize(item.action)} · {formatDateTime(item.createdAt)}</p>
@@ -548,8 +508,11 @@ export function DashboardPage() {
       </div>
 
       {/* Mobile: no padding wrapper — sections handle their own spacing */}
-      <div className="flex flex-col gap-4 sm:hidden">
-        <MobileHeroCard />
+      <div className="flex flex-col sm:hidden">
+        <MobileHero name={user?.name ?? "Dashboard"}>
+          <MobileHeroCard />
+        </MobileHero>
+        <MobileSheet className="flex flex-col gap-4">
         <KpiRow />
         {trendsError && !trends ? (
           <LoadError what="the analytics" onRetry={() => void refetchTrends()} />
@@ -566,6 +529,7 @@ export function DashboardPage() {
           <ChartsSection trends={trends} />
         )}
         <RecentActivity />
+        </MobileSheet>
       </div>
 
       {/* Desktop: spaced column */}

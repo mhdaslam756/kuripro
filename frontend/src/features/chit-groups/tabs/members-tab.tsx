@@ -1,4 +1,5 @@
-import { AlertCircle, History, Lock, MessageSquare, Repeat, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, History, Lock, Repeat, Trash2, Trophy, UserPlus, Zap } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -229,7 +230,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                           className="h-9 px-3 text-xs font-semibold border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 rounded-xl gap-1"
                           onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
                         >
-                          <MessageSquare size={14} /> WhatsApp
+                          <WhatsAppIcon size={14} /> WhatsApp
                         </Button>
                       ) : null}
                       {memberIdStr ? (
@@ -347,7 +348,7 @@ export function MembersTab({ chitGroup }: { chitGroup: ChitGroup }) {
                                   onClick={() => openWhatsAppChat(phone, `Hi ${name}, this is regarding ${chitGroup.name}.`)}
                                   title="WhatsApp Member"
                                 >
-                                  <MessageSquare size={13} /> WhatsApp
+                                  <WhatsAppIcon size={13} /> WhatsApp
                                 </Button>
                               ) : null}
                               {memberIdStr ? (

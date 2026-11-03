@@ -13,7 +13,7 @@ export function OrganizationPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-text-primary">
+      <h1 className="max-lg:hidden mb-1 font-display text-2xl font-semibold text-text-primary">
         Organization
       </h1>
       <p className="mb-6 text-sm text-text-secondary">

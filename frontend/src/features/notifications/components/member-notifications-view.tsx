@@ -8,7 +8,6 @@ import {
   Gavel,
   Landmark,
   Mail,
-  MessageSquare,
   Radio,
   Receipt,
   Search,
@@ -19,6 +18,7 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ function getChannelBadge(channel: string) {
     case "WHATSAPP":
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-[#25D366]/15 px-2 py-0.5 text-[10px] font-bold text-[#25D366] border border-[#25D366]/30">
-          <MessageSquare size={10} /> WhatsApp
+          <WhatsAppIcon size={10} /> WhatsApp
         </span>
       );
     case "PUSH":

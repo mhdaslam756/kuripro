@@ -104,9 +104,9 @@ export function MemberRegisterPage() {
 
   return (
     <PublicPortalLayout>
-      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden">
-        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default">
-          <RegisterIllustration className="mb-3" />
+      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
+        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:pb-5">
+          <RegisterIllustration className="mb-3 max-sm:hidden" />
           <div className="flex items-center gap-2 text-accent-primary font-semibold text-xs tracking-wider uppercase mb-2">
             <UserPlus size={15} /> Member Self-Registration
           </div>
@@ -118,7 +118,7 @@ export function MemberRegisterPage() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-5 sm:p-6">
+        <CardContent className="p-5 sm:p-6 max-sm:p-0">
           {error ? (
             <div role="alert" className="mb-5 rounded-sm border border-bad-border bg-bad-bg/15 p-3.5 text-sm text-bad-fg flex items-start gap-2">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />

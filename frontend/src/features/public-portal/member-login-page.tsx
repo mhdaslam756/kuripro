@@ -52,9 +52,9 @@ export function MemberLoginPage() {
 
   return (
     <PublicPortalLayout>
-      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden">
-        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default text-left">
-          <LoginIllustration className="mb-3" />
+      <Card className="border-border-default bg-bg-surface rounded-lg shadow-sm overflow-hidden max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
+        <CardHeader className="bg-bg-surface pb-5 pt-6 px-5 sm:px-6 border-b border-border-default max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:pb-5 text-left">
+          <LoginIllustration className="mb-3 max-sm:hidden" />
           <CardTitle className="font-display text-2xl font-bold text-text-primary">
             Member Portal Login
           </CardTitle>
@@ -63,7 +63,7 @@ export function MemberLoginPage() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-5 sm:p-6">
+        <CardContent className="p-5 sm:p-6 max-sm:p-0">
           {error ? (
             <div role="alert" className="mb-5 rounded-sm border border-bad-border bg-bad-bg/15 p-3.5 text-sm text-bad-fg flex items-start gap-2">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
@@ -110,7 +110,7 @@ export function MemberLoginPage() {
             <Button
               type="submit"
               size="lg"
-              className="mt-1 w-full h-12 font-semibold gap-2 text-base"
+              className="mt-1 h-12 w-full gap-2 rounded-xl text-base font-semibold"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Logging in…" : "Sign In to Member Portal"}

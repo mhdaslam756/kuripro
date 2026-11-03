@@ -1,4 +1,5 @@
-import { Bell, Check, Copy, ExternalLink, MessageSquare, Send, Smartphone, AlertCircle } from "lucide-react";
+import { Bell, Check, Copy, ExternalLink, Send, Smartphone, AlertCircle } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
@@ -147,7 +148,7 @@ export function ReminderDialog({ open, onOpenChange, installment, chitGroupName 
                 <Smartphone size={14} /> Push Notification
               </TabsTrigger>
               <TabsTrigger value="whatsapp" className="gap-1.5 text-xs font-semibold">
-                <MessageSquare size={14} /> WhatsApp
+                <WhatsAppIcon size={14} /> WhatsApp
               </TabsTrigger>
             </TabsList>
 

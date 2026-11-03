@@ -1,4 +1,5 @@
-import { Copy, Check, MessageSquare, ExternalLink } from "lucide-react";
+import { Copy, Check, ExternalLink } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,7 @@ export function WhatsAppReminderDialog({ open, onOpenChange, installment, chitGr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <span className="flex size-7 items-center justify-center rounded-full bg-[#25D366]/15 text-[#25D366]">
-              <MessageSquare size={16} />
+              <WhatsAppIcon size={16} />
             </span>
             Send WhatsApp Reminder
           </DialogTitle>
