@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 
 function MobileLoadingSkeleton() {
   return (
-    <div className="sm:hidden flex flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+    <div className="sm:hidden flex flex-col gap-4 px-4 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]">
       {/* Balance card skeleton */}
       <div className="glass-card bg-brand-700 p-5">
         <div className="flex items-center justify-between mb-1">
@@ -434,7 +434,7 @@ export function MemberDashboardView() {
       {/* ══ MOBILE ═══════════════════════════════════════════════════════════ */}
 
       <div className="flex flex-col sm:hidden">
-        <MobileHero name={member.name}>
+        <MobileHero>
           <MobileBalanceCard
             totalPaid={summary.totalPaid}
             outstanding={summary.totalOutstanding}

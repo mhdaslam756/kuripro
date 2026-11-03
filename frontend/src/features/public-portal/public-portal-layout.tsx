@@ -35,7 +35,7 @@ export function PublicPortalLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-bg-app flex flex-col font-sans">
       {/* Phone: app-style hero with the organization's identity; the form sheet slides up over it */}
-      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#3b1585_0%,#5b21b6_48%,#7c3aed_100%)] px-6 pb-20 pt-[max(2.5rem,env(safe-area-inset-top))] text-center text-white sm:hidden">
+      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#3b1585_0%,#5b21b6_48%,#7c3aed_100%)] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] text-center text-white sm:hidden">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-white/10 blur-2xl" />
         <div aria-hidden="true" className="pointer-events-none absolute -left-20 bottom-0 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
         <div className="relative flex flex-col items-center gap-3">

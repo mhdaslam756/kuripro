@@ -287,8 +287,13 @@
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
-    background-image: radial-gradient(circle at 50% 0%, rgba(109, 40, 217, 0.08), transparent 36rem);
   }
+  @media (min-width: 1024px) {
+    body {
+      background-image: radial-gradient(circle at 50% 0%, rgba(109, 40, 217, 0.08), transparent 36rem);
+    }
+  }
+
   button,
   a,
   input,
