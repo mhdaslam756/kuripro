@@ -84,10 +84,44 @@ export interface RegisterMemberInput {
   notes?: string;
 }
 
+/** The login created for a member when staff register them. */
+export interface MemberLogin {
+  status: "CREATED" | "LINKED" | "EXISTING_ACCOUNT";
+  /** What the member types to sign in (their mobile number). */
+  loginId: string;
+  /** Shown once to hand over; null unless a login was created. */
+  temporaryPassword: string | null;
+}
+
+/** A login created for one member, as listed after an import or "create logins". */
+export interface MemberLoginRow extends MemberLogin {
+  memberId: string;
+  memberCode: string;
+  name: string;
+}
+
+/** How many members have no login yet. */
+export function useMembersWithoutLogin(enabled: boolean) {
+  return useQuery({
+    queryKey: ["members", "login-gap"],
+    queryFn: () => api.get<{ withoutLogin: number }>("/members/login-gap").then((r) => r.withoutLogin),
+    enabled,
+  });
+}
+
+/** Creates a login for every member who lacks one. */
+export function useProvisionLogins() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ logins: MemberLoginRow[] }>("/members/provision-logins").then((r) => r.logins),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }),
+  });
+}
+
 export function useRegisterMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: RegisterMemberInput) => api.post<{ member: Member }>("/members", input),
+    mutationFn: (input: RegisterMemberInput) => api.post<{ member: Member; login: MemberLogin }>("/members", input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }),
   });
 }

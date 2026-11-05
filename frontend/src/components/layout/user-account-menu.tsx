@@ -1,5 +1,6 @@
 
-import { ChevronDown, Download, LogOut, Smartphone } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Download, LogOut, Smartphone } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SwitchOrganizationDialog } from "@/features/auth/components/organization-picker";
 import { useAuth } from "@/lib/auth-context";
 import { isIosDevice, isStandalone } from "@/lib/pwa";
 import { promptInstall } from "@/lib/pwa-runtime";
@@ -23,6 +25,8 @@ export function UserAccountMenu() {
   const navigate = useNavigate();
   const { canInstall } = usePwa();
   const standalone = isStandalone();
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const canSwitchOrganization = Boolean(user?.tenantId) && user?.role?.slug !== "SUPER_ADMIN";
 
   async function handleInstallApp() {
     if (isIosDevice()) {
@@ -113,6 +117,16 @@ export function UserAccountMenu() {
               </DropdownMenuItem>
             ) : null}
 
+            {canSwitchOrganization ? (
+              <DropdownMenuItem
+                onClick={() => setSwitchOpen(true)}
+                className="cursor-pointer gap-2 py-2 text-xs font-semibold rounded-xl"
+              >
+                <ArrowLeftRight size={15} />
+                <span>Switch organization</span>
+              </DropdownMenuItem>
+            ) : null}
+
             <DropdownMenuItem
               onClick={() => navigate("/device")}
               className="cursor-pointer gap-2 py-2 text-xs font-semibold rounded-xl"
@@ -133,6 +147,8 @@ export function UserAccountMenu() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {canSwitchOrganization ? <SwitchOrganizationDialog open={switchOpen} onOpenChange={setSwitchOpen} /> : null}
     </>
   );
 }

@@ -3,7 +3,13 @@ import type { Request, Response } from "express";
 import type { DeviceContext } from "../auth/auth.service.js";
 import { setRefreshCookie } from "../auth/cookie.helper.js";
 import * as publicService from "./public.service.js";
-import type { PublicMemberLoginInput, PublicMemberRegisterInput } from "./public.validators.js";
+import type {
+  PublicVerifyAccountInput,
+  PublicJoinInput,
+  PublicMemberLoginInput,
+  PublicMemberRegisterInput,
+  PublicPhoneCheckInput,
+} from "./public.validators.js";
 
 function extractDeviceContext(req: Request): DeviceContext {
   const deviceId = req.headers["x-device-id"] as string | undefined;
@@ -52,4 +58,25 @@ export async function loginMember(req: Request, res: Response): Promise<void> {
   }
 
   res.status(200).json({ auth });
+}
+
+export async function checkPhone(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params as { slug: string };
+  const result = await publicService.checkPublicPhone(slug, req.body as PublicPhoneCheckInput);
+  res.status(200).json(result);
+}
+
+export async function joinOrganization(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params as { slug: string };
+  const auth = await publicService.joinOrganizationWithAccount(slug, req.body as PublicJoinInput, extractDeviceContext(req));
+  if (auth.refreshToken) {
+    setRefreshCookie(res, auth.refreshToken);
+  }
+  res.status(201).json({ auth });
+}
+
+export async function verifyAccount(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params as { slug: string };
+  const result = await publicService.verifyExistingAccount(slug, req.body as PublicVerifyAccountInput);
+  res.status(200).json(result);
 }

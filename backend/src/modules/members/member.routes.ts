@@ -65,6 +65,10 @@ memberRouter.post(
   memberController.commitImport,
 );
 
+// Every member needs a login: how many lack one, and create them all (fixed paths, before /:id).
+memberRouter.get("/login-gap", requirePermission("members.update"), memberController.loginGap);
+memberRouter.post("/provision-logins", requirePermission("members.update"), memberController.provisionLogins);
+
 // --- Single member ---
 
 memberRouter.get("/me", memberController.getMe);

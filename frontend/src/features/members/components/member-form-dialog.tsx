@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Field } from "@/components/ui/field";
+import { MOBILE_NUMBER_MESSAGE, MobileInput } from "@/components/ui/mobile-input";
 import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,12 +13,12 @@ import { ApiError } from "@/lib/api-client";
 import type { ResolvedPlace } from "@/lib/google-maps";
 import { GENDERS, OCCUPATION_TYPES, type Member } from "../types";
 import { humanize } from "@/lib/format";
-import { useRegisterMember, useUpdateMember, type RegisterMemberInput } from "../use-members";
+import { useRegisterMember, useUpdateMember, type MemberLogin, type RegisterMemberInput } from "../use-members";
 import { AddressAutocomplete, MapsUnconfiguredHint } from "./address-autocomplete";
 
 const schema = z.object({
   name: z.string().min(2, "Required"),
-  phone: z.string().min(7, "Enter a valid phone number"),
+  phone: z.string().regex(/^\d{10}$/, MOBILE_NUMBER_MESSAGE),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   gender: z.enum(GENDERS).optional(),
   dateOfBirth: z.string().optional(),
@@ -37,7 +38,7 @@ type FormValues = z.infer<typeof schema>;
 interface MemberFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated?: (memberId: string) => void;
+  onCreated?: (memberId: string, memberName: string, login: MemberLogin) => void;
   /** When provided, the dialog edits this member instead of registering a new one. */
   member?: Member;
 }
@@ -124,7 +125,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
       await updateMember.mutateAsync(input);
     } else {
       const result = await registerMember.mutateAsync(input);
-      onCreated?.(result.member.id);
+      onCreated?.(result.member.id, result.member.name, result.login);
     }
     reset();
     setGeo(undefined);
@@ -155,7 +156,7 @@ export function MemberFormDialog({ open, onOpenChange, onCreated, member }: Memb
               <Input id="name" {...register("name")} />
             </Field>
             <Field label="Phone" htmlFor="phone" error={errors.phone?.message}>
-              <Input id="phone" {...register("phone")} />
+              <MobileInput id="phone" placeholder="10-digit mobile number" {...register("phone")} />
             </Field>
           </div>
 

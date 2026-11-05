@@ -10,6 +10,8 @@ import type {
   RegisterMemberInput,
   RegisterOrganizerInput,
   ResendVerificationEmailInput,
+  SelectOrganizationInput,
+  SwitchOrganizationInput,
   ResetPasswordInput,
   RequestOtpInput,
   VerifyEmailInput,
@@ -68,6 +70,57 @@ export async function resendVerificationEmail(req: Request, res: Response): Prom
 export async function login(req: Request, res: Response): Promise<void> {
   const input = req.body as LoginInput;
   const result = await authService.login(input, extractDeviceContext(req, input));
+
+  // In several organisations: no session yet — the client shows a picker and calls select-organisation.
+  if ("requiresOrganizationSelection" in result) {
+    res.status(200).json(result);
+    return;
+  }
+
+  setRefreshCookie(res, result.refreshToken);
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
+}
+
+export async function selectOrganization(req: Request, res: Response): Promise<void> {
+  const input = req.body as SelectOrganizationInput;
+  const result = await authService.completeOrganizationSelection(
+    input.selectionToken,
+    input.tenantId,
+    extractDeviceContext(req, input),
+  );
+  setRefreshCookie(res, result.refreshToken);
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
+}
+
+export async function listOrganizations(req: Request, res: Response): Promise<void> {
+  if (!req.auth) {
+    throw AppError.unauthorized();
+  }
+  const organizations = await authService.listOrganizationsForUser(req.auth.userId);
+  res.status(200).json({ organizations, currentTenantId: req.auth.tenantId });
+}
+
+export async function switchOrganization(req: Request, res: Response): Promise<void> {
+  if (!req.auth) {
+    throw AppError.unauthorized();
+  }
+  const input = req.body as SwitchOrganizationInput;
+  const result = await authService.switchOrganization(
+    req.auth.userId,
+    input.tenantId,
+    extractDeviceContext(req, input),
+    readRefreshToken(req),
+  );
   setRefreshCookie(res, result.refreshToken);
   res.status(200).json({
     accessToken: result.accessToken,
@@ -123,8 +176,22 @@ export async function changePassword(req: Request, res: Response): Promise<void>
   if (!req.auth) {
     throw AppError.unauthorized();
   }
-  await authService.changePassword(req.auth.userId, input.currentPassword, input.newPassword);
-  res.status(204).send();
+  const result = await authService.changePassword(req.auth.userId, input.currentPassword, input.newPassword, {
+    keepSignedIn: input.keepSignedIn,
+    activeTenantId: req.auth.tenantId,
+    deviceContext: extractDeviceContext(req, input),
+  });
+  if (!result) {
+    res.status(204).send();
+    return;
+  }
+  setRefreshCookie(res, result.refreshToken);
+  res.status(200).json({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    deviceId: result.deviceId,
+    user: result.user,
+  });
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {

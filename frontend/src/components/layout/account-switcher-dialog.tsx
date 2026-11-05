@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/lib/auth-context";
+import { OrganizationPickerDialog } from "@/features/auth/components/organization-picker";
+import { isOrganizationChoice, useAuth, type AuthUser, type OrganizationChoice } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api-client";
 import { getSavedAccounts, removeSavedAccount, type SavedAccount } from "@/lib/saved-accounts";
 
@@ -18,7 +19,7 @@ interface AccountSwitcherDialogProps {
 }
 
 export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDialogProps) {
-  const { user, login } = useAuth();
+  const { user, login, selectOrganization } = useAuth();
   const navigate = useNavigate();
 
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
@@ -29,6 +30,7 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [organizationChoice, setOrganizationChoice] = useState<OrganizationChoice | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -52,6 +54,16 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
     setError(null);
   }
 
+  function finishSwitch(loggedUser: AuthUser, message: string) {
+    toast.success(message);
+    onOpenChange(false);
+    if (loggedUser.role?.slug === "SUPER_ADMIN") {
+      navigate("/super-admin/dashboard", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }
+
   async function handleConfirmSwitch(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedAccount || !password) {
@@ -63,14 +75,12 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
     setError(null);
 
     try {
-      const loggedUser = await login(selectedAccount.email, password, true);
-      toast.success(`Switched to ${loggedUser.name} (${loggedUser.role?.name || "Account"})`);
-      onOpenChange(false);
-      if (loggedUser.role?.slug === "SUPER_ADMIN") {
-        navigate("/super-admin/dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+      const result = await login(selectedAccount.email, password, true);
+      if (isOrganizationChoice(result)) {
+        setOrganizationChoice(result);
+        return;
       }
+      finishSwitch(result, `Switched to ${result.name} (${result.role?.name || "Account"})`);
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : "Failed to switch account. Please verify password.");
     } finally {
@@ -89,14 +99,12 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
     setError(null);
 
     try {
-      const loggedUser = await login(newIdentifier, newPassword, true);
-      toast.success(`Logged in as ${loggedUser.name}`);
-      onOpenChange(false);
-      if (loggedUser.role?.slug === "SUPER_ADMIN") {
-        navigate("/super-admin/dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+      const result = await login(newIdentifier, newPassword, true);
+      if (isOrganizationChoice(result)) {
+        setOrganizationChoice(result);
+        return;
       }
+      finishSwitch(result, `Logged in as ${result.name}`);
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : "Login failed. Please check your credentials.");
     } finally {
@@ -129,6 +137,18 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
   }
 
   return (
+    <>
+    <OrganizationPickerDialog
+      open={organizationChoice !== null}
+      onOpenChange={(next: boolean) => !next && setOrganizationChoice(null)}
+      organizations={organizationChoice?.organizations ?? []}
+      onSelect={async (org) => {
+        if (!organizationChoice) return;
+        const loggedUser = await selectOrganization(organizationChoice, org.tenantId, true);
+        setOrganizationChoice(null);
+        finishSwitch(loggedUser, `Switched to ${loggedUser.name} (${org.name})`);
+      }}
+    />
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85dvh] sm:max-h-[85vh] flex flex-col sm:max-w-md w-full max-w-full overflow-hidden p-4 sm:p-6 rounded-t-[28px] sm:rounded-3xl shadow-2xl border-border-default/90 box-border">
         <DialogHeader className="text-left pb-2.5 border-b border-border-default/60 shrink-0 max-w-full overflow-hidden">
@@ -347,5 +367,6 @@ export function AccountSwitcherDialog({ open, onOpenChange }: AccountSwitcherDia
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 }

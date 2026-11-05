@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FormDrawer } from "@/components/ui/form-drawer";
+import { MemberLoginsList } from "./member-logins-list";
 import {
   Table,
   TableBody,
@@ -184,6 +185,7 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
                 <span className="text-text-secondary">{committed.skipped} skipped</span>
               </p>
               <ReportTable reports={committed.reports.filter((report) => report.status === "ERROR")} />
+              {committed.logins && committed.logins.length > 0 ? <MemberLoginsList rows={committed.logins} /> : null}
             </div>
           ) : null}
 

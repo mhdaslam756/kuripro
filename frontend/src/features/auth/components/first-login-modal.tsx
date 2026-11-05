@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api-client";
+import { api, getDeviceId } from "@/lib/api-client";
+import { useAuth, type AuthUser } from "@/lib/auth-context";
 
 interface Props {
   open: boolean;
   initialPassword?: string;
+  /** Called once the password is changed and a fresh session is in place. */
   onPasswordChanged: () => void;
 }
 
 export function FirstLoginModal({ open, initialPassword = "", onPasswordChanged }: Props) {
+  const { loginWithTokens } = useAuth();
   const [currentPassword, setCurrentPassword] = useState(initialPassword);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,7 +47,15 @@ export function FirstLoginModal({ open, initialPassword = "", onPasswordChanged 
 
     setLoading(true);
     try {
-      await api.post("/auth/change-password", { currentPassword: currentPassword || initialPassword, newPassword });
+      // Changing a password ends every session, so ask for a fresh one back and carry on signed in.
+      const res = await api.post<{ accessToken: string; refreshToken?: string; user: AuthUser }>("/auth/change-password", {
+        currentPassword: currentPassword || initialPassword,
+        newPassword,
+        keepSignedIn: true,
+        deviceId: getDeviceId(),
+        deviceLabel: navigator.userAgent.slice(0, 100),
+      });
+      loginWithTokens(res.accessToken, res.user, res.refreshToken);
       onPasswordChanged();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update password");

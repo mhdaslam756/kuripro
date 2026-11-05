@@ -28,6 +28,13 @@ import { slugify } from "../../utils/slugify.js";
 import type { AuthContext } from "../../types/auth.js";
 import type { RegisterOrganizerInput, LoginInput, RegisterMemberInput } from "./auth.validators.js";
 import {
+  issueOrganizationSelectionToken,
+  listUserOrganizations,
+  resolveActiveOrganization,
+  verifyOrganizationSelectionToken,
+  type UserOrganization,
+} from "./organization.service.js";
+import {
   generateAccessToken,
   issueRefreshToken,
   revokeRefreshToken,
@@ -104,10 +111,14 @@ async function generateUniqueSlug(tenantName: string): Promise<string> {
   throw AppError.internal("Could not allocate a unique tenant slug, please try again");
 }
 
-/** Resolves a user's role and flattens it into the shape both the JWT and req.auth need. */
-async function buildAuthContext(user: IssuableUser): Promise<AuthContext> {
-  const tenantId = user.tenantId ? user.tenantId.toString() : null;
-  const role = await findRoleById(user.roleId.toString(), tenantId);
+/**
+ * Resolves a user's role and flattens it into the shape both the JWT and req.auth need. `activeTenantId`
+ * picks which of the user's organisations the session acts in (default: the home organisation).
+ */
+async function buildAuthContext(user: IssuableUser, activeTenantId?: string | null): Promise<AuthContext> {
+  const active = await resolveActiveOrganization(user, activeTenantId);
+  const tenantId = active.tenantId;
+  const role = await findRoleById(active.roleId, tenantId);
   if (!role) {
     throw AppError.internal("This user's role could not be resolved");
   }
@@ -129,8 +140,12 @@ async function buildAuthContext(user: IssuableUser): Promise<AuthContext> {
   };
 }
 
-export async function issueAuthResult(user: IssuableUser, deviceContext: DeviceContext = {}): Promise<AuthResult> {
-  const context = await buildAuthContext(user);
+export async function issueAuthResult(
+  user: IssuableUser,
+  deviceContext: DeviceContext = {},
+  activeTenantId?: string | null,
+): Promise<AuthResult> {
+  const context = await buildAuthContext(user, activeTenantId);
   const ttlSeconds = deviceContext.rememberDevice ? REMEMBERED_DEVICE_TTL_SECONDS : env.JWT_REFRESH_TTL_SECONDS;
   const deviceId = deviceContext.deviceId ?? randomUUID();
 
@@ -257,7 +272,17 @@ export async function registerOrganizer(
   }
 }
 
-export async function login(input: LoginInput, deviceContext: DeviceContext = {}): Promise<AuthResult> {
+/** Returned instead of a session when the person belongs to several organisations and must pick one. */
+export interface OrganizationSelectionRequired {
+  requiresOrganizationSelection: true;
+  organizations: UserOrganization[];
+  selectionToken: string;
+}
+
+export async function login(
+  input: LoginInput,
+  deviceContext: DeviceContext = {},
+): Promise<AuthResult | OrganizationSelectionRequired> {
   const user = await findUserByPhoneOrEmail(input.email, { withPassword: true });
   if (!user) {
     throw AppError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
@@ -274,6 +299,17 @@ export async function login(input: LoginInput, deviceContext: DeviceContext = {}
       userAgent: deviceContext.userAgent,
     });
     throw AppError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
+  }
+
+  // One login, many organisations: ask which one to enter before any session is issued.
+  const organizations = await listUserOrganizations(user);
+  if (organizations.length > 1) {
+    assertUserCanLogin(user);
+    return {
+      requiresOrganizationSelection: true,
+      organizations,
+      selectionToken: issueOrganizationSelectionToken(user._id.toString()),
+    };
   }
 
   // Check tenant status if applicable
@@ -311,6 +347,95 @@ export async function login(input: LoginInput, deviceContext: DeviceContext = {}
   });
 
   return issueAuthResult(user, deviceContext);
+}
+
+/** Second step of sign-in for someone in several organisations: exchange the ticket for a session. */
+export async function completeOrganizationSelection(
+  selectionToken: string,
+  tenantId: string,
+  deviceContext: DeviceContext = {},
+): Promise<AuthResult> {
+  const userId = verifyOrganizationSelectionToken(selectionToken);
+  const user = await findUserById(userId);
+  if (!user) {
+    throw AppError.unauthorized();
+  }
+
+  const organizations = await listUserOrganizations(user);
+  if (!organizations.some((o) => o.tenantId === tenantId)) {
+    throw AppError.forbidden("You are not a member of that organization");
+  }
+
+  assertUserCanLogin(user);
+  if (user.status === "INVITED") {
+    user.status = "ACTIVE";
+  }
+  user.lastLoginAt = new Date();
+  await saveUser(user);
+
+  await recordActivity({
+    tenantId,
+    userId: user._id,
+    action: "LOGIN_SUCCEEDED",
+    message: "Logged in with password",
+    ipAddress: deviceContext.ipAddress,
+    userAgent: deviceContext.userAgent,
+  });
+
+  return issueAuthResult(user, deviceContext, tenantId);
+}
+
+/** The organisations a signed-in person can switch between. */
+export async function listOrganizationsForUser(userId: string): Promise<UserOrganization[]> {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw AppError.unauthorized();
+  }
+  return listUserOrganizations(user);
+}
+
+/**
+ * Moves a signed-in person to another of their organisations without asking for the password again —
+ * they are already authenticated and the target must be an active membership. The session for the
+ * organisation they leave is retired so stale sessions do not pile up.
+ */
+export async function switchOrganization(
+  userId: string,
+  tenantId: string,
+  deviceContext: DeviceContext = {},
+  currentRefreshToken?: string,
+): Promise<AuthResult> {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw AppError.unauthorized();
+  }
+
+  const organizations = await listUserOrganizations(user);
+  if (!organizations.some((o) => o.tenantId === tenantId)) {
+    throw AppError.forbidden("You are not a member of that organization");
+  }
+
+  const result = await issueAuthResult(user, deviceContext, tenantId);
+
+  await recordActivity({
+    tenantId,
+    userId: user._id,
+    action: "ORGANIZATION_SWITCHED",
+    message: `Switched to ${organizations.find((o) => o.tenantId === tenantId)?.name ?? "another organization"}`,
+    ipAddress: deviceContext.ipAddress,
+    userAgent: deviceContext.userAgent,
+  });
+
+  const oldTokenId = tokenIdOf(currentRefreshToken);
+  if (currentRefreshToken && oldTokenId && oldTokenId !== tokenIdOf(result.refreshToken)) {
+    const oldSession = await findSessionByTokenIdAnyTenant(oldTokenId);
+    if (oldSession && oldSession.userId.toString() === userId) {
+      await repoRevokeSession(oldSession);
+    }
+    await revokeRefreshToken(currentRefreshToken).catch(() => undefined);
+  }
+
+  return result;
 }
 
 /** Always returns the same shape whether or not the email is registered — no user enumeration. */
@@ -401,7 +526,7 @@ export async function resetPassword(identifier: string, code: string, newPasswor
   foundUser.emailVerifiedAt = new Date();
   await saveUser(foundUser);
 
-  await revokeAllSessionsForUser(foundUser._id.toString(), foundUser.tenantId ? foundUser.tenantId.toString() : null);
+  await revokeAllSessionsForUser(foundUser._id.toString());
   await recordActivity({
     tenantId: foundUser.tenantId,
     userId: foundUser._id,
@@ -414,7 +539,16 @@ export async function resetPassword(identifier: string, code: string, newPasswor
  * Changing a password revokes every active session (including the current one) — the safest
  * default. The caller will need to log in again with the new password on every device.
  */
-export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+/**
+ * Changes the password and ends every session. With `keepSignedIn` (the forced first-login change) a
+ * fresh session in `activeTenantId` is returned, so the person is not signed out the moment they finish.
+ */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  options: { keepSignedIn?: boolean; activeTenantId?: string | null; deviceContext?: DeviceContext } = {},
+): Promise<AuthResult | undefined> {
   const user = await findUserById(userId, { withPassword: true });
   if (!user) {
     throw AppError.unauthorized();
@@ -429,13 +563,16 @@ export async function changePassword(userId: string, currentPassword: string, ne
   user.mustChangePassword = false;
   await saveUser(user);
 
-  await revokeAllSessionsForUser(userId, user.tenantId ? user.tenantId.toString() : null);
+  await revokeAllSessionsForUser(userId);
   await recordActivity({
     tenantId: user.tenantId,
     userId: user._id,
     action: "PASSWORD_CHANGED",
     message: "Password changed — all sessions revoked",
   });
+
+  if (!options.keepSignedIn) return undefined;
+  return issueAuthResult(user, options.deviceContext ?? {}, options.activeTenantId ?? undefined);
 }
 
 /**
@@ -448,13 +585,14 @@ export async function changePassword(userId: string, currentPassword: string, ne
  * round-trip needed.
  */
 export async function refreshSession(refreshToken: string): Promise<Omit<AuthResult, "deviceId">> {
-  const { userId, next } = await rotateRefreshToken(refreshToken);
+  const { userId, tenantId: sessionTenantId, next } = await rotateRefreshToken(refreshToken);
 
   const user = await findUserById(userId);
   if (!user) {
     throw AppError.unauthorized();
   }
-  const context = await buildAuthContext(user);
+  // Stay in the organisation this session was issued for; if that membership has since ended, fall back home.
+  const context = await buildAuthContext(user, sessionTenantId).catch(() => buildAuthContext(user));
 
   return {
     accessToken: generateAccessToken(context),
@@ -528,9 +666,9 @@ export async function revokeSessionById(sessionId: string, userId: string, tenan
   });
 }
 
-/** Used internally by password change/reset — revokes every session with no exception. */
-async function revokeAllSessionsForUser(userId: string, tenantId: string | null): Promise<void> {
-  const tokenIds = await repoRevokeAllSessions(userId, tenantId);
+/** Used internally by password change/reset — revokes every session, in every organisation, with no exception. */
+async function revokeAllSessionsForUser(userId: string): Promise<void> {
+  const tokenIds = await repoRevokeAllSessions(userId, undefined);
   await Promise.all(tokenIds.map((tokenId) => revokeRefreshTokenById(tokenId)));
 }
 

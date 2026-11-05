@@ -15,6 +15,8 @@ import {
   requestOtpSchema,
   resendVerificationEmailSchema,
   resetPasswordSchema,
+  selectOrganizationSchema,
+  switchOrganizationSchema,
   verifyEmailSchema,
   verifyOtpSchema,
 } from "./auth.validators.js";
@@ -97,6 +99,21 @@ authRouter.post(
 );
 
 authRouter.post("/refresh", authController.refresh);
+
+// One login, many organisations.
+authRouter.post(
+  "/organizations/select",
+  authRateLimiter,
+  validate({ body: selectOrganizationSchema }),
+  authController.selectOrganization,
+);
+authRouter.get("/organizations", requireAuth, authController.listOrganizations);
+authRouter.post(
+  "/organizations/switch",
+  requireAuth,
+  validate({ body: switchOrganizationSchema }),
+  authController.switchOrganization,
+);
 
 authRouter.post(
   "/change-password",

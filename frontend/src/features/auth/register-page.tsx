@@ -23,7 +23,7 @@ const registerSchema = z.object({
   pincode: z.string().min(1, "Pincode required"),
   organizerName: z.string().min(2, "Enter your name"),
   organizerEmail: z.string().email("Enter a valid email address"),
-  organizerPhone: z.string().min(7, "Enter a valid phone number"),
+  organizerPhone: z.string().regex(/^\d{10}$/, "Enter a 10-digit mobile number"),
   organizerPassword: z
     .string()
     .min(10, PASSWORD_HINT)
@@ -383,9 +383,16 @@ export function RegisterPage() {
                   <input
                     id="organizerPhone"
                     type="tel"
-                    placeholder="Your Phone Number"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel-national"
+                    placeholder="Your 10-digit mobile number"
                     className="w-full bg-transparent pl-3 text-sm font-medium text-text-primary placeholder:text-text-disabled outline-none"
-                    {...register("organizerPhone")}
+                    {...register("organizerPhone", {
+                      onChange: (event) => {
+                        event.target.value = event.target.value.replace(/\D/g, "").slice(0, 10);
+                      },
+                    })}
                   />
                 </div>
                 {errors.organizerPhone ? (

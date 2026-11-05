@@ -246,6 +246,8 @@ export interface ImportCommitResult {
   created: number;
   skipped: number;
   reports: CsvRowReport[];
+  /** The login created for each imported member, with the temporary password to hand over. */
+  logins?: import("./use-members").MemberLoginRow[];
 }
 
 export interface MemberDeletionEligibility {

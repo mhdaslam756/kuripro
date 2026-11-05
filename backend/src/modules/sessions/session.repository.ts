@@ -122,13 +122,18 @@ export async function revokeSession(session: SessionDocument): Promise<void> {
   await session.save();
 }
 
+/**
+ * Revokes a user's live sessions. `tenantId` limits it to one organisation's sessions; `undefined` means
+ * every organisation (a password change must end them all — a session is tied to the organisation it was
+ * opened in, so a one-account-many-organisations user can have live sessions in several).
+ */
 export async function revokeAllSessions(
   userId: ObjectIdLike,
-  tenantId: ObjectIdLike | null,
+  tenantId: ObjectIdLike | null | undefined,
   exceptTokenId?: string,
 ): Promise<string[]> {
   const filter = {
-    tenantId,
+    tenantId: tenantId === undefined ? { $exists: true } : tenantId,
     userId,
     revokedAt: { $exists: false },
     ...(exceptTokenId ? { tokenId: { $ne: exceptTokenId } } : {}),

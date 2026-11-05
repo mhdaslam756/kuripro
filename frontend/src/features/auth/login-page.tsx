@@ -8,11 +8,12 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/lib/api-client";
-import { useAuth } from "@/lib/auth-context";
+import { isOrganizationChoice, useAuth, type AuthUser, type OrganizationChoice } from "@/lib/auth-context";
 import { EmailVerificationDialog } from "./components/email-verification-dialog";
 import { FirstLoginModal } from "./components/first-login-modal";
 import { ForgotPasswordDialog } from "./components/forgot-password-dialog";
 import { LoginIllustration } from "./components/login-illustration";
+import { OrganizationPickerDialog } from "./components/organization-picker";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Please enter your username, email, or phone"),
@@ -23,7 +24,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, selectOrganization, updateUser } = useAuth();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
@@ -32,6 +33,7 @@ export function LoginPage() {
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [lastEnteredPassword, setLastEnteredPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [organizationChoice, setOrganizationChoice] = useState<OrganizationChoice | null>(null);
 
   const {
     register,
@@ -46,20 +48,29 @@ export function LoginPage() {
 
   const rememberDevice = watch("rememberDevice");
 
+  function finishLogin(loggedUser: AuthUser) {
+    if (loggedUser?.mustChangePassword) {
+      setShowFirstLoginModal(true);
+    } else if (loggedUser?.role?.slug === "SUPER_ADMIN") {
+      navigate("/super-admin/dashboard", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }
+
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     setLastEnteredPassword(values.password);
 
     try {
-      const loggedUser = await login(values.identifier, values.password, values.rememberDevice);
+      const result = await login(values.identifier, values.password, values.rememberDevice);
 
-      if (loggedUser?.mustChangePassword) {
-        setShowFirstLoginModal(true);
-      } else if (loggedUser?.role?.slug === "SUPER_ADMIN") {
-        navigate("/super-admin/dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+      // In several organisations: ask which one to open before going in.
+      if (isOrganizationChoice(result)) {
+        setOrganizationChoice(result);
+        return;
       }
+      finishLogin(result);
     } catch (error: any) {
       if (
         error instanceof ApiError &&
@@ -206,6 +217,18 @@ export function LoginPage() {
       </div>
 
       {/* Existing Auth Dialogs (Preserved) */}
+      <OrganizationPickerDialog
+        open={organizationChoice !== null}
+        onOpenChange={(open: boolean) => !open && setOrganizationChoice(null)}
+        organizations={organizationChoice?.organizations ?? []}
+        onSelect={async (org) => {
+          if (!organizationChoice) return;
+          const loggedUser = await selectOrganization(organizationChoice, org.tenantId, rememberDevice);
+          setOrganizationChoice(null);
+          finishLogin(loggedUser);
+        }}
+      />
+
       <ForgotPasswordDialog
         open={showForgotPassword}
         initialIdentifier={watch("identifier") || ""}
@@ -217,6 +240,7 @@ export function LoginPage() {
         initialPassword={lastEnteredPassword}
         onPasswordChanged={() => {
           setShowFirstLoginModal(false);
+          updateUser({ mustChangePassword: false });
           navigate("/dashboard", { replace: true });
         }}
       />

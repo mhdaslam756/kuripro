@@ -31,8 +31,8 @@ interface NestedIdParams {
 
 export async function create(req: Request, res: Response): Promise<void> {
   const tenantId = requireTenantContext(req);
-  const member = await memberService.registerMember(tenantId, req.auth!.userId, req.body as CreateMemberInput);
-  res.status(201).json({ member });
+  const { member, login } = await memberService.registerMemberWithLogin(tenantId, req.auth!.userId, req.body as CreateMemberInput);
+  res.status(201).json({ member, login });
 }
 
 export async function list(req: Request, res: Response): Promise<void> {
@@ -339,3 +339,16 @@ export async function commitImport(req: Request, res: Response): Promise<void> {
 }
 
 export type { MemberIdParam };
+
+// --- Logins for every member ---
+
+export async function loginGap(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  res.status(200).json({ withoutLogin: await memberService.countMembersWithoutLogin(tenantId) });
+}
+
+export async function provisionLogins(req: Request, res: Response): Promise<void> {
+  const tenantId = requireTenantContext(req);
+  const logins = await memberService.provisionLoginsForMembersWithout(tenantId, req.auth!.userId);
+  res.status(200).json({ logins });
+}

@@ -1,9 +1,10 @@
-import { ChevronRight, Download, Phone, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronRight, Download, KeyRound, Phone, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,9 +25,11 @@ import { formatDate, humanize } from "@/lib/format";
 import { BulkImportDialog } from "./components/bulk-import-dialog";
 import { DeleteMemberDialog } from "./components/delete-member-dialog";
 import { MemberFormDialog } from "./components/member-form-dialog";
+import { MemberLoginCreatedDialog } from "./components/member-login-created-dialog";
+import { MemberLoginsList } from "./components/member-logins-list";
 import { KycStatusBadge, MemberStatusBadge, RiskBandBadge } from "./components/status-badges";
 import { KYC_STATUSES, MEMBER_STATUSES, RISK_BANDS, type Member } from "./types";
-import { buildMemberQueryString, useMembers, type MemberListFilters } from "./use-members";
+import { buildMemberQueryString, useMembers, type MemberListFilters, type MemberLogin, type MemberLoginRow, useMembersWithoutLogin, useProvisionLogins } from "./use-members";
 
 const ALL = "__all__";
 
@@ -41,6 +44,7 @@ export function MembersPage() {
   const [page, setPage] = useState(1);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [createdMember, setCreatedMember] = useState<{ id: string; name: string; login: MemberLogin } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -60,6 +64,12 @@ export function MembersPage() {
   const canImportExport = hasPermission("members.import_export");
   const canCreate = hasPermission("members.create");
   const canDelete = hasPermission("members.delete");
+  const canUpdate = hasPermission("members.update");
+  // Every member needs a login so they can sign in and join other organizations.
+  const { data: withoutLogin } = useMembersWithoutLogin(canUpdate);
+  const provisionLogins = useProvisionLogins();
+  const [loginsConfirmOpen, setLoginsConfirmOpen] = useState(false);
+  const [createdLogins, setCreatedLogins] = useState<MemberLoginRow[] | null>(null);
 
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
@@ -112,6 +122,23 @@ export function MembersPage() {
           ) : null}
         </div>
       </div>
+
+      {canUpdate && withoutLogin ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-warn-border bg-warn-bg/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <KeyRound size={18} className="mt-0.5 shrink-0 text-warn-fg" />
+            <p className="text-sm text-text-primary">
+              <strong>{withoutLogin} member{withoutLogin === 1 ? " has" : "s have"} no login.</strong>{" "}
+              <span className="text-text-secondary">
+                Every member needs one to sign in, and to join other organizations with the same account.
+              </span>
+            </p>
+          </div>
+          <Button size="sm" className="shrink-0 rounded-xl" onClick={() => setLoginsConfirmOpen(true)}>
+            Create logins
+          </Button>
+        </div>
+      ) : null}
 
       {/* Search & Filter Control Bar */}
       <div className="mb-2 flex items-center gap-2.5">
@@ -320,9 +347,63 @@ export function MembersPage() {
       <MemberFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        onCreated={(memberId) => navigate(`/members/${memberId}`)}
+        onCreated={(id, name, login) => setCreatedMember({ id, name, login })}
+      />
+      <MemberLoginCreatedDialog
+        open={createdMember !== null}
+        memberName={createdMember?.name ?? ""}
+        login={createdMember?.login ?? null}
+        onDone={() => {
+          const id = createdMember?.id;
+          setCreatedMember(null);
+          if (id) navigate(`/members/${id}`);
+        }}
       />
       <BulkImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <Dialog open={loginsConfirmOpen} onOpenChange={setLoginsConfirmOpen}>
+        <DialogContent>
+          <DialogHeader className="pr-10">
+            <DialogTitle>Create logins for {withoutLogin ?? 0} members?</DialogTitle>
+            <DialogDescription>
+              Each member gets a login with their mobile number and a temporary password. You'll get a list to hand out. Members who
+              already have a KuriPro account elsewhere are skipped, and keep using that account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLoginsConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={provisionLogins.isPending}
+              onClick={() =>
+                void provisionLogins.mutateAsync().then((rows) => {
+                  setLoginsConfirmOpen(false);
+                  setCreatedLogins(rows);
+                })
+              }
+            >
+              {provisionLogins.isPending ? "Creating…" : "Create logins"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createdLogins !== null} onOpenChange={(open: boolean) => !open && setCreatedLogins(null)}>
+        <DialogContent>
+          <DialogHeader className="pr-10">
+            <DialogTitle>Logins created</DialogTitle>
+            <DialogDescription>Hand these details to your members.</DialogDescription>
+          </DialogHeader>
+          {createdLogins ? <MemberLoginsList rows={createdLogins} /> : null}
+          <DialogFooter>
+            <Button type="button" onClick={() => setCreatedLogins(null)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {memberToDelete ? (
         <DeleteMemberDialog
           open={Boolean(memberToDelete)}
