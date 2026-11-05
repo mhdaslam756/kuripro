@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { setAccessToken } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { queryClient } from "@/lib/query-client";
 
 export interface PublicOrgInfo {
   id: string;
@@ -98,5 +99,57 @@ export function usePublicMemberLogin(slug: string) {
 
       return res;
     },
+  });
+}
+
+/** What we learn from a mobile number before deciding which sign-up path to show. */
+export interface PublicPhoneCheck {
+  /** A KuriPro login already exists for this number. */
+  accountExists: boolean;
+  /** The number already belongs to this organisation, so signing in is the next step. */
+  alreadyMember: boolean;
+  /** The account's email with most of it hidden, so the person recognises it. */
+  maskedEmail?: string;
+}
+
+export function usePublicPhoneCheck(slug: string) {
+  return useMutation({
+    mutationFn: (phone: string) => api.post<PublicPhoneCheck>(`/public/org/${slug}/check-phone`, { phone }),
+  });
+}
+
+export interface JoinOrganizationInput {
+  phone: string;
+  password: string;
+  /** Only when the account has no existing member profile to reuse. */
+  address?: { line1: string; city: string; state: string; pincode: string; country: string };
+  occupationType?: string;
+}
+
+/** Joins this organisation with an account the person already has, then signs them in to it. */
+export function usePublicJoin(slug: string) {
+  const { loginWithTokens } = useAuth();
+
+  return useMutation({
+    mutationFn: async (input: JoinOrganizationInput) => {
+      const res = await api.post<{ auth: { accessToken: string; refreshToken?: string; user: any } }>(
+        `/public/org/${slug}/join`,
+        input,
+      );
+      // Anything cached belongs to whichever organisation this browser was in before.
+      queryClient.clear();
+      setAccessToken(res.auth.accessToken);
+      loginWithTokens(res.auth.accessToken, res.auth.user, res.auth.refreshToken);
+      return res;
+    },
+  });
+}
+
+
+/** Confirms the password of an existing account. Creates nothing; the page then offers the Join button. */
+export function usePublicVerifyAccount(slug: string) {
+  return useMutation({
+    mutationFn: (input: { phone: string; password: string }) =>
+      api.post<{ verified: true; name: string }>(`/public/org/${slug}/verify-account`, input),
   });
 }

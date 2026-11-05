@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MOBILE_NUMBER_MESSAGE, mobileNumberSchema, optionalMobileNumberSchema } from "../../utils/common-validators.js";
 
 import { emailSchema } from "../../utils/common-validators.js";
 import { paginationQuerySchema } from "../../utils/pagination.js";
@@ -39,7 +40,7 @@ export const memberOccupationSchema = z.object({
 
 export const createMemberSchema = z.object({
   name: z.string().min(2),
-  phone: z.string().min(7),
+  phone: mobileNumberSchema,
   email: z.string().email().optional(),
   dateOfBirth: z.coerce.date().optional(),
   gender: z.enum(GENDERS).optional(),
@@ -53,7 +54,7 @@ export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 
 export const updateMemberSchema = z.object({
   name: z.string().min(2).optional(),
-  phone: z.string().min(7).optional(),
+  phone: mobileNumberSchema.optional(),
   email: z.string().email().optional(),
   dateOfBirth: z.coerce.date().optional(),
   gender: z.enum(GENDERS).optional(),
@@ -114,7 +115,7 @@ export const createNomineeSchema = z.object({
   name: z.string().min(2),
   relation: z.enum(NOMINEE_RELATIONS),
   dateOfBirth: z.coerce.date().optional(),
-  phone: z.string().optional(),
+  phone: optionalMobileNumberSchema,
   address: z.string().optional(),
   idProofType: z.string().optional(),
   idProofNumber: z.string().optional(),
@@ -131,7 +132,7 @@ export type UpdateNomineeInput = z.infer<typeof updateNomineeSchema>;
 
 const externalGuarantorSchema = z.object({
   name: z.string().min(2),
-  phone: z.string().min(7),
+  phone: mobileNumberSchema,
   address: z.string().optional(),
   occupation: z.string().optional(),
   idProofType: z.string().optional(),
@@ -158,7 +159,7 @@ export const createFamilyMemberSchema = z.object({
   relation: z.enum(FAMILY_RELATIONS),
   dateOfBirth: z.coerce.date().optional(),
   occupation: z.string().optional(),
-  phone: z.string().optional(),
+  phone: optionalMobileNumberSchema,
   isDependent: z.boolean().default(true),
 });
 
@@ -190,7 +191,7 @@ const defaultIfBlank = (fallback: string) => (val: unknown): unknown =>
 
 export const memberCsvRowSchema = z.object({
   name: z.preprocess(blankToUndefined, z.string().min(2, "Name must be at least 2 characters")),
-  phone: z.preprocess(cleanPhone, z.string().min(7, "Phone must be a valid number")),
+  phone: z.preprocess(cleanPhone, z.string().regex(/^\d{10}$/, MOBILE_NUMBER_MESSAGE)),
   email: z.preprocess(blankToUndefined, z.string().email().optional()),
   gender: z.preprocess(normalizeGender, z.enum(GENDERS).optional()),
   dateOfBirth: z.preprocess(parseFlexibleDate, z.date().optional()),

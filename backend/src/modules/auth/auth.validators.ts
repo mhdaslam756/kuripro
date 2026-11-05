@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mobileNumberSchema } from "../../utils/common-validators.js";
 
 const PASSWORD_POLICY_MESSAGE =
   "Password must be at least 10 characters and include an uppercase letter, a lowercase letter, and a digit";
@@ -27,6 +28,21 @@ export const deviceContextSchema = z.object({
 });
 export type DeviceContextInput = z.infer<typeof deviceContextSchema>;
 
+export const selectOrganizationSchema = z
+  .object({
+    selectionToken: z.string().min(1),
+    tenantId: z.string().min(1),
+  })
+  .merge(deviceContextSchema);
+export type SelectOrganizationInput = z.infer<typeof selectOrganizationSchema>;
+
+export const switchOrganizationSchema = z
+  .object({
+    tenantId: z.string().min(1),
+  })
+  .merge(deviceContextSchema);
+export type SwitchOrganizationInput = z.infer<typeof switchOrganizationSchema>;
+
 export const registerOrganizerSchema = z
   .object({
     tenantName: z.string().min(2),
@@ -37,7 +53,7 @@ export const registerOrganizerSchema = z
 
     organizerName: z.string().min(2),
     organizerEmail: z.string().email(),
-    organizerPhone: z.string().min(7),
+    organizerPhone: mobileNumberSchema,
     organizerPassword: passwordSchema,
   })
   .merge(deviceContextSchema);
@@ -53,10 +69,14 @@ export const loginSchema = z
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: passwordSchema,
-});
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+    /** Forced first-login change: return a fresh session instead of signing the person out. */
+    keepSignedIn: z.boolean().optional(),
+  })
+  .merge(deviceContextSchema);
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
@@ -103,7 +123,7 @@ export const registerMemberSchema = z
   .object({
     tenantSlug: z.string().min(1, "Tenant slug is required"),
     name: z.string().min(2, "Full name must be at least 2 characters"),
-    phone: z.string().min(7, "Enter a valid phone number"),
+    phone: mobileNumberSchema,
     email: z.string().email("Enter a valid email address"),
     password: passwordSchema,
     address: memberAddressSchema,

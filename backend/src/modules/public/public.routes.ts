@@ -5,9 +5,12 @@ import { env } from "../../config/env.js";
 import { validate } from "../../middleware/validate.js";
 import * as publicController from "./public.controller.js";
 import {
+  publicJoinSchema,
   publicMemberLoginSchema,
   publicMemberRegisterSchema,
   publicOrgSlugParamSchema,
+  publicPhoneCheckSchema,
+  publicVerifyAccountSchema,
 } from "./public.validators.js";
 
 export const publicRouter: Router = Router();
@@ -37,4 +40,29 @@ publicRouter.post(
   publicRateLimiter,
   validate({ params: publicOrgSlugParamSchema, body: publicMemberLoginSchema }),
   publicController.loginMember,
+);
+
+// Registration starts with the mobile number: an existing account can join with a password instead of
+// filling in the whole form again.
+publicRouter.post(
+  "/org/:slug/check-phone",
+  publicRateLimiter,
+  validate({ params: publicOrgSlugParamSchema, body: publicPhoneCheckSchema }),
+  publicController.checkPhone,
+);
+
+publicRouter.post(
+  "/org/:slug/join",
+  publicRateLimiter,
+  validate({ params: publicOrgSlugParamSchema, body: publicJoinSchema }),
+  publicController.joinOrganization,
+);
+
+
+// Step two: confirm the existing account's password before the Join button is offered.
+publicRouter.post(
+  "/org/:slug/verify-account",
+  publicRateLimiter,
+  validate({ params: publicOrgSlugParamSchema, body: publicVerifyAccountSchema }),
+  publicController.verifyAccount,
 );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
+import { isValidMobileNumber, MobileInput } from "@/components/ui/mobile-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,7 +109,7 @@ export function GuarantorsTab({ memberId }: { memberId: string }) {
           <FormDrawerActions
             onCancel={() => setOpen(false)}
             onSubmit={() => void handleAdd()}
-            disabled={type === "EXTERNAL" ? !name || !phone : !guarantorMemberId}
+            disabled={type === "EXTERNAL" ? !name || !isValidMobileNumber(phone) : !guarantorMemberId}
             pending={addGuarantor.isPending}
             pendingLabel="Adding…"
             submitLabel="Add guarantor"
@@ -135,7 +136,7 @@ export function GuarantorsTab({ memberId }: { memberId: string }) {
                   <Input id="guarantor-name" value={name} onChange={(e) => setName(e.target.value)} />
                 </Field>
                 <Field label="Phone" htmlFor="guarantor-phone">
-                  <Input id="guarantor-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  <MobileInput id="guarantor-phone" placeholder="10-digit mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </Field>
               </div>
             ) : (

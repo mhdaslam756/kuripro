@@ -21,6 +21,28 @@ interface LoginResponse {
   user: AuthUser;
 }
 
+/** One organisation a person can enter. */
+export interface OrganizationOption {
+  tenantId: string;
+  name: string;
+  slug: string;
+  logoUrl?: string;
+  roleName: string;
+  roleSlug?: string;
+  /** The organisation the account was created in. */
+  isHome: boolean;
+}
+
+/** What login returns, instead of a session, when the person belongs to several organisations. */
+export interface OrganizationChoice {
+  organizations: OrganizationOption[];
+  selectionToken: string;
+}
+
+export function isOrganizationChoice(value: AuthUser | OrganizationChoice): value is OrganizationChoice {
+  return "selectionToken" in value;
+}
+
 export interface RegisterOrganizerInput {
   tenantName: string;
   registrationNumber: string;
@@ -37,7 +59,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   /** True only while the initial silent-refresh bootstrap is in flight on app load. */
   isLoading: boolean;
-  login: (email: string, password: string, rememberDevice?: boolean) => Promise<AuthUser>;
+  /** Signs in. For someone in several organisations it returns a choice to put to them, not a session. */
+  login: (email: string, password: string, rememberDevice?: boolean) => Promise<AuthUser | OrganizationChoice>;
+  /** Second step after login returned a choice: enter the chosen organisation. */
+  selectOrganization: (choice: OrganizationChoice, tenantId: string, rememberDevice?: boolean) => Promise<AuthUser>;
+  /** Move to another of the person's organisations without signing in again. */
+  switchOrganization: (tenantId: string) => Promise<AuthUser>;
   loginWithTokens: (accessToken: string, user: AuthUser, refreshToken?: string) => void;
   updateUser: (patch: Partial<AuthUser>) => void;
   registerOrganization: (input: RegisterOrganizerInput) => Promise<void>;
@@ -108,14 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveAccount(authUser);
   }
 
-  async function login(email: string, password: string, rememberDevice = false): Promise<AuthUser> {
-    const res = await api.post<LoginResponse>("/auth/login", {
-      email,
-      password,
-      rememberDevice,
-      deviceId: getDeviceId(),
-      deviceLabel: navigator.userAgent.slice(0, 100),
-    });
+  function startSession(res: LoginResponse): AuthUser {
     setAccessToken(res.accessToken);
     if (res.refreshToken) {
       setRefreshToken(res.refreshToken);
@@ -123,6 +143,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
     saveAccount(res.user);
     return res.user;
+  }
+
+  async function login(email: string, password: string, rememberDevice = false): Promise<AuthUser | OrganizationChoice> {
+    const res = await api.post<LoginResponse | (OrganizationChoice & { requiresOrganizationSelection: true })>("/auth/login", {
+      email,
+      password,
+      rememberDevice,
+      deviceId: getDeviceId(),
+      deviceLabel: navigator.userAgent.slice(0, 100),
+    });
+    if ("requiresOrganizationSelection" in res) {
+      return { organizations: res.organizations, selectionToken: res.selectionToken };
+    }
+    return startSession(res);
+  }
+
+  async function selectOrganization(choice: OrganizationChoice, tenantId: string, rememberDevice = false): Promise<AuthUser> {
+    const res = await api.post<LoginResponse>("/auth/organizations/select", {
+      selectionToken: choice.selectionToken,
+      tenantId,
+      rememberDevice,
+      deviceId: getDeviceId(),
+      deviceLabel: navigator.userAgent.slice(0, 100),
+    });
+    return startSession(res);
+  }
+
+  async function switchOrganization(tenantId: string): Promise<AuthUser> {
+    const res = await api.post<LoginResponse>("/auth/organizations/switch", {
+      tenantId,
+      deviceId: getDeviceId(),
+      deviceLabel: navigator.userAgent.slice(0, 100),
+    });
+    // Everything cached belongs to the organisation we just left.
+    queryClient.clear();
+    return startSession(res);
   }
 
   async function registerOrganization(input: RegisterOrganizerInput): Promise<void> {
@@ -161,7 +217,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, loginWithTokens, updateUser, registerOrganization, logout, hasPermission }}
+      value={{
+        user,
+        isLoading,
+        login,
+        selectOrganization,
+        switchOrganization,
+        loginWithTokens,
+        updateUser,
+        registerOrganization,
+        logout,
+        hasPermission,
+      }}
     >
       {children}
     </AuthContext.Provider>

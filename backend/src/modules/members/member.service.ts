@@ -50,7 +50,8 @@ async function generateUniqueMemberCode(tenantId: string, session?: mongoose.Cli
 import { getPaymentPunctualityStats, listPaymentsByMembershipIds } from "../payments/payment.repository.js";
 import { listPayoutsByCycleIds } from "../payouts/payout.repository.js";
 import { getOrganizationRoleBySlug } from "../roles/role.service.js";
-import { createUser, findUserByEmail, findUserById } from "../users/user.repository.js";
+import { createUser, findUserByEmail, findUserById, findUserByPhoneOrEmail } from "../users/user.repository.js";
+import { findTenantById } from "../tenants/tenant.repository.js";
 import { User, type UserDocument } from "../users/user.model.js";
 import { AppError } from "../../utils/app-error.js";
 import { generateTemporaryPassword, hashPassword } from "../../utils/password.js";
@@ -169,6 +170,122 @@ export async function registerMember(
   });
 
   return member;
+}
+
+export interface MemberLoginResult {
+  /**
+   * CREATED: a new login with a temporary password the person must change at first sign-in.
+   * LINKED: their existing login in this organisation was attached.
+   * EXISTING_ACCOUNT: they already have a KuriPro account elsewhere; nothing was created and they join
+   * with that account's password from this organisation's sign-up link.
+   */
+  status: "CREATED" | "LINKED" | "EXISTING_ACCOUNT";
+  /** What they type to sign in. */
+  loginId: string;
+  /** Shown to staff once, to hand to the member. Null unless a login was created. */
+  temporaryPassword: string | null;
+}
+
+/**
+ * Gives a member added by staff a login, so they can sign in and are known to KuriPro as an account.
+ * An account that already exists for the number is never overwritten or linked across organisations.
+ */
+async function provisionMemberLogin(tenantId: string, member: MemberDocument, createdBy: string): Promise<MemberLoginResult> {
+  const loginId = member.phone;
+
+  const existing =
+    (await findUserByPhoneOrEmail(member.phone)) ?? (member.email ? await findUserByPhoneOrEmail(member.email) : null);
+  if (existing) {
+    if (existing.tenantId?.toString() === tenantId) {
+      try {
+        await linkMemberToExistingUser(tenantId, member, existing, createdBy);
+        return { status: "LINKED", loginId, temporaryPassword: null };
+      } catch {
+        // already tied to another member record here; leave this one without a login
+      }
+    }
+    return { status: "EXISTING_ACCOUNT", loginId, temporaryPassword: null };
+  }
+
+  const tenant = await findTenantById(tenantId);
+  if (!tenant) {
+    throw AppError.notFound("Organization not found");
+  }
+  const role = await getOrganizationRoleBySlug(tenantId, "MEMBER");
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+
+  const user = await createUser({
+    tenantId,
+    roleId: role._id,
+    name: member.name,
+    // Members without an email still sign in by phone; this placeholder only fills the unique email field.
+    email: member.email ?? `${member.phone}@${tenant.slug}.member`,
+    phone: member.phone,
+    passwordHash,
+    status: "INVITED",
+    // Staff supplied these details and handed over the password, so there is no email to verify before sign-in.
+    isEmailVerified: true,
+    mustChangePassword: true,
+  });
+
+  try {
+    member.userId = user._id;
+    await saveMember(member);
+  } catch (err) {
+    await user.deleteOne();
+    throw err;
+  }
+
+  await recordActivity({
+    tenantId,
+    userId: createdBy,
+    memberId: member._id,
+    action: "MEMBER_INVITED_TO_PORTAL",
+    message: `Created a login for ${member.name}`,
+  });
+
+  return { status: "CREATED", loginId, temporaryPassword };
+}
+
+export interface MemberLoginRow extends MemberLoginResult {
+  memberId: string;
+  memberCode: string;
+  name: string;
+}
+
+/** Every ACTIVE-or-not member of the organisation that has no login yet. */
+export async function countMembersWithoutLogin(tenantId: string): Promise<number> {
+  return Member.countDocuments({ tenantId, userId: null });
+}
+
+/**
+ * Gives every member who has no login one, so each member can sign in and later join other organizations.
+ * Members whose number already has an account elsewhere are reported, not overwritten.
+ */
+export async function provisionLoginsForMembersWithout(tenantId: string, createdBy: string): Promise<MemberLoginRow[]> {
+  const members = await Member.find({ tenantId, userId: null }).sort({ createdAt: 1 });
+  const rows: MemberLoginRow[] = [];
+  for (const member of members) {
+    try {
+      const login = await provisionMemberLogin(tenantId, member, createdBy);
+      rows.push({ ...login, memberId: member._id.toString(), memberCode: member.memberCode, name: member.name });
+    } catch {
+      // one bad record must not stop the rest; it stays without a login and is counted again next time
+    }
+  }
+  return rows;
+}
+
+/** Registers a member and gives them a login (see provisionMemberLogin). Used by staff "Register member". */
+export async function registerMemberWithLogin(
+  tenantId: string,
+  createdBy: string,
+  input: CreateMemberInput,
+): Promise<{ member: MemberDocument; login: MemberLoginResult }> {
+  const member = await registerMember(tenantId, createdBy, input);
+  const login = await provisionMemberLogin(tenantId, member, createdBy);
+  return { member, login };
 }
 
 export async function getMemberById(tenantId: string, memberId: string): Promise<MemberDocument> {
@@ -670,7 +787,7 @@ async function linkMemberToExistingUser(
 ): Promise<InviteMemberResult> {
   if (existingUser.tenantId?.toString() !== tenantId) {
     throw AppError.conflict(
-      `${existingUser.email} is already registered to an account outside this organization — invite this member with a different email address`,
+      `${existingUser.email} already has an account in another organization — ask them to join yours from your sign-up page with that account, or invite them with a different email address`,
     );
   }
 
@@ -982,6 +1099,8 @@ export interface BulkImportResult {
   created: number;
   skipped: number;
   reports: CsvRowReport[];
+  /** The login created for each imported member, with the temporary password to hand over. */
+  logins: MemberLoginRow[];
 }
 
 export async function commitBulkImport(
@@ -991,6 +1110,7 @@ export async function commitBulkImport(
 ): Promise<BulkImportResult> {
   const rows = await parseMembersCsv(csvBuffer);
   const reports: CsvRowReport[] = [];
+  const logins: MemberLoginRow[] = [];
   let created = 0;
 
   for (const [index, rawRow] of rows.entries()) {
@@ -1003,8 +1123,9 @@ export async function commitBulkImport(
     }
 
     try {
-      await registerMember(tenantId, createdBy, input);
+      const { member, login } = await registerMemberWithLogin(tenantId, createdBy, input);
       created += 1;
+      logins.push({ ...login, memberId: member._id.toString(), memberCode: member.memberCode, name: member.name });
       reports.push({ row: rowNumber, status: "OK", errors: [], name: input.name, phone: input.phone });
     } catch (error) {
       const message = error instanceof AppError ? error.message : "Failed to create member";
@@ -1012,7 +1133,7 @@ export async function commitBulkImport(
     }
   }
 
-  return { created, skipped: reports.length - created, reports };
+  return { created, skipped: reports.length - created, reports, logins };
 }
 
 export async function resolveMemberForUser(userId: string, tenantId: string): Promise<MemberDocument | null> {

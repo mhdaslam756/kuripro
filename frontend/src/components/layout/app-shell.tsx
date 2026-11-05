@@ -1,10 +1,11 @@
-import { ArrowLeft, Banknote, Undo2, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Banknote, Undo2, BarChart3, Bell, Building2, Gavel, HandCoins, LayoutDashboard, Landmark, LogOut, Menu, Monitor, Moon, ShieldCheck, Smartphone, Sun, Settings2, Users, X, ChevronRight } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { IconTile, type IconTone } from "@/components/ui/icon-tile";
+import { SwitchOrganizationDialog } from "@/features/auth/components/organization-picker";
 import { cn } from "@/lib/utils";
 import { HeaderInstallAppButton, HeaderPushNotificationButton } from "@/components/pwa/install-notification-toasts";
 import { useLiveNotifications } from "@/features/notifications/use-live-notifications";
@@ -249,6 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, hasPermission, logout } = useAuth();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
   const { pathname } = useLocation();
   // On phones the dashboard draws its own hero (greeting, balance, actions) instead of the top bar.
   const isHeroRoute = pathname === "/dashboard";
@@ -461,6 +463,23 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             </div>
 
+            {user?.tenantId && user?.role?.slug !== "SUPER_ADMIN" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setSwitchOpen(true);
+                }}
+                className="active-bounce mb-4 flex w-full items-center gap-3 rounded-2xl border border-border-default bg-bg-surface p-3 text-left"
+              >
+                <IconTile tone="sky">
+                  <ArrowLeftRight size={18} />
+                </IconTile>
+                <span className="flex-1 text-sm font-semibold text-text-primary">Switch organization</span>
+                <ChevronRight size={15} className="text-text-secondary" />
+              </button>
+            ) : null}
+
             <p className="mb-2 native-section-label">App Features &amp; Settings</p>
 
             <div className="native-section">
@@ -506,6 +525,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
+      {user?.tenantId && user?.role?.slug !== "SUPER_ADMIN" ? (
+        <SwitchOrganizationDialog open={switchOpen} onOpenChange={setSwitchOpen} />
+      ) : null}
     </div>
   );
 }

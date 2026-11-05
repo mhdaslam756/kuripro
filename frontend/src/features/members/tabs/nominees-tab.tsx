@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormDrawer, FormDrawerActions } from "@/components/ui/form-drawer";
 import { Field } from "@/components/ui/field";
+import { isValidMobileNumber, MobileInput } from "@/components/ui/mobile-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,7 +97,7 @@ export function NomineesTab({ memberId }: { memberId: string }) {
           <FormDrawerActions
             onCancel={() => setOpen(false)}
             onSubmit={() => void handleAdd()}
-            disabled={!name}
+            disabled={!name || (phone !== "" && !isValidMobileNumber(phone))}
             pending={addNominee.isPending}
             pendingLabel="Adding…"
             submitLabel="Add nominee"
@@ -135,7 +136,7 @@ export function NomineesTab({ memberId }: { memberId: string }) {
               </Field>
             </div>
             <Field label="Phone (optional)" htmlFor="nominee-phone">
-              <Input id="nominee-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <MobileInput id="nominee-phone" placeholder="10-digit mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
         </div>
       </FormDrawer>
